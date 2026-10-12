@@ -1,0 +1,49 @@
+name: Historia de Usuario
+description: Nueva historia de usuario para el Product Backlog
+title: "[HU] "
+labels: ["historia-usuario"]
+
+body:
+  - type: input
+    id: rol
+    attributes:
+      label: Como...
+      description: Rol del usuario
+      placeholder: estudiante
+    validations:
+      required: true
+
+  - type: input
+    id: accion
+    attributes:
+      label: Quiero...
+      description: Funcionalidad que se necesita
+      placeholder: reservar una sala de estudio
+    validations:
+      required: true
+
+  - type: input
+    id: beneficio
+    attributes:
+      label: Para...
+      description: Beneficio o valor que obtiene el usuario
+      placeholder: asegurar un espacio para estudiar con mi grupo
+    validations:
+      required: true
+
+  - type: textarea
+    id: criterios
+    attributes:
+      label: Criterios de aceptación
+      description: Usar el formato Dado / Cuando / Entonces
+      value: |
+        - [ ] Dado... cuando... entonces...
+        - [ ] Dado... cuando... entonces...
+    validations:
+      required: true
+
+  - type: textarea
+    id: notas
+    attributes:
+      label: Notas adicionales
+      description: Información técnica, mockups, dependencias, etc.

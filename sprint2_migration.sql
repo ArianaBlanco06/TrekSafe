@@ -1,0 +1,2 @@
+-- OBSOLETO — contenido fusionado en init_schema.sql (hispanización completa).
+-- No ejecutar. Conservado solo como referencia histórica del sprint 2.
