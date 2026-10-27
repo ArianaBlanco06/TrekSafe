@@ -3,7 +3,7 @@ import { parseDecimalCoordinates, isValidPeruCoordinates } from '../../shared/ut
 
 const tiposSangre = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const;
 
-function campoCoordenadaOpcional(campo: string) {
+export function campoCoordenadaOpcional(campo: string) {
   return z
     .string()
     .trim()
