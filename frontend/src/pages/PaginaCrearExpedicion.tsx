@@ -4,7 +4,11 @@ import { ChevronDown, ChevronLeft, ChevronUp, Globe, Plus, WifiOff, X } from 'lu
 import { FieldError, FieldLabel } from '@/components/Layout';
 import { CoordinatePickerMapLazy } from '@/components/maps/CoordinatePickerMapLazy';
 import type { CoordinatePickerTarget } from '@/components/maps/CoordinatePickerMap';
+import { GuardarComoPlantilla } from '@/components/plantillas/GuardarComoPlantilla';
+import { SelectorPlantillasCuenta } from '@/components/plantillas/SelectorPlantillasCuenta';
+import { useAutenticacion } from '@/context/ContextoAutenticacion';
 import { useEstadoEnLinea } from '@/hooks/useEstadoEnLinea';
+import { mensajeAplicacionBorrador, type BorradorDesdePlantilla } from '@/lib/plantillasCuentaLogica';
 import { validateCoordinateInput } from '@/lib/coordinates';
 import { cachearContactos, obtenerContactosCacheados } from '@/lib/offlineContacts';
 import {
@@ -21,6 +25,8 @@ import { crearExpedicion } from '@/services/expedicion';
 export function PaginaCrearExpedicion() {
   const navigate = useNavigate();
   const enLinea = useEstadoEnLinea();
+  const { usuario } = useAutenticacion();
+  const [versionPlantillasCuenta, setVersionPlantillasCuenta] = useState(0);
   const [contactos, setContactos] = useState<ContactoEmergencia[]>([]);
   const [plantillas, setPlantillas] = useState<PlantillaRuta[]>([]);
   const [borradoresPendientes, setBorradoresPendientes] = useState(0);
@@ -125,6 +131,22 @@ export function PaginaCrearExpedicion() {
     setMinutosTolerancia(plantilla.minutosTolerancia);
     setErrorCoordInicio('');
     setErrorCoordFin('');
+  };
+
+  const aplicarBorrador = (borrador: BorradorDesdePlantilla) => {
+    setLugarInicio(borrador.lugarInicio);
+    setLugarFin(borrador.lugarFin);
+    setCoordenadasInicio(borrador.coordenadasInicio ?? '');
+    setCoordenadasFin(borrador.coordenadasFin ?? '');
+    setMinutosTolerancia(borrador.minutosTolerancia);
+    setIdsContactosSeleccionados(borrador.idsContactos);
+    setNombresAcompanantes(borrador.nombresAcompanantes.length > 0 ? borrador.nombresAcompanantes : ['']);
+    setHoraInicio('');
+    setHoraRetornoEstimada('');
+    setErrorCoordInicio('');
+    setErrorCoordFin('');
+    setError('');
+    setInfo(mensajeAplicacionBorrador(borrador));
   };
 
   const validarCoordenadas = (): boolean => {
@@ -249,6 +271,16 @@ export function PaginaCrearExpedicion() {
 
       {info && <div className="mb-4 p-3 rounded-xl bg-primary/10 text-primary text-sm">{info}</div>}
       {error && <div className="error-banner mb-4">{error}</div>}
+
+      {usuario && (
+        <SelectorPlantillasCuenta
+          usuarioId={usuario.id}
+          enLinea={enLinea}
+          contactos={contactos}
+          versionLista={versionPlantillasCuenta}
+          onAplicar={aplicarBorrador}
+        />
+      )}
 
       {plantillas.length > 0 && (
         <div className="mb-6">
@@ -485,6 +517,20 @@ export function PaginaCrearExpedicion() {
             <Plus size={16} /> Agregar acompañante
           </button>
         </div>
+
+        <GuardarComoPlantilla
+          enLinea={enLinea}
+          datos={{
+            lugarInicio: lugarInicio.trim(),
+            lugarFin: lugarFin.trim(),
+            coordenadasInicio: coordenadasInicio.trim() || undefined,
+            coordenadasFin: coordenadasFin.trim() || undefined,
+            minutosTolerancia,
+            idsContactos: idsContactosSeleccionados,
+            nombresAcompanantes: acompanantesValidos,
+          }}
+          onGuardada={() => setVersionPlantillasCuenta((v) => v + 1)}
+        />
 
         <button type="submit" className="btn-primary" disabled={!puedeEnviar || cargando}>
           {cargando

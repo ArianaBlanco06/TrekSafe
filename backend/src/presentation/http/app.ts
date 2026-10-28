@@ -8,6 +8,8 @@ import { errorHandler, notFoundHandler } from '../../shared/errors/errorHandler.
 import { createRateLimiter } from './middleware/rateLimitMiddleware.js';
 import { crearRutasAutenticacion } from './routes/rutasAutenticacion.js';
 import { crearRutasExpedicion } from './routes/rutasExpedicion.js';
+import { ensamblarModuloPlantillas } from '../../infrastructure/composicion/moduloPlantillas.js';
+import { crearRutasPlantillas } from './routes/rutasPlantillas.js';
 import { crearRutasRescate } from './routes/rutasRescate.js';
 import { crearRutasUsuario } from './routes/rutasUsuario.js';
 
@@ -38,6 +40,7 @@ export function createApp() {
   app.use(`${env.apiPrefix}/auth`, limiteTasaAuth, crearRutasAutenticacion());
   app.use(`${env.apiPrefix}/usuario`, crearRutasUsuario());
   app.use(`${env.apiPrefix}/expediciones`, crearRutasExpedicion());
+  app.use(`${env.apiPrefix}/plantillas`, crearRutasPlantillas(ensamblarModuloPlantillas()));
   app.use(`${env.apiPrefix}/rescate`, crearRutasRescate());
 
   app.use(notFoundHandler);
