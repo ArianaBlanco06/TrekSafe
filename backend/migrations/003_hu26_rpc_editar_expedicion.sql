@@ -187,6 +187,11 @@ BEGIN
             jsonb_build_object('antes', to_jsonb(v_acompanantes_antes), 'despues', to_jsonb(v_acompanantes)));
     END IF;
 
+    -- Sin cambios no se escribe nada: ni versión, ni colecciones, ni evento.
+    IF v_cambios = '{}'::jsonb THEN
+        RETURN jsonb_build_object('id', p_expedicion_id, 'version', v_exp.version);
+    END IF;
+
     -- e) Actualización del plan y reemplazo completo de sus colecciones.
     UPDATE public.expediciones
     SET lugar_inicio = v_lugar_inicio,
