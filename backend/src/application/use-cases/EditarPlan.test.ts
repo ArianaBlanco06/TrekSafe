@@ -272,6 +272,7 @@ describe('EditarPlan', () => {
         assert.equal(estado, 409);
         assert.equal(cuerpo.codigo, 'PLAN_NO_EDITABLE');
         assert.deepEqual(dao.plan, antes);
+        assert.equal(dao.llamadasEditar, 0);
       });
     }
   });
@@ -286,12 +287,14 @@ describe('EditarPlan', () => {
       assert.equal(estado, 422);
       assert.equal(cuerpo.codigo, 'SALIDA_YA_INICIADA');
       assert.deepEqual(dao.plan, antes);
+      assert.equal(dao.llamadasEditar, 0);
     });
 
     it('una salida del plan exactamente igual al reloj recibe 422', async () => {
       preparar(planInicial(), '2030-02-01T10:00:00.000Z');
 
       assert.equal((await rechazo()).estado, 422);
+      assert.equal(dao.llamadasEditar, 0);
     });
 
     it('una nueva hora de salida ya pasada recibe 422', async () => {
