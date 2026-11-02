@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // override: true → backend/.env tiene prioridad sobre PORT del sistema (evita 5010 vs 3000)
 config({ path: path.resolve(__dirname, '../../../.env'), override: true });
 
-const envSchema = z.object({
+export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(3000),
   API_PREFIX: z.string().default('/api'),
@@ -19,6 +19,7 @@ const envSchema = z.object({
   JWT_EXPIRES_IN: z.string().default('24h'),
   MEDICAL_ENCRYPTION_KEY: z.string().min(32),
   CRON_INTERVAL_MS: z.coerce.number().default(60_000),
+  CRON_ENABLED: z.enum(['true', 'false']).default('true').transform((v) => v === 'true'),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
   SMTP_HOST: z.string().default(''),
   SMTP_PORT: z.coerce.number().default(587),
@@ -47,6 +48,7 @@ export type Env = {
   jwtExpiresIn: string;
   medicalEncryptionKey: string;
   cronIntervalMs: number;
+  cronEnabled: boolean;
   corsOrigin: string;
   smtpHost: string;
   smtpPort: number;
@@ -81,6 +83,7 @@ export function loadEnv(): Env {
     jwtExpiresIn: e.JWT_EXPIRES_IN,
     medicalEncryptionKey: e.MEDICAL_ENCRYPTION_KEY,
     cronIntervalMs: e.CRON_INTERVAL_MS,
+    cronEnabled: e.CRON_ENABLED,
     corsOrigin: e.CORS_ORIGIN,
     smtpHost: e.SMTP_HOST,
     smtpPort: e.SMTP_PORT,
