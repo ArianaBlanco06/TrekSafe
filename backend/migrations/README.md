@@ -65,6 +65,16 @@ El script usa solo modulos incluidos en Node, sin `npm install`. Crea un cluster
 
 Con las dependencias del backend instaladas, agregar `--with-backend` ejecuta tambien los mismos 12 escenarios de contrato contra el repositorio en memoria y el adaptador de produccion conectado a PostgreSQL temporal. El runner prepara la configuracion de loopback y la pasa solo al proceso hijo de pruebas; no se configura ninguna conexion desde `.env`.
 
+### Integracion completa y PWA
+
+Con las dependencias de ambos proyectos y PostgREST nativo disponibles:
+
+```powershell
+node backend/scripts/test-hu32-sql.mjs --pg-bin "C:\Program Files\PostgreSQL\18\bin" --with-browser --postgrest "C:\ruta\PostgREST\postgrest.exe"
+```
+
+Este modo incluye builds, comprobaciones de tipos, pruebas de regresion y navegador, la suite SQL y el contrato. Despues ejecuta la API real y el SDK Supabase contra PostgREST nativo y el cluster temporal, con el build PWA y su worker activo. Las conexiones y credenciales son ficticias/locales; API, PostgREST y PostgreSQL temporal se cierran al finalizar. El loader historico puede leer `.env` en el proceso de integracion, pero se sustituyen todos sus campos antes de inicializar la configuracion y los repositorios. No se modifica el archivo ni se usan sus destinos. Detalle y evidencia: [fase 6](../../docs/hu-32/fase-6-integracion.md).
+
 La version del plan se crea **solo como fixture de esa base temporal**, despues de comprobar que la migracion rechaza correctamente el esquema sin version. No constituye la migracion compartida pendiente de HU-26.
 
 Las pruebas cubren reglas, permisos, normalizacion, IDs estables, eliminacion, no-op, version obsoleta, rollback por fallo inyectado y concurrencia de sesiones. Al finalizar se detiene la instancia temporal. Se conservan su carpeta y logs para inspeccion; el script imprime su ubicacion. El servicio PostgreSQL instalado no se detiene ni se reconfigura.

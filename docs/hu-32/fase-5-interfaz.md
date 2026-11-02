@@ -77,4 +77,4 @@ npm.cmd run test:ui --prefix frontend
 
 En este entorno Windows se autorizó ejecutar build y navegador fuera del entorno restringido: esbuild necesitaba acceder a sus directorios y el navegador iniciar sus procesos. No se modificó la política de PowerShell.
 
-La fase 6 validará el recorrido completo con backend y persistencia integrados, permisos, conflictos, regresión y PWA con worker activo. El acuerdo de versión del plan y la aplicación coordinada de migraciones siguen siendo requisitos para usar la base DEV compartida. Esta fase no marca toda HU-32 como aceptada ni prepara un commit o PR por cuenta de Andriy.
+Continuación: [fase 6 — integración, regresión y PWA](fase-6-integracion.md). El acuerdo de versión del plan y la aplicación coordinada de migraciones siguen siendo requisitos para usar la base DEV compartida. Esta fase no marca toda HU-32 como aceptada ni prepara un commit o PR por cuenta de Andriy.

@@ -1,7 +1,7 @@
 // Pruebas SQL aisladas con PostgreSQL nativo. No lee .env ni usa el servicio local.
 // Agregar --with-backend para comprobar el mismo contrato con memoria y SQL.
 import assert from 'node:assert/strict';
-import { execFile, spawn } from 'node:child_process';
+import { execFile, fork, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdtemp, readFile } from 'node:fs/promises';
@@ -13,10 +13,17 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const args = process.argv.slice(2);
-const withBackend = args[2] === '--with-backend';
-if (![2, 3].includes(args.length) || args[0] !== '--pg-bin' || (args.length === 3 && !withBackend)) {
-  throw new Error('Uso: node backend/scripts/test-hu32-sql.mjs --pg-bin <carpeta bin de PostgreSQL> [--with-backend]');
+const flags = new Set();
+let postgrestBin;
+if (args[0] !== '--pg-bin' || !args[1]) throw new Error('Se requiere --pg-bin <carpeta bin de PostgreSQL>');
+for (let i = 2; i < args.length; i++) {
+  if (['--with-backend', '--with-browser'].includes(args[i])) flags.add(args[i]);
+  else if (args[i] === '--postgrest' && args[i + 1]) postgrestBin = path.resolve(args[++i]);
+  else throw new Error(`Argumento no reconocido: ${args[i]}`);
 }
+const withBrowser = flags.has('--with-browser');
+const withBackend = flags.has('--with-backend') || withBrowser;
+if (withBrowser && (!postgrestBin || !existsSync(postgrestBin))) throw new Error('Se requiere --postgrest <ejecutable oficial> con --with-browser');
 if (withBackend && !existsSync(path.join(root, 'backend/node_modules/tsx'))) {
   throw new Error('Instalar las dependencias del backend antes de usar --with-backend');
 }
@@ -122,6 +129,22 @@ async function invalidUnchanged(points, version, expected = 'datos_invalidos') {
 }
 
 try {
+  if (withBrowser) {
+    console.log(`Validacion completa con ${process.version}`);
+    const backendDir = path.join(root, 'backend');
+    const frontendDir = path.join(root, 'frontend');
+    for (const [dir, argv] of [
+      [backendDir, ['node_modules/typescript/bin/tsc', '--noEmit']],
+      [backendDir, ['node_modules/typescript/bin/tsc']],
+      [frontendDir, ['node_modules/typescript/bin/tsc', '--noEmit']],
+      [frontendDir, ['node_modules/typescript/bin/tsc', '--noEmit', '-p', 'tsconfig.playwright.json']],
+      [frontendDir, ['node_modules/vite/bin/vite.js', 'build']],
+      [backendDir, ['--import', 'tsx', '--test', 'src/**/*.test.ts']],
+      [frontendDir, ['node_modules/@playwright/test/cli.js', 'test', '--config', 'playwright.config.ts']],
+    ]) {
+      console.log(await command(process.execPath, argv, '', { cwd: dir, env: { ...env, VITE_API_URL: '/api' } }));
+    }
+  }
   await command(exe('initdb'), ['-D', data, '-U', user, '--auth=trust', '--encoding=UTF8', '--locale=C']);
   await command(exe('pg_ctl'), ['-D', data, '-l', log, '-w', '-t', '30', 'start',
     '-o', `-h 127.0.0.1 -p ${port} -c timezone=UTC -c max_connections=15`]);
@@ -353,6 +376,39 @@ try {
       '--import', 'tsx', '--test', 'src/application/services/contratoPuntosRuta.test.ts',
     ], '', { cwd: path.join(root, 'backend') }));
     console.log('Contrato del backend verificado con memoria y PostgreSQL temporal.');
+  }
+  if (withBrowser) {
+    const controlToken = randomUUID();
+    const child = fork(path.join(root, 'backend/scripts/hu32-integration-server.mjs'), [], {
+      env: { ...env, TREKSAFE_HU32_CONTROL_TOKEN: controlToken, TREKSAFE_HU32_POSTGREST_BIN: postgrestBin,
+        TREKSAFE_HU32_POSTGREST_LOG: path.join(workspace, 'postgrest.log'), TREKSAFE_HU32_PG_BIN: bin },
+      execArgv: [], windowsHide: true, stdio: ['ignore', 'inherit', 'inherit', 'ipc'],
+    });
+    try {
+      const baseUrl = await new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('La API temporal no inicio en 20 segundos')), 20_000);
+        child.once('error', error => { clearTimeout(timer); reject(error); });
+        child.once('exit', code => { clearTimeout(timer); reject(new Error(`La API temporal termino con codigo ${code}`)); });
+        child.on('message', message => {
+          if (message?.type === 'ready') { clearTimeout(timer); resolve(message.url); }
+        });
+      });
+      assert.equal(new URL(baseUrl).hostname, '127.0.0.1');
+      console.log(`API real y PWA aisladas: ${baseUrl}`);
+      console.log(await command(process.execPath, [
+        'node_modules/@playwright/test/cli.js', 'test', '--config', 'playwright.integration.config.ts',
+      ], '', { cwd: path.join(root, 'frontend'), env: { ...env,
+        TREKSAFE_HU32_BASE_URL: baseUrl, TREKSAFE_HU32_CONTROL_TOKEN: controlToken } }));
+    } finally {
+      if (child.exitCode === null && child.signalCode === null) {
+        const exited = new Promise(resolve => child.once('exit', resolve));
+        const timer = setTimeout(() => child.kill(), 10_000);
+        if (child.connected) child.send('stop'); else child.kill();
+        await exited;
+        clearTimeout(timer);
+      }
+      console.log('API temporal y PostgREST detenidos.');
+    }
   }
   console.log(`RESULTADO: ${count} comprobaciones SQL aprobadas. No se contacto Supabase.`);
 } finally {
