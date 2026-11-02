@@ -14,6 +14,7 @@ export type FilaExpedicion = {
   hora_retorno_estimada: string;
   minutos_tolerancia: number;
   estado: string;
+  version: number;
   creado_en?: string;
   actualizado_en?: string;
 };
@@ -91,7 +92,7 @@ export class RepositorioExpedicion {
         estado: input.estado,
       })
       .select(
-        'id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada, minutos_tolerancia, estado, creado_en',
+        'id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada, minutos_tolerancia, estado, version, creado_en',
       )
       .single();
 
@@ -132,7 +133,7 @@ export class RepositorioExpedicion {
     const { data, error } = await this.supabase
       .from('expediciones')
       .select(
-        'id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada, minutos_tolerancia, estado, creado_en, actualizado_en',
+        'id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada, minutos_tolerancia, estado, version, creado_en, actualizado_en',
       )
       .eq('senderista_id', senderistaId)
       .eq('estado', 'completada')
@@ -146,7 +147,7 @@ export class RepositorioExpedicion {
     const { data, error } = await this.supabase
       .from('expediciones')
       .select(
-        'id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada, minutos_tolerancia, estado, creado_en',
+        'id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada, minutos_tolerancia, estado, version, creado_en',
       )
       .eq('senderista_id', senderistaId)
       .order('creado_en', { ascending: false });
@@ -161,7 +162,7 @@ export class RepositorioExpedicion {
       .select(
         `
         id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada,
-        minutos_tolerancia, estado, creado_en, actualizado_en,
+        minutos_tolerancia, estado, version, creado_en, actualizado_en,
         acompanantes_expedicion ( nombre_acompanante ),
         vinculos_expedicion_contacto (
           contactos_emergencia ( nombre_completo, correo_electronico )
@@ -182,7 +183,7 @@ export class RepositorioExpedicion {
     const { data, error } = await this.supabase
       .from('expediciones')
       .select(
-        'id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada, minutos_tolerancia, estado, actualizado_en',
+        'id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada, minutos_tolerancia, estado, version, actualizado_en',
       )
       .eq('id', expedicionId)
       .eq('senderista_id', senderistaId)
@@ -217,6 +218,7 @@ export class RepositorioExpedicion {
         .update({ estado: 'en_progreso', actualizado_en: ahora })
         .eq('id', fila.id)
         .eq('estado', 'programada')
+        .lte('hora_inicio', ahora)
         .select('id')
         .maybeSingle();
 
@@ -281,7 +283,7 @@ export class RepositorioExpedicion {
       .eq('senderista_id', senderistaId)
       .in('estado', ['en_progreso', 'alerta'])
       .select(
-        'id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada, minutos_tolerancia, estado, actualizado_en',
+        'id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada, minutos_tolerancia, estado, version, actualizado_en',
       )
       .maybeSingle();
 
