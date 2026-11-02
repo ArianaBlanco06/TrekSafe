@@ -64,10 +64,35 @@ function normalizarDatos(entrada: EntradaEditarExpedicion): DatosPlan {
   };
 }
 
+function mismoInstante(a: string, b: string): boolean {
+  return new Date(a).getTime() === new Date(b).getTime();
+}
+
+function mismosElementos(a: string[], b: string[]): boolean {
+  const ordenadaB = [...b].sort();
+  return a.length === b.length && [...a].sort().every((valor, i) => valor === ordenadaB[i]);
+}
+
+/** Mismo criterio que la RPC: ignora el formato de las horas y el orden de las listas. */
+function planSinCambios(plan: PlanExpedicion, datos: DatosPlan): boolean {
+  return (
+    plan.lugarInicio === datos.lugarInicio &&
+    plan.lugarFin === datos.lugarFin &&
+    plan.coordenadasInicio === datos.coordenadasInicio &&
+    plan.coordenadasFin === datos.coordenadasFin &&
+    mismoInstante(plan.horaInicio, datos.horaInicio) &&
+    mismoInstante(plan.horaRetornoEstimada, datos.horaRetornoEstimada) &&
+    plan.minutosTolerancia === datos.minutosTolerancia &&
+    mismosElementos(plan.idsContactos, datos.idsContactos) &&
+    mismosElementos(plan.nombresAcompanantes, datos.nombresAcompanantes)
+  );
+}
+
 /**
  * Edita una expedición programada de su propietario.
  * Valida antes de escribir con el reloj inyectado; la persistencia vuelve a
  * comprobar las reglas dentro de la transacción y puede rechazar por concurrencia.
+ * Si los datos no cambian, devuelve el plan sin subir la versión ni registrar evento.
  */
 export class EditarPlan {
   constructor(
@@ -100,6 +125,7 @@ export class EditarPlan {
       throw traducir('VERSION_OBSOLETA', plan.version);
     }
     if (new Date(datos.horaInicio).getTime() <= ahoraMs) throw traducir('SALIDA_EN_PASADO');
+    if (planSinCambios(plan, datos)) return plan;
 
     try {
       await this.dao.editarPlan({

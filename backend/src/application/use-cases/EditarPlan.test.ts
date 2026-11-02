@@ -4,6 +4,7 @@ import type { Request, Response } from 'express';
 import { ErrorEdicionPlan } from '../../domain/errors/ErrorEdicionPlan.js';
 import type {
   ComandoEditarPlan,
+  DatosPlan,
   IExpedicionDAO,
   PlanExpedicion,
   ResultadoEdicionPlan,
@@ -29,6 +30,21 @@ class RelojFijo implements IReloj {
   ahora(): Date {
     return new Date(this.instante);
   }
+}
+
+/** Forma comparable de los datos: como la RPC, ignora el formato de las horas y el orden de las listas. */
+function huellaDatos(datos: DatosPlan): string {
+  return JSON.stringify([
+    datos.lugarInicio,
+    datos.lugarFin,
+    datos.coordenadasInicio,
+    datos.coordenadasFin,
+    Date.parse(datos.horaInicio),
+    Date.parse(datos.horaRetornoEstimada),
+    datos.minutosTolerancia,
+    [...datos.idsContactos].sort(),
+    [...datos.nombresAcompanantes].sort(),
+  ]);
 }
 
 /** Doble de prueba con las mismas reglas que la RPC treksafe_editar_expedicion. */
@@ -75,6 +91,9 @@ class ExpedicionDAOEnMemoria implements IExpedicionDAO {
     }
     if (comando.datos.idsContactos.some((id) => !this.contactosDelPropietario.includes(id))) {
       throw new ErrorEdicionPlan('CONTACTOS_INVALIDOS');
+    }
+    if (huellaDatos(this.plan) === huellaDatos(comando.datos)) {
+      return { id: this.plan.id, version: this.plan.version };
     }
 
     this.plan = { ...this.plan, ...structuredClone(comando.datos), version: this.plan.version + 1 };
@@ -239,6 +258,130 @@ describe('EditarPlan', () => {
       );
 
       assert.equal(resultado.version, 2);
+    });
+  });
+
+  describe('edición sin cambios', () => {
+    function entradaSinCambios(cambios: Record<string, unknown> = {}) {
+      return entradaValida({
+        lugarInicio: 'Cebollapampa',
+        lugarFin: 'Laguna 69',
+        coordenadasInicio: undefined,
+        coordenadasFin: undefined,
+        horaInicio: '2030-02-01T10:00:00.000Z',
+        horaRetornoEstimada: '2030-02-01T18:00:00.000Z',
+        minutosTolerancia: 30,
+        idsContactos: [CONTACTO_PROPIO],
+        nombresAcompanantes: ['Ana Ríos'],
+        ...cambios,
+      });
+    }
+
+    it('no sube la versión ni registra evento', async () => {
+      const antes = structuredClone(dao.plan);
+
+      const resultado = await casoDeUso.ejecutar(PROPIETARIO, EXPEDICION, entradaSinCambios());
+
+      assert.equal(resultado.version, 1);
+      assert.deepEqual(dao.plan, antes);
+      assert.equal(dao.operaciones.size, 0);
+    });
+
+    it('no llama a la persistencia', async () => {
+      await casoDeUso.ejecutar(PROPIETARIO, EXPEDICION, entradaSinCambios());
+
+      assert.equal(dao.llamadasEditar, 0);
+    });
+
+    it('no distingue el formato de las horas ni el orden de las listas', async () => {
+      preparar(
+        planInicial({
+          horaInicio: '2030-02-01T10:00:00+00:00',
+          horaRetornoEstimada: '2030-02-01T18:00:00+00:00',
+          idsContactos: [CONTACTO_PROPIO, CONTACTO_NUEVO],
+          nombresAcompanantes: ['Ana Ríos', 'Luis Paredes'],
+        }),
+      );
+
+      const resultado = await casoDeUso.ejecutar(
+        PROPIETARIO,
+        EXPEDICION,
+        entradaSinCambios({
+          horaInicio: '2030-02-01T05:00:00-05:00',
+          horaRetornoEstimada: '2030-02-01T13:00:00-05:00',
+          idsContactos: [CONTACTO_NUEVO, CONTACTO_PROPIO],
+          nombresAcompanantes: ['Luis Paredes', 'Ana Ríos'],
+        }),
+      );
+
+      assert.equal(resultado.version, 1);
+      assert.equal(dao.operaciones.size, 0);
+    });
+
+    it('un reintento con la misma operación tampoco sube la versión', async () => {
+      await casoDeUso.ejecutar(PROPIETARIO, EXPEDICION, entradaSinCambios());
+      const reintento = await casoDeUso.ejecutar(PROPIETARIO, EXPEDICION, entradaSinCambios());
+
+      assert.equal(reintento.version, 1);
+      assert.equal(dao.operaciones.size, 0);
+    });
+
+    const unSoloCambio: [string, Record<string, unknown>][] = [
+      ['lugarInicio', { lugarInicio: 'Pashpa' }],
+      ['lugarFin', { lugarFin: 'Nevado Ishinca' }],
+      ['coordenadasInicio', { coordenadasInicio: '-9.5105, -77.5275' }],
+      ['coordenadasFin', { coordenadasFin: '-9.0105, -77.6042' }],
+      ['horaInicio', { horaInicio: '2030-02-01T09:59:00.000Z' }],
+      ['horaRetornoEstimada', { horaRetornoEstimada: '2030-02-01T18:01:00.000Z' }],
+      ['minutosTolerancia', { minutosTolerancia: 31 }],
+      ['idsContactos', { idsContactos: [CONTACTO_PROPIO, CONTACTO_NUEVO] }],
+      ['nombresAcompanantes', { nombresAcompanantes: ['Ana Ríos', 'Luis Paredes'] }],
+    ];
+    for (const [campo, cambio] of unSoloCambio) {
+      it(`cambiar solo ${campo} sí sube la versión y registra evento`, async () => {
+        const resultado = await casoDeUso.ejecutar(
+          PROPIETARIO,
+          EXPEDICION,
+          entradaSinCambios(cambio),
+        );
+
+        assert.equal(resultado.version, 2);
+        assert.equal(dao.operaciones.size, 1);
+      });
+    }
+
+    it('un plan que ya no es editable se rechaza aunque no haya cambios', async () => {
+      preparar(planInicial({ estado: 'en_progreso' }));
+
+      const { estado, cuerpo } = await rechazo(entradaSinCambios());
+
+      assert.equal(estado, 409);
+      assert.equal(cuerpo.codigo, 'PLAN_NO_EDITABLE');
+    });
+
+    it('una versión obsoleta se rechaza aunque no haya cambios', async () => {
+      preparar(planInicial({ version: 4 }));
+
+      const { estado, cuerpo } = await rechazo(entradaSinCambios({ versionEsperada: 3 }));
+
+      assert.equal(estado, 409);
+      assert.equal(cuerpo.codigo, 'VERSION_OBSOLETA');
+    });
+
+    it('el DAO en memoria, como la RPC, devuelve la versión actual sin escribir', async () => {
+      const antes = structuredClone(dao.plan);
+
+      const resultado = await dao.editarPlan({
+        expedicionId: EXPEDICION,
+        senderistaId: PROPIETARIO,
+        versionEsperada: 1,
+        operacionId: OPERACION,
+        datos: planInicial(),
+      });
+
+      assert.deepEqual(resultado, { id: EXPEDICION, version: 1 });
+      assert.deepEqual(dao.plan, antes);
+      assert.equal(dao.operaciones.size, 0);
     });
   });
 

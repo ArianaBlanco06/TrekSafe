@@ -46,6 +46,7 @@ export interface IExpedicionDAO {
 
   /**
    * Aplica la edición y su evento de forma atómica.
+   * Si los datos no cambian, no escribe nada y devuelve la versión actual.
    * @throws ErrorEdicionPlan si alguna regla de negocio la rechaza.
    */
   editarPlan(comando: ComandoEditarPlan): Promise<ResultadoEdicionPlan>;
