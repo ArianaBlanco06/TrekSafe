@@ -1,4 +1,4 @@
-import { api } from './clienteApi';
+import { api, peticionApi } from './clienteApi';
 
 export type Expedicion = {
   id: string;
@@ -72,7 +72,11 @@ export type DatosEdicionExpedicion = {
 };
 
 export function obtenerExpedicion(id: string) {
-  return api.get<{ expedicion: PlanExpedicion }>(`/expediciones/${id}`, true);
+  return peticionApi<{ expedicion: PlanExpedicion }>(
+    `/expediciones/${id}`,
+    { method: 'GET', cache: 'no-store' },
+    true,
+  );
 }
 
 export function editarExpedicion(
