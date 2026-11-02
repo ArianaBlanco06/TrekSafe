@@ -29,6 +29,19 @@ function mismosElementos(a: string[], b: string[]): boolean {
   return a.length === b.length && [...a].sort().every((valor, i) => valor === ordenadaB[i]);
 }
 
+const TOLERANCIA_MAXIMA = 480;
+
+function validarTolerancia(valor: string): string {
+  if (!valor.trim()) return 'La tolerancia es obligatoria';
+  const minutos = Number(valor);
+  if (!Number.isInteger(minutos)) return 'La tolerancia debe ser un número entero de minutos';
+  if (minutos <= 0) return 'La tolerancia debe ser mayor que 0';
+  if (minutos > TOLERANCIA_MAXIMA) {
+    return `La tolerancia no puede superar los ${TOLERANCIA_MAXIMA} minutos`;
+  }
+  return '';
+}
+
 export function PaginaEditarExpedicion() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
@@ -44,7 +57,9 @@ export function PaginaEditarExpedicion() {
   const [errorCoordFin, setErrorCoordFin] = useState('');
   const [horaInicio, setHoraInicio] = useState('');
   const [horaRetornoEstimada, setHoraRetornoEstimada] = useState('');
-  const [minutosTolerancia, setMinutosTolerancia] = useState(30);
+  // Como texto, para permitir el campo vacío mientras se escribe; se valida al enviar.
+  const [minutosTolerancia, setMinutosTolerancia] = useState('30');
+  const [errorTolerancia, setErrorTolerancia] = useState('');
   const [idsContactos, setIdsContactos] = useState<string[]>([]);
   const [nombresAcompanantes, setNombresAcompanantes] = useState<string[]>(['']);
   const [objetivoSelector, setObjetivoSelector] = useState<CoordinatePickerTarget>('start');
@@ -80,7 +95,8 @@ export function PaginaEditarExpedicion() {
       setErrorCoordFin('');
       setHoraInicio(isoADatetimeLocal(expedicion.horaInicio));
       setHoraRetornoEstimada(isoADatetimeLocal(expedicion.horaRetornoEstimada));
-      setMinutosTolerancia(expedicion.minutosTolerancia);
+      setMinutosTolerancia(String(expedicion.minutosTolerancia));
+      setErrorTolerancia('');
       setIdsContactos(expedicion.idsContactos);
       setNombresAcompanantes(
         expedicion.nombresAcompanantes.length > 0 ? expedicion.nombresAcompanantes : [''],
@@ -113,7 +129,8 @@ export function PaginaEditarExpedicion() {
       coordenadasFin.trim() !== (plan.coordenadasFin ?? '') ||
       horaInicio !== isoADatetimeLocal(plan.horaInicio) ||
       horaRetornoEstimada !== isoADatetimeLocal(plan.horaRetornoEstimada) ||
-      minutosTolerancia !== plan.minutosTolerancia ||
+      minutosTolerancia.trim() === '' ||
+      Number(minutosTolerancia) !== plan.minutosTolerancia ||
       !mismosElementos(idsContactos, plan.idsContactos) ||
       !mismosElementos(acompanantesValidos, plan.nombresAcompanantes));
 
@@ -127,14 +144,17 @@ export function PaginaEditarExpedicion() {
     idsContactos.length > 0 &&
     acompanantesValidos.length > 0 &&
     !errorCoordInicio &&
-    !errorCoordFin;
+    !errorCoordFin &&
+    !errorTolerancia;
 
   const validarFormulario = (): boolean => {
     const errInicio = coordenadasInicio.trim() ? validateCoordinateInput(coordenadasInicio) : null;
     const errFin = coordenadasFin.trim() ? validateCoordinateInput(coordenadasFin) : null;
+    const errTolerancia = validarTolerancia(minutosTolerancia);
     setErrorCoordInicio(errInicio ?? '');
     setErrorCoordFin(errFin ?? '');
-    if (errInicio || errFin) return false;
+    setErrorTolerancia(errTolerancia);
+    if (errInicio || errFin || errTolerancia) return false;
 
     if (new Date(horaRetornoEstimada) <= new Date(horaInicio)) {
       setError('La hora de retorno debe ser posterior a la hora de salida');
@@ -158,7 +178,7 @@ export function PaginaEditarExpedicion() {
       coordenadasFin: coordenadasFin.trim() || undefined,
       horaInicio: new Date(horaInicio).toISOString(),
       horaRetornoEstimada: new Date(horaRetornoEstimada).toISOString(),
-      minutosTolerancia,
+      minutosTolerancia: Number(minutosTolerancia),
       idsContactos,
       nombresAcompanantes: acompanantesValidos,
       versionEsperada: plan.version,
@@ -251,7 +271,8 @@ export function PaginaEditarExpedicion() {
 
       {error && <div className="error-banner mb-4">{error}</div>}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      {/* noValidate: la validación nativa de min/max bloquearía el envío sin mostrar nuestros mensajes. */}
+      <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <div>
           <FieldLabel htmlFor="editar-lugar-inicio">Ubicación inicial</FieldLabel>
           <input
@@ -367,11 +388,17 @@ export function PaginaEditarExpedicion() {
             id="editar-tolerancia"
             type="number"
             min={1}
-            max={480}
-            className="input-field"
+            max={TOLERANCIA_MAXIMA}
+            className={`input-field ${errorTolerancia ? 'input-error' : ''}`}
             value={minutosTolerancia}
-            onChange={(e) => setMinutosTolerancia(Number(e.target.value))}
+            onChange={(e) => {
+              setMinutosTolerancia(e.target.value);
+              setErrorTolerancia('');
+            }}
+            aria-required="true"
+            aria-invalid={Boolean(errorTolerancia)}
           />
+          {errorTolerancia && <FieldError message={errorTolerancia} />}
         </div>
 
         <fieldset>
