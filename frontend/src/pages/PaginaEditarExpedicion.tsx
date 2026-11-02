@@ -24,6 +24,11 @@ function mensajeDeError(err: unknown, porDefecto: string): string {
   return err instanceof Error ? err.message : porDefecto;
 }
 
+function mismosElementos(a: string[], b: string[]): boolean {
+  const ordenadaB = [...b].sort();
+  return a.length === b.length && [...a].sort().every((valor, i) => valor === ordenadaB[i]);
+}
+
 export function PaginaEditarExpedicion() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
@@ -99,8 +104,22 @@ export function PaginaEditarExpedicion() {
 
   const acompanantesValidos = nombresAcompanantes.map((n) => n.trim()).filter((n) => n.length >= 2);
 
+  // Se compara con lo que el formulario mostró al cargar: el campo de hora no conserva los segundos.
+  const tieneCambios =
+    plan !== null &&
+    (lugarInicio.trim() !== plan.lugarInicio ||
+      lugarFin.trim() !== plan.lugarFin ||
+      coordenadasInicio.trim() !== (plan.coordenadasInicio ?? '') ||
+      coordenadasFin.trim() !== (plan.coordenadasFin ?? '') ||
+      horaInicio !== isoADatetimeLocal(plan.horaInicio) ||
+      horaRetornoEstimada !== isoADatetimeLocal(plan.horaRetornoEstimada) ||
+      minutosTolerancia !== plan.minutosTolerancia ||
+      !mismosElementos(idsContactos, plan.idsContactos) ||
+      !mismosElementos(acompanantesValidos, plan.nombresAcompanantes));
+
   const puedeEnviar =
     enLinea &&
+    tieneCambios &&
     lugarInicio.trim().length >= 3 &&
     lugarFin.trim().length >= 3 &&
     Boolean(horaInicio) &&
