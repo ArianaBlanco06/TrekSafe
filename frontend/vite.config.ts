@@ -26,7 +26,9 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'autoUpdate' recarga todas las ventanas abiertas al activarse un Service Worker nuevo, y eso
+      // descarta formularios a medio editar. Así, la versión nueva se activa al cerrar las pestañas.
+      registerType: 'prompt',
       includeAssets: ['favicon.svg'],
       manifest: {
         name: 'TrekSafe',
