@@ -20,6 +20,7 @@ export function errorHandler(
       error: err.name,
       mensaje: err.message,
       codigo: err.codigo,
+      ...err.extras,
     });
     return;
   }
