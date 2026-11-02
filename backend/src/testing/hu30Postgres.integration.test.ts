@@ -1,10 +1,8 @@
 import assert from 'node:assert/strict';
-import { randomUUID } from 'node:crypto';
 import { setTimeout as esperar } from 'node:timers/promises';
 import { after, before, describe, it, type TestContext } from 'node:test';
 import pg from 'pg';
-import { RepositorioListasEquipoSupabase } from '../infrastructure/repositories/RepositorioListasEquipoSupabase.js';
-import { clienteSupabasePostgresPruebas } from './clienteSupabasePostgresPruebas.js';
+import { crearPoolEquipoPruebas, contextoPostgresEquipoPruebas } from './contextoPostgresEquipoPruebas.js';
 import { verificarContratoListasEquipoDAO } from './contratoListasEquipoDAO.js';
 
 const conexionPruebas = process.env.HU30_TEST_DATABASE_URL;
@@ -12,26 +10,12 @@ const conexionPruebas = process.env.HU30_TEST_DATABASE_URL;
 describe('HU-30 PostgreSQL desechable', { skip: !conexionPruebas }, () => {
   let pool: pg.Pool;
   before(() => {
-    const url = new URL(conexionPruebas!);
-    if (!['127.0.0.1', 'localhost'].includes(url.hostname) || url.pathname !== '/treksafe_hu30_test') {
-      throw new Error('Estas pruebas requieren una base local desechable llamada treksafe_hu30_test.');
-    }
-    pool = new pg.Pool({ connectionString: conexionPruebas, max: 5 });
+    pool = crearPoolEquipoPruebas(conexionPruebas!);
   });
   after(async () => { await pool?.end(); });
 
   async function preparar(t: TestContext) {
-    const senderistaA = randomUUID();
-    const senderistaB = randomUUID();
-    for (const id of [senderistaA, senderistaB]) {
-      await pool.query('INSERT INTO public.usuarios(id,correo_electronico,hash_contrasena,rol) VALUES($1,$2,$3,$4)',
-        [id, `${id}@example.invalid`, 'fixture-no-login', 'senderista']);
-      await pool.query('INSERT INTO public.perfiles_senderista(usuario_id,nombre_completo,telefono,id_documento) VALUES($1,$2,$3,$4)',
-        [id, 'Prueba HU-30', '+51900000001', id.slice(0, 20)]);
-    }
-    t.after(async () => { await pool.query('DELETE FROM public.usuarios WHERE id = ANY($1::uuid[])', [[senderistaA, senderistaB]]); });
-    const dao = new RepositorioListasEquipoSupabase(clienteSupabasePostgresPruebas(pool));
-    return { dao, senderistaA, senderistaB };
+    return contextoPostgresEquipoPruebas(pool, t);
   }
 
   verificarContratoListasEquipoDAO('Contrato IListasEquipoDAO: SDK y PostgreSQL real mediante puente fetch', preparar);

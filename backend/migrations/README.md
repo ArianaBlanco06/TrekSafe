@@ -80,6 +80,8 @@ persistente y falla, ejecutar `ROLLBACK` antes de continuar.
 
 El script `backend/scripts/test-hu30-postgres.ps1` prepara y apaga automáticamente
 una instancia local desechable y ejecuta también las suites de contrato y HTTP.
+Desde la fase 7 requiere las dependencias de ambas carpetas y ejecuta también el
+frontend, incluyendo el recorrido integrado React, HTTP y PostgreSQL con dos usuarios.
 El alcance y los límites de estas comprobaciones se describen en la documentación
 de HU-30. No equivalen a una validación de PostgREST en Supabase DEV.
 

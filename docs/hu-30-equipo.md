@@ -13,8 +13,9 @@ listas inicialmente vacías y también quitar todos los ítems de una lista exis
 | 3 Esquema | Migración y pruebas locales PostgreSQL; aplicación en DEV pendiente de coordinación. |
 | 4 Reglas | Entidades, servicio y DAO de pruebas implementados; comprobación de tipos y pruebas aprobadas. |
 | 5 Persistencia y API | Adaptador, RPC y rutas comprobados localmente; aplicación y validación en Supabase DEV pendientes. |
-| 6 Interfaz | Pendiente: pantalla y acceso desde el perfil. |
-| 7 y 8 Integración y entrega | Pendientes de las capas anteriores y de las pruebas en DEV. |
+| 6 Interfaz | Pantalla y acceso desde el perfil implementados; pruebas de React aprobadas, revisión visual pendiente. |
+| 7 Validación | 80 pruebas locales aprobadas con Node 22; revisión visual y Supabase DEV pendientes. |
+| 8 Entrega | Pendiente de revisión, evidencia en DEV y aceptación del equipo. |
 
 ## Reglas y contrato
 
@@ -103,8 +104,8 @@ eliminación, conservación de datos ante errores y una eliminación entre lectu
 escritura. No requieren `.env`, Supabase ni correo.
 
 El 1 de noviembre de 2026 se verificaron tipos, compilación y 41 pruebas en Windows
-con Node 24.15.0, sin fallos: 35 pruebas nuevas y las 6 existentes. La ejecución con Node 22
-del entorno de referencia sigue pendiente. Estas pruebas no acreditan persistencia
+con Node 24.15.0, sin fallos: 35 pruebas nuevas y las 6 existentes. La validación
+posterior con Node 22 se recoge en la fase 7. Estas pruebas no acreditan persistencia
 remota ni aislamiento HTTP, que requieren la fase 5.
 
 ## API de la fase 5
@@ -166,4 +167,70 @@ carreras con bloqueo real de PostgreSQL: edición contra edición e intento de
 editar una lista eliminada. La comprobación final conservó solo las dos cuentas
 semilla, cero listas y cero ítems. También pasaron typecheck y compilación del
 backend, con Node 24.15.0; PostgreSQL local fue 18.1. Quedan pendientes la aplicación coordinada y
-la comprobación contra Supabase DEV, además de Node 22 y la interfaz.
+la comprobación contra Supabase DEV. La validación con Node 22 se completó en la fase 7.
+
+## Interfaz de la fase 6
+
+El senderista accede desde **Perfil → Listas de equipo**, en
+`/senderista/perfil/equipo`. Puede crear listas vacías, añadir o quitar ítems,
+cambiar su condición de obligatorio, editar listas y eliminarlas tras confirmar.
+Editar consulta primero la versión guardada; cancelar descarta solo el formulario.
+
+| Componente o módulo | Responsabilidad |
+| --- | --- |
+| `listasEquipoApi` | Adaptar las cinco operaciones HTTP y enviar el JWT. |
+| `useListasEquipo` | Coordinar carga, escrituras, errores y resultados; recibe `ListasEquipoApi`. |
+| `FormularioListaEquipo` | Mantener lo escrito, mostrar validaciones y emitir los datos del formulario. |
+| `listasEquipoFormulario` | Preparar una copia editable y serializar solo los campos autorizados. |
+| `PaginaListasEquipo` | Conectar sesión, API y presentación; reiniciar el estado privado al cambiar de usuario. |
+
+Los ids guardados se conservan al editar y las claves locales de React no salen
+en la solicitud. Los fallos de guardado conservan nombre e ítems; las escrituras
+simultáneas están bloqueadas. Una lectura anterior no puede sobrescribir el
+resultado de una escritura que terminó después. Hay estados separados de carga,
+colección vacía, error, reintento y confirmación de una operación exitosa.
+
+La pantalla permite continuar escribiendo en un formulario abierto sin conexión,
+pero guardar y eliminar requieren red. No persiste borradores ni añade una cola
+offline. Las lecturas usan `cache: no-store` y Workbox aplica `NetworkOnly` a estos
+endpoints para no guardar respuestas privadas en la caché compartida de la PWA.
+
+## Comprobaciones de la fase 6
+
+```powershell
+npm.cmd run test:equipo --prefix frontend
+npm.cmd run typecheck --prefix frontend
+npm.cmd run build --prefix frontend
+```
+
+Se añadieron herramientas de prueba de desarrollo compatibles con React 18 y el
+ejecutor Node: `react-test-renderer`, sus tipos, `tsx` y los tipos de Node 22.
+No se cargan en el código de la aplicación entregado al navegador.
+
+El 1 de noviembre de 2026 pasaron 19 pruebas del frontend con Node 24.15.0.
+Cubren listas vacías, ítems obligatorios y opcionales, ids retenidos, cancelación,
+errores de guardado, confirmación de eliminación simulada, reconexión, reintento,
+doble envío, lecturas antiguas y solicitudes HTTP autenticadas sin caché.
+
+Estas pruebas montan React con un contrato HTTP sustituido y eventos simulados;
+no son pruebas de navegador. La revisión visual en móvil y escritorio, incluyendo
+el tema oscuro y la navegación por teclado, queda pendiente: no había navegador
+habilitado en la sesión. Tampoco se comprobó aún el recorrido completo de la PWA
+contra Supabase DEV. Ambos puntos forman parte de la verificación de integración.
+
+## Verificación de la fase 7
+
+Se completó el recorrido local React → cliente HTTP → Express → DAO → PostgreSQL
+con dos usuarios ficticios y sesiones distintas del mismo usuario. Se aprobaron
+80 pruebas con Node 22.23.4 en Windows: 60 del backend y 20 del frontend, además
+de las pruebas SQL, ambos typecheck y ambos builds. Los scripts actuales también
+descubrieron correctamente las suites nuevas en ese entorno.
+
+El script PostgreSQL ahora ejecuta las pruebas de ambas carpetas antes de apagar
+su instancia temporal. Sin `HU30_TEST_DATABASE_URL`, las pruebas ordinarias omiten
+la suite de PostgreSQL y el nuevo recorrido integrado del frontend.
+
+La matriz de aceptación, comandos, entorno y limitaciones están en
+[Validación local de HU-30](hu-30-validacion.md). Supabase DEV y sus migraciones
+siguen pendientes por decisión de Jhon; la comprobación visual requiere un navegador
+habilitado. Esta evidencia local no marca la HU como aceptada o Done.

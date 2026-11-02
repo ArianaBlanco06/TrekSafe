@@ -47,6 +47,10 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api/],
         runtimeCaching: [
           {
+            urlPattern: ({ url }) => /^\/api\/usuario\/listas-equipo(?:\/|$)/.test(url.pathname),
+            handler: 'NetworkOnly',
+          },
+          {
             urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
             handler: 'NetworkFirst',
             options: {

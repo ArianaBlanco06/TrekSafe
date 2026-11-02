@@ -43,6 +43,8 @@ try {
     $env:HU30_TEST_DATABASE_URL = "postgresql://postgres@127.0.0.1:$testPort/treksafe_hu30_test"
     & npm.cmd test --prefix backend
     if ($LASTEXITCODE -ne 0) { throw 'Fallaron las pruebas del backend.' }
+    & npm.cmd run test:equipo --prefix frontend
+    if ($LASTEXITCODE -ne 0) { throw 'Fallaron las pruebas del frontend o el recorrido integrado.' }
     & (Join-Path $PostgresBin 'psql.exe') @argsSql -d treksafe_hu30_test -c 'SELECT (SELECT count(*) FROM public.usuarios) AS usuarios_semilla, (SELECT count(*) FROM public.listas_equipo) AS listas_restantes, (SELECT count(*) FROM public.items_lista_equipo) AS items_restantes;'
     if ($LASTEXITCODE -ne 0) { throw 'Fallo la comprobacion final.' }
 } finally {
