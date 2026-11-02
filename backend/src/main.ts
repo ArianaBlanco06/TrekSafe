@@ -6,7 +6,7 @@ import { iniciarCronFechaLimiteExpedicion } from './infrastructure/jobs/cronFech
 
 async function bootstrap() {
   loadEnv();
-  const { port, nodeEnv, mailDevFallback } = loadEnv();
+  const { port, nodeEnv, mailDevFallback, cronEnabled } = loadEnv();
 
   try {
     await verificarConexionBaseDatos();
@@ -26,7 +26,11 @@ async function bootstrap() {
     console.warn('[TrekSafe API] Advertencia de verificación de correo (desarrollo continúa):', err);
   }
 
-  iniciarCronFechaLimiteExpedicion();
+  if (cronEnabled) {
+    iniciarCronFechaLimiteExpedicion();
+  } else {
+    console.log('[Cron] desactivado (CRON_ENABLED=false)');
+  }
 
   const app = createApp();
   app.listen(port, '0.0.0.0', () => {
