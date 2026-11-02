@@ -151,7 +151,7 @@ Para HU-36 y HU-37 (lectura), y HU-27 y HU-35 (escritura). Se crea en `backend/m
 
 **Orden de lectura:** usa `ORDER BY ocurrido_en, id` junto con el filtro por `expedicion_id`; el índice `idx_eventos_plan_expedicion_orden` lo cubre. `id` no refleja el orden de inserción: solo desempata de forma estable.
 
-**Formato de `cambios`:** contiene únicamente los campos que cambiaron. Si la edición no cambió nada, el evento se registra con `{}` y la versión también aumenta.
+**Formato de `cambios`:** contiene únicamente los campos que cambiaron. Una edición sin cambios no registra evento ni aumenta la versión: devuelve la versión actual y su `operacion_id` no queda registrado.
 
 ```json
 {
