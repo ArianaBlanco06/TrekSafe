@@ -47,6 +47,11 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api/],
         runtimeCaching: [
           {
+            // El editor necesita una version vigente y aislada de la cache API.
+            urlPattern: ({ url }) => /\/expediciones\/[^/]+\/puntos\/?$/.test(url.pathname),
+            handler: 'NetworkOnly',
+          },
+          {
             urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
             handler: 'NetworkFirst',
             options: {

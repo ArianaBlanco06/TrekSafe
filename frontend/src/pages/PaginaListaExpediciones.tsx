@@ -102,6 +102,12 @@ export function PaginaListaExpediciones() {
                     <ChevronRight size={16} />
                   </p>
                 )}
+                {exp.estado === 'programada' && (
+                  <Link to={`/senderista/expedicion/${exp.id}/puntos`}
+                    className="mt-3 flex min-h-11 items-center gap-1 text-sm font-semibold text-primary">
+                    Gestionar puntos <ChevronRight size={16} aria-hidden="true" />
+                  </Link>
+                )}
               </div>
             );
 

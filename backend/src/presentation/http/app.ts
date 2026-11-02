@@ -10,6 +10,8 @@ import { crearRutasAutenticacion } from './routes/rutasAutenticacion.js';
 import { crearRutasExpedicion } from './routes/rutasExpedicion.js';
 import { crearRutasRescate } from './routes/rutasRescate.js';
 import { crearRutasUsuario } from './routes/rutasUsuario.js';
+import { crearRutasPuntosRuta } from './routes/rutasPuntosRuta.js';
+import { crearServicioPuntosRuta } from '../../infrastructure/composition/puntosRuta.js';
 
 export function createApp() {
   const env = loadEnv();
@@ -37,6 +39,7 @@ export function createApp() {
 
   app.use(`${env.apiPrefix}/auth`, limiteTasaAuth, crearRutasAutenticacion());
   app.use(`${env.apiPrefix}/usuario`, crearRutasUsuario());
+  app.use(`${env.apiPrefix}/expediciones`, crearRutasPuntosRuta(crearServicioPuntosRuta()));
   app.use(`${env.apiPrefix}/expediciones`, crearRutasExpedicion());
   app.use(`${env.apiPrefix}/rescate`, crearRutasRescate());
 

@@ -31,12 +31,15 @@ export function parseDecimalCoordinates(value: string): ParsedCoordinates | null
 }
 
 export function isValidPeruCoordinates(lat: number, lon: number): boolean {
-  return (
-    lat >= PERU_LAT_MIN &&
-    lat <= PERU_LAT_MAX &&
-    lon >= PERU_LON_MIN &&
-    lon <= PERU_LON_MAX
-  );
+  return isValidPeruLatitude(lat) && isValidPeruLongitude(lon);
+}
+
+export function isValidPeruLatitude(lat: number): boolean {
+  return lat >= PERU_LAT_MIN && lat <= PERU_LAT_MAX;
+}
+
+export function isValidPeruLongitude(lon: number): boolean {
+  return lon >= PERU_LON_MIN && lon <= PERU_LON_MAX;
 }
 
 export function validateCoordinateInput(value: string): string | null {
