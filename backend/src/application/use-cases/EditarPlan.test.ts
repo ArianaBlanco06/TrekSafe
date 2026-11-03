@@ -101,6 +101,10 @@ class ExpedicionDAOEnMemoria implements IExpedicionDAO {
     this.operaciones.set(comando.operacionId, { ...resultado, senderistaId: comando.senderistaId });
     return resultado;
   }
+
+  async cancelarPlan(): Promise<never> {
+    throw new Error('HU-27: estas pruebas no cancelan planes (ver CancelarPlan.test.ts)');
+  }
 }
 
 function planInicial(cambios: Partial<PlanExpedicion> = {}): PlanExpedicion {
