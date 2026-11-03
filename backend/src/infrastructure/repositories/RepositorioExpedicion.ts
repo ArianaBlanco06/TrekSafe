@@ -24,6 +24,8 @@ type FilaExpedicionActiva = FilaExpedicion & {
   vinculos_expedicion_contacto: {
     contactos_emergencia: { nombre_completo: string; correo_electronico: string } | null;
   }[];
+  /** HU-35: solo el tipo, para contar las ampliaciones del retorno. */
+  eventos_plan?: { tipo: string }[];
 };
 
 export class RepositorioExpedicion {
@@ -166,7 +168,8 @@ export class RepositorioExpedicion {
         acompanantes_expedicion ( nombre_acompanante ),
         vinculos_expedicion_contacto (
           contactos_emergencia ( nombre_completo, correo_electronico )
-        )
+        ),
+        eventos_plan ( tipo )
       `,
       )
       .eq('senderista_id', senderistaId)
