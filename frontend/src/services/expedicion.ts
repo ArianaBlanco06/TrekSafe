@@ -26,6 +26,8 @@ export type ExpedicionActiva = {
   cantidadContactos: number;
   acompanantes: string[];
   contactos: { nombreCompleto: string; correoElectronico: string }[];
+  /** HU-35: ampliaciones del retorno que aún puede usar. */
+  ampliacionesRestantes: number;
 };
 
 export function obtenerExpediciones() {
@@ -113,6 +115,35 @@ export function cancelarExpedicion(
   return api.post<{ mensaje: string; expedicion: ResultadoCancelacion }>(
     `/expediciones/${id}/cancelar`,
     { operacionId, ...(motivoLimpio ? { motivo: motivoLimpio } : {}) },
+    true,
+  );
+}
+
+/** Mismos límites que `ampliarRetornoSchema` en el backend (HU-35). */
+export const MIN_MINUTOS_AMPLIACION = 1;
+export const MAX_MINUTOS_AMPLIACION = 120;
+export const MIN_MOTIVO_AMPLIACION = 3;
+export const MAX_MOTIVO_AMPLIACION = 200;
+
+export type ResultadoAmpliacionRetorno = {
+  id: string;
+  version: number;
+  horaRetornoEstimada: string;
+  fechaLimite: string;
+};
+
+/**
+ * HU-35. El `operacionId` debe generarse una sola vez por intento y reutilizarse en
+ * los reintentos: así un doble toque no suma los minutos dos veces.
+ */
+export function ampliarRetorno(
+  id: string,
+  datos: { versionEsperada: number; minutos: number; motivo: string },
+  operacionId: string = crypto.randomUUID(),
+) {
+  return api.post<{ mensaje: string; expedicion: ResultadoAmpliacionRetorno }>(
+    `/expediciones/${id}/ampliar-retorno`,
+    { ...datos, motivo: datos.motivo.trim(), operacionId },
     true,
   );
 }
