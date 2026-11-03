@@ -17,11 +17,11 @@ El SQL es incremental: conserva las tablas y datos del esquema base. No modifica
 
 ## 2. Requisito de versión y coordinación
 
-El contrato preparado utiliza `public.expediciones.version BIGINT NOT NULL` con default. La migración comprueba ese requisito antes de crear objetos. Si falta, emite `HU32_VERSION_REQUERIDA` y revierte toda la migración.
+El contrato preparado utiliza `public.expediciones.version INTEGER NOT NULL` con default, siguiendo la indicación del equipo del 3 de noviembre de 2026 para compatibilidad con HU-26. La migración comprueba ese requisito antes de crear objetos. Si falta o el tipo difiere, emite `HU32_VERSION_REQUERIDA` y revierte toda la migración.
 
-La columna no se crea desde la migración de HU-32. Su migración de origen y la semántica compartida siguen pendientes de acuerdo con Favio y Sebastian. Las pruebas añaden la columna con valor inicial 1 exclusivamente a la base temporal después de verificar el rechazo del esquema sin versión. Ese fixture no es una decisión ya integrada por el equipo.
+La columna no se crea desde la migración de HU-32: debe aportarla HU-26. Las pruebas añaden la columna INTEGER con valor inicial 1 exclusivamente a la base temporal después de verificar el rechazo del esquema sin versión y del tipo incorrecto. Ese fixture no aplica la migración del equipo en DEV.
 
-Esta preparación permite revisar y demostrar la persistencia sin atribuir a HU-32 la modificación unilateral del contrato de otras historias. Antes de aplicar en DEV se deben confirmar nombre/tipo, qué cambios incrementan la versión y orden de migraciones. Si el acuerdo difiere, ajustar SQL, contrato y pruebas.
+Esta preparación permite revisar la persistencia conforme al nombre/tipo indicados por el equipo. Antes de aplicar en DEV se deben coordinar qué cambios incrementan la versión y el orden de migraciones. La validación posterior al ajuste está en [ajuste INTEGER](ajuste-integer.md); los resultados de la fase original se conservan como registro histórico.
 
 ## 3. Comportamiento implementado en SQL
 

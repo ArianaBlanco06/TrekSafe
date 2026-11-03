@@ -15,7 +15,7 @@ type Contexto = {
   repo: IConsultaPuntosRuta & IGuardadoPuntosRuta;
   planId: string;
   otroPlanId: string;
-  cambiar: (cambios: Partial<Pick<RutaConPuntos['expedicion'], 'estado' | 'horaInicio'>>) => Promise<void>;
+  cambiar: (cambios: Partial<Pick<RutaConPuntos['expedicion'], 'estado' | 'horaInicio' | 'version'>>) => Promise<void>;
   cerrar: () => Promise<void>;
 };
 
@@ -79,15 +79,35 @@ async function escenarioSql(): Promise<Contexto> {
   });
   return {
     repo, planId, otroPlanId,
-    cambiar: async ({ estado, horaInicio }) => {
+    cambiar: async ({ estado, horaInicio, version }) => {
       await admin.query(`UPDATE public.expediciones SET estado=coalesce($2::public.estado_expedicion_enum,estado),
-        hora_inicio=coalesce($3::timestamptz,hora_inicio) WHERE id=$1`, [planId, estado, horaInicio]);
+        hora_inicio=coalesce($3::timestamptz,hora_inicio), version=coalesce($4::integer,version)
+        WHERE id=$1`, [planId, estado, horaInicio, version]);
     },
     cerrar: async () => { await admin.end(); },
   };
 }
 
 const contrato: Array<[string, (ctx: Contexto) => Promise<void>]> = [
+  ['ultimo incremento INTEGER y no-op en la version maxima', async ({ repo, planId, cambiar }) => {
+    await cambiar({ version: 2_147_483_646 });
+    const puntos = [puntoFixture()];
+    const result = await repo.guardarColeccionPropia({ senderistaId: actor, expedicionId: planId,
+      versionEsperada: 2_147_483_646, puntos });
+    assert.equal(result.tipo, 'guardado');
+    if (result.tipo !== 'guardado') return;
+    assert.equal(result.ruta.expedicion.version, 2_147_483_647);
+    const same = await repo.guardarColeccionPropia({ senderistaId: actor, expedicionId: planId,
+      versionEsperada: 2_147_483_647, puntos });
+    assert.deepEqual(same, result);
+  }],
+  ['rango INTEGER agotado no modifica la coleccion', async ({ repo, planId, cambiar }) => {
+    await cambiar({ version: 2_147_483_647 });
+    const before = await repo.consultarPropia(actor, planId);
+    await assert.rejects(repo.guardarColeccionPropia({ senderistaId: actor, expedicionId: planId,
+      versionEsperada: 2_147_483_647, puntos: [puntoFixture()] }));
+    assert.deepEqual(await repo.consultarPropia(actor, planId), before);
+  }],
   ['consulta vacia y privada', async ({ repo, planId }) => {
     assert.deepEqual((await repo.consultarPropia(actor, planId))!.puntos, []);
     assert.equal(await repo.consultarPropia(otro, planId), null);

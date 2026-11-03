@@ -2,6 +2,8 @@
 
 Fecha: 1 de noviembre de 2026. Responsable: Andriy Hitoshi Enciso Rojas (@Hitoshi).
 
+Actualización posterior: el 3 de noviembre de 2026 se adaptó HU-32 al acuerdo `expediciones.version INTEGER` y se repitió la validación completa con éxito. Los resultados actuales están en [ajuste INTEGER](ajuste-integer.md); este documento conserva el registro de la fase original.
+
 Estado: validación completa aprobada en un entorno local aislado con Node 22, API de producción, cliente Supabase, PostgREST nativo, PostgreSQL temporal y PWA con service worker activo. La base DEV de Supabase no se modificó. El acuerdo de versión y la integración con las historias de otros integrantes siguen pendientes antes de aplicar allí la migración.
 
 ## 1. Recorrido probado

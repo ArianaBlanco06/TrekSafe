@@ -4,6 +4,19 @@ import { RepositorioPuntosRuta } from './RepositorioPuntosRuta.js';
 import { rutaFixture, puntoFixture, senderistaFixture } from '../../testing/puntosRuta/fixtures.js';
 
 describe('RepositorioPuntosRuta: frontera RPC', () => {
+  it('rechaza versiones fuera del contrato INTEGER en las respuestas RPC', async () => {
+    for (const version of [0, -1, 1.5, 2_147_483_648]) {
+      const ruta = rutaFixture();
+      ruta.expedicion.version = version;
+      const repo = new RepositorioPuntosRuta({
+        rpc: async (nombre) => ({ error: null,
+          data: nombre === 'treksafe_consultar_puntos_ruta' ? ruta : { tipo: 'guardado', ruta } }),
+      });
+      await assert.rejects(repo.consultarPropia(senderistaFixture, ruta.expedicion.id));
+      await assert.rejects(repo.guardarColeccionPropia({ senderistaId: senderistaFixture,
+        expedicionId: ruta.expedicion.id, versionEsperada: 1, puntos: [] }));
+    }
+  });
   it('usa nombres y parametros SQL exactos y normaliza timestamps', async () => {
     const ruta = rutaFixture();
     ruta.expedicion.horaInicio = '2099-01-01T07:00:00-05:00';

@@ -1,6 +1,9 @@
 import type { EstadoExpedicion } from '../value-objects/enums.js';
 import type { PuntoRuta } from './PuntoRuta.js';
 
+// Limite de expediciones.version INTEGER, compartido con HU-26.
+export const MAX_VERSION_PLAN = 2_147_483_647;
+
 export type RutaConPuntos = {
   expedicion: {
     id: string;

@@ -133,6 +133,7 @@ test('JWT, roles, propiedad, límite y permisos se verifican en toda la cadena',
   expect((await request.get(apiPath, { headers: headers(rescue) })).status()).toBe(403);
   expect((await request.get(apiPath, { headers: headers(other) })).status()).toBe(404);
   for (const data of [
+    { versionEsperada: 2_147_483_648, puntos: [] },
     { versionEsperada: 1, puntos: Array.from({ length: 21 }, (_, i) => point(i + 1)) },
     { versionEsperada: 1, puntos: [point()], senderistaId: other.usuario.id },
     { versionEsperada: 1, puntos: [{ ...point(), latitud: 0.500000001 }] },

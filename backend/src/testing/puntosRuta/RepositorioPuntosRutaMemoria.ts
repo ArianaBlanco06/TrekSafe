@@ -3,6 +3,7 @@ import type {
 } from '../../application/ports/puntosRuta.js';
 import { guardarPuntosRutaSchema } from '../../application/dto/puntosRuta.dto.js';
 import type { RutaConPuntos } from '../../domain/entities/RutaConPuntos.js';
+import { MAX_VERSION_PLAN } from '../../domain/entities/RutaConPuntos.js';
 
 // Doble para pruebas del contrato, no conectado al ensamblaje de produccion.
 export class RepositorioPuntosRutaMemoria implements IConsultaPuntosRuta, IGuardadoPuntosRuta {
@@ -57,7 +58,7 @@ export class RepositorioPuntosRutaMemoria implements IConsultaPuntosRuta, IGuard
         && p.longitud === anterior.longitud && p.orden === anterior.orden;
     });
     if (!mismos) {
-      if (plan.ruta.expedicion.version === Number.MAX_SAFE_INTEGER) throw new Error('Rango de versión agotado');
+      if (plan.ruta.expedicion.version === MAX_VERSION_PLAN) throw new Error('Rango de versión agotado');
       plan.ruta = { expedicion: { ...plan.ruta.expedicion, version: plan.ruta.expedicion.version + 1 }, puntos };
     }
     return { tipo: 'guardado', ruta: this.fotografia(plan.ruta) };

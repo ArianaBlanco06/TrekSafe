@@ -67,7 +67,7 @@ Una expedición ajena y una inexistente responden igual: `404 NO_ENCONTRADO`. Pa
 
 ## 5. Versión del plan: propuesta de coordinación
 
-La copia local no contiene un campo de versión. Se propone **una única versión del plan compartida con HU-26**, llamada `version` en los ejemplos, entera positiva, inicial 1. Su nombre físico, migración de origen y participación en otros cambios deben acordarse con Favio y Sebastian antes de aplicar el SQL en DEV compartido. Para avanzar con la fase 3 se prepara SQL revisable con una precondición explícita de versión y se valida en una instancia temporal con un fixture; esto no confirma el acuerdo compartido ni crea su migración por cuenta de HU-32.
+El equipo confirmó el 3 de noviembre de 2026 **una única versión del plan compartida con HU-26**, `expediciones.version INTEGER`. HU-32 exige una versión positiva en 1..2147483647, `NOT NULL` y default (fixture inicial: 1). La migración de HU-26 debe aportar la columna; HU-32 comprueba el requisito sin crearla ni cambiar su tipo. Queda coordinar con Favio y Sebastian el orden de aplicación y la participación de las demás operaciones en el incremento.
 
 Comportamiento que necesita HU-32:
 
@@ -147,7 +147,7 @@ Cabeceras: `Authorization: Bearer <JWT>` y `Content-Type: application/json`.
 }
 ```
 
-`versionEsperada` debe ser un entero positivo representable de forma segura en JavaScript. Respuesta `200`:
+`versionEsperada` debe ser un entero entre 1 y 2147483647, conforme a PostgreSQL `INTEGER`. Fuera de ese rango la API devuelve `400`. En la versión máxima un guardado idéntico conserva versión y datos; un cambio efectivo falla sin escrituras parciales. Respuesta `200`:
 
 ```json
 {
@@ -303,12 +303,12 @@ No se reutilizará `init_schema.sql` sobre DEV con datos. La fase 3 preparará S
 
 | Con quién | Decisión que debe confirmarse antes de integrar |
 | --- | --- |
-| Favio | Nombre y semántica de la versión única del plan; qué operaciones la incrementan; compatibilidad con edición/cancelación, bloqueos y conflictos. |
+| Favio | Tipo `INTEGER` y nombre `expediciones.version` confirmados por el equipo; revisar qué operaciones incrementan la versión y la compatibilidad con edición/cancelación, bloqueos y conflictos. |
 | Sebastian | Migración que crea la versión si no existe, orden de archivos, tabla/RPC, permisos y registro de aplicación. |
 | Marko como PO | Revisión de las interpretaciones propuestas: colección vacía, límite de nombre, precisión/geografía y salida futura. |
 
-Estos puntos se dejan como coordinación pendiente; no se contactó a los integrantes ni se comprobó su trabajo remoto. Los ejemplos de `version` concretan una propuesta verificable y deberán ajustarse si el contrato compartido usa otro nombre o semántica.
+El nombre y tipo siguen la indicación del equipo recibida en el chat. Los demás puntos requieren coordinación; no se contactó a los integrantes ni se comprobó su trabajo remoto.
 
 La fase 2 entrega el contrato documentado y ejemplos para revisar. La verificación de esta fase comprende consistencia de ejemplos y referencias; todavía no hay endpoints, migraciones o pruebas funcionales ejecutadas. Las dependencias locales y la línea base técnica continúan pendientes según fase 1.
 
-Continuación: [fase 3 — persistencia y validación SQL](fase-3-persistencia.md). La migración preparada requiere `expediciones.version BIGINT NOT NULL` con default y detiene su aplicación si falta ese requisito. El acuerdo compartido de versión y el orden de migraciones siguen pendientes de coordinación antes de aplicar en DEV. Git y la publicación permanecen a cargo de Andriy.
+Continuación: [fase 3 — persistencia y validación SQL](fase-3-persistencia.md). La migración preparada requiere `expediciones.version INTEGER NOT NULL` con default y detiene su aplicación si falta ese requisito. El orden de migraciones sigue pendiente de coordinación antes de aplicar en DEV. Véase el [ajuste de integración del PR #63](ajuste-integer.md).

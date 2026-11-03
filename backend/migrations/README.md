@@ -8,7 +8,9 @@ Esta carpeta inicia la propuesta local de migraciones incrementales de HU-32. Su
 2. Integrar la migracion de version del plan acordada con Favio y Sebastian.
 3. Revisar y aplicar `hu32_puntos_ruta.sql` una sola vez.
 
-El contrato preparado espera `public.expediciones.version BIGINT NOT NULL`, con un default acordado (propuesta: 1). HU-32 comprueba su existencia antes de crear objetos y agrega una restriccion de rango seguro para JavaScript: de 1 a 9007199254740991. No crea esa columna ni asume que ya fue aprobada por el equipo. Si el acuerdo usa otro nombre o tipo, adaptar esta migracion y el contrato antes de aplicarlos.
+El contrato compartido indicado por el equipo el 3 de noviembre de 2026 es `public.expediciones.version INTEGER`, siguiendo HU-26 de Favio. HU-32 requiere `NOT NULL` y default (fixture inicial: 1), comprueba el tipo exacto antes de crear objetos y restringe las versiones positivas a 1..2147483647. La migracion de HU-26 debe aportar la columna; HU-32 no la crea ni cambia su tipo. Confirmar con Sebastian el orden y la aplicacion en DEV.
+
+El ajuste INTEGER paso la validacion completa: 39 comprobaciones SQL, 28 pruebas de contrato y las suites backend/UI/integracion. Resultados y alcance en [ajuste INTEGER](../../docs/hu-32/ajuste-integer.md).
 
 La migracion se ejecuta dentro de `BEGIN`/`COMMIT`. Ante un requisito ausente o un error, se revierte completa. Un segundo intento sobre una migracion ya aplicada falla en lugar de ocultar diferencias de esquema mediante `IF NOT EXISTS`.
 
@@ -22,7 +24,7 @@ La migracion se ejecuta dentro de `BEGIN`/`COMMIT`. Ante un requisito ausente o 
 | `treksafe_normalizar_nombre_punto(text)` | Normalizacion de espacios equivalente a `String.trim()` de JavaScript. |
 | `treksafe_validar_puntos_ruta(jsonb)` | Validacion pura y coleccion canonica; conserva indices del arreglo original en los errores. |
 | `treksafe_consultar_puntos_ruta(uuid, uuid)` | Fotografia privada de contexto, version y puntos ordenados, en una sola sentencia. |
-| `treksafe_guardar_puntos_ruta(uuid, uuid, bigint, jsonb)` | Bloqueo del plan y actualizacion atomica de la coleccion, con verificacion de version, estado, hora e IDs. |
+| `treksafe_guardar_puntos_ruta(uuid, uuid, integer, jsonb)` | Bloqueo del plan y actualizacion atomica de la coleccion, con verificacion de version, estado, hora e IDs. |
 
 Las funciones de normalizacion/validacion no son RPC para clientes. `anon` y `authenticated` no tienen privilegios en los objetos nuevos. `service_role` solo puede ejecutar consulta/guardado; no puede acceder directamente a `puntos_ruta`. Las dos RPC usan `SECURITY DEFINER`, nombres de tabla/funcion calificados y un `search_path` fijo. El propietario que aplica la migracion debe ser un rol confiable con acceso al esquema base y capacidad para definir estos permisos.
 
@@ -51,6 +53,7 @@ Los errores SQL inesperados se propagan para que se revierta la transaccion; la 
 - El intercambio de posiciones usa una restriccion unica diferible. Se actualizan las filas existentes conservando su identidad; no se borran para recrearlas al reordenar.
 - Los puntos omitidos se eliminan. Nombres y coordenadas se normalizan antes de comparar. Si la coleccion canonica es identica y la version esta vigente, no cambian la version ni `actualizado_en`.
 - Un cambio efectivo actualiza version y metadatos con los puntos. Un fallo, incluida una colision concurrente de UUID, no deja bajas o cambios parciales.
+- Con version 2147483647 se admite un guardado identico; un cambio efectivo falla sin escribir puntos ni metadatos. La API rechaza versiones fuera de 1..2147483647 con 400; una llamada SQL directa fuera del rango INTEGER falla en la conversion del argumento antes de ejecutar la RPC.
 - La restriccion de orden se verifica antes de devolver exito; una violacion inesperada aborta la operacion.
 
 ## Pruebas locales reproducibles

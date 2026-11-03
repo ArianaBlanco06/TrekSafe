@@ -1,10 +1,11 @@
 import { z } from 'zod';
+import { MAX_VERSION_PLAN } from '../../domain/entities/RutaConPuntos.js';
 import { isValidPeruLatitude, isValidPeruLongitude } from '../../shared/utils/coordinates.js';
 
 export const idExpedicionPuntosSchema = z.string().uuid('ID de expedición inválido')
   .transform((id) => id.toLowerCase());
 export const parametrosPuntosRutaSchema = z.object({ id: idExpedicionPuntosSchema });
-export const versionPuntosSchema = z.number().int().positive().safe();
+export const versionPuntosSchema = z.number().int().min(1).max(MAX_VERSION_PLAN);
 
 const nombreSchema = z.string().trim().superRefine((nombre, ctx) => {
   const caracteres = Array.from(nombre);

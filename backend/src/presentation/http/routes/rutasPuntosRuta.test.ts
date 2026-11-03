@@ -113,16 +113,28 @@ describe('HTTP de puntos con JWT y servicio reales', () => {
     assert.equal(invalidBody.status, 400);
     assert.ok((await leerError(invalidBody)).detalles._cuerpo);
   });
-  it('rechaza exceso de puntos, version insegura y datos medicos/estado adicionales', async () => {
+  it('rechaza exceso de puntos, version fuera de INTEGER y datos medicos/estado adicionales', async () => {
     for (const body of [
       { versionEsperada: 1, puntos: Array.from({ length: 21 }, (_, i) => puntoFixture(i + 1)) },
-      { versionEsperada: Number.MAX_SAFE_INTEGER + 1, puntos: [] },
+      ...[0, -1, 1.5, 2_147_483_648, Number.MAX_SAFE_INTEGER + 1].map(versionEsperada => ({ versionEsperada, puntos: [] })),
       { versionEsperada: 1, puntos: [], estado: 'completada', fichaMedica: {} },
     ]) {
       const response = await put(body);
       assert.equal(response.status, 400);
       assert.equal((await leerError(response)).codigo, 'DATOS_PUNTOS_INVALIDOS');
     }
+  });
+  it('acepta el limite INTEGER y evita escrituras al agotar su rango', async (ctx) => {
+    ctx.mock.method(console, 'error', () => {});
+    repo.cambiarContexto(ruta.expedicion.id, { version: 2_147_483_646 });
+    const puntos = [puntoFixture()];
+    const ultimo = await put({ versionEsperada: 2_147_483_646, puntos });
+    assert.equal(ultimo.status, 200);
+    assert.equal((await leerRuta(ultimo)).expedicion.version, 2_147_483_647);
+    const before = await repo.consultarPropia(actor, ruta.expedicion.id);
+    assert.equal((await put({ versionEsperada: 2_147_483_647, puntos })).status, 200);
+    assert.equal((await put({ versionEsperada: 2_147_483_647, puntos: [] })).status, 500);
+    assert.deepEqual(await repo.consultarPropia(actor, ruta.expedicion.id), before);
   });
   it('conflicto de version devuelve 409 y conserva la coleccion guardada', async () => {
     const puntos = [puntoFixture()];

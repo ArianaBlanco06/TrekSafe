@@ -34,7 +34,10 @@ describe('ServicioPuntosRuta', () => {
   const invalidos: Array<[string, () => unknown]> = [
     ['propietario agregado al cuerpo', () => ({ versionEsperada: 1, puntos: [], senderistaId: 'otro' })],
     ['coleccion omitida', () => ({ versionEsperada: 1 })],
-    ['version insegura', () => ({ versionEsperada: Number.MAX_SAFE_INTEGER + 1, puntos: [] })],
+    ['version superior a INTEGER', () => ({ versionEsperada: 2_147_483_648, puntos: [] })],
+    ['version cero', () => ({ versionEsperada: 0, puntos: [] })],
+    ['version negativa', () => ({ versionEsperada: -1, puntos: [] })],
+    ['version fraccionaria', () => ({ versionEsperada: 1.5, puntos: [] })],
     ['version como cadena', () => ({ versionEsperada: '1', puntos: [] })],
     ['coordenada como cadena', () => ({ versionEsperada: 1, puntos: [{ ...puntoFixture(), latitud: '-9' }] })],
     ['coordenada infinita', () => ({ versionEsperada: 1, puntos: [puntoFixture(1, { longitud: Infinity })] })],

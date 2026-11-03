@@ -4,6 +4,8 @@ Fecha: 1 de noviembre de 2026. Responsable: Andriy Hitoshi Enciso Rojas (@Hitosh
 
 Estado: paquete de entrega local completado. El material permite revisar y demostrar la implementación; no registra aceptación del PO, aprobación externa, integración en DEV o publicación de un PR.
 
+Actualización posterior, 3 de noviembre de 2026: Andriy comunicó el PR #63 y el acuerdo de usar `expediciones.version INTEGER` como HU-26. La adaptación y su verificación se registran en [ajuste INTEGER](ajuste-integer.md). Los estados y resultados siguientes describen el cierre original de esta fase.
+
 ## 1. Material preparado
 
 | Entregable | Archivo |

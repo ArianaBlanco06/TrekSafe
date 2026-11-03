@@ -29,7 +29,7 @@ Completar estos requisitos con el equipo antes de levantar otra API contra su ba
 
 | Requisito | Comprobación |
 | --- | --- |
-| Versión del plan | Favio/Sebastian confirman nombre, tipo, default y semántica. El SQL preparado espera `version BIGINT NOT NULL` con default; la propuesta inicial es 1. |
+| Versión del plan | El equipo confirmó `expediciones.version INTEGER`, conforme a HU-26. HU-32 requiere `NOT NULL` y default (fixture inicial: 1); coordinar con Favio/Sebastian la aplicación previa y reglas de incremento. |
 | Migraciones | La versión compartida precede a HU-32 y Sebastian registra su aplicación. No ejecutar `init_schema.sql` sobre DEV con trabajo existente. |
 | API y cron | Usar la API coordinada. Si todavía no está integrado TECH #55, no asumir que escribir `CRON_ENABLED=false` desactiva el código histórico. |
 | Datos | Dos cuentas senderistas ficticias. La cuenta principal tiene un contacto vigente y una expedición programada con salida futura y acompañante. |

@@ -93,7 +93,7 @@ const otherPlan = 'b1d0d5c0-8327-4af1-9cc1-2e83ae7e0321';
 const readCall = (id = plan, actor = owner) =>
   `public.treksafe_consultar_puntos_ruta('${actor}', '${id}')`;
 const saveCall = (points, version, id = plan, actor = owner) =>
-  `public.treksafe_guardar_puntos_ruta('${actor}', '${id}', ${version === null ? 'NULL' : version}, ${jsonSql(points)})`;
+  `public.treksafe_guardar_puntos_ruta('${actor}', '${id}', ${version === null ? 'NULL' : version}::integer, ${jsonSql(points)})`;
 const read = async (id = plan, actor = owner) =>
   JSON.parse(await sql(`SET ROLE service_role; SELECT coalesce(${readCall(id, actor)}, 'null'::jsonb);`));
 const save = async (points, version, id = plan, actor = owner) =>
@@ -165,8 +165,20 @@ try {
     assert.equal(await sql('SELECT count(*) FROM public.usuarios;'), '2');
   });
   // Fixture exclusivo del test. No es una migracion de version para el equipo.
-  await sql('ALTER TABLE public.expediciones ADD COLUMN version bigint NOT NULL DEFAULT 1;');
+  await test('precondicion: rechaza BIGINT y revierte sin crear objetos HU-32', async () => {
+    await sql('ALTER TABLE public.expediciones ADD COLUMN version bigint NOT NULL DEFAULT 1;');
+    await assert.rejects(sql(migration), /HU32_VERSION_REQUERIDA/);
+    assert.equal(await sql("SELECT to_regclass('public.puntos_ruta') IS NULL;"), 't');
+    assert.equal(await sql("SELECT to_regprocedure('public.treksafe_guardar_puntos_ruta(uuid,uuid,integer,jsonb)') IS NULL;"), 't');
+    await sql('ALTER TABLE public.expediciones DROP COLUMN version;');
+  });
+  await sql('ALTER TABLE public.expediciones ADD COLUMN version integer NOT NULL DEFAULT 1;');
   await sql(migration);
+  await test('contrato de catalogo: columna y RPC INTEGER sin sobrecarga BIGINT', async () => {
+    assert.equal(await sql("SELECT atttypid='integer'::regtype FROM pg_attribute WHERE attrelid='public.expediciones'::regclass AND attname='version';"), 't');
+    assert.equal(await sql("SELECT to_regprocedure('public.treksafe_guardar_puntos_ruta(uuid,uuid,integer,jsonb)') IS NOT NULL;"), 't');
+    assert.equal(await sql("SELECT to_regprocedure('public.treksafe_guardar_puntos_ruta(uuid,uuid,bigint,jsonb)') IS NULL;"), 't');
+  });
   await sql(`INSERT INTO public.usuarios(id,correo_electronico,hash_contrasena,rol)
     VALUES ('${other}','otro@example.invalid','fixture','senderista');
     INSERT INTO public.perfiles_senderista(usuario_id,nombre_completo,telefono,id_documento)
@@ -253,7 +265,13 @@ try {
   }
   await test('version nula o fuera de rango', async () => {
     await invalidUnchanged([], null);
-    await invalidUnchanged([], 9007199254740992n);
+    await invalidUnchanged([], 0);
+    await invalidUnchanged([], -1);
+    const before = await snapshot();
+    for (const version of [2147483648, -2147483649]) {
+      await assert.rejects(save([], version), /out of range|fuera de rango/i);
+      assert.deepEqual(await snapshot(), before);
+    }
   });
   await test('ID de otra expedicion no se traslada ni revela datos', async () => {
     const foreign = point(1);
@@ -362,13 +380,27 @@ try {
         assert.equal(await sql(`SELECT has_table_privilege('${role}','public.puntos_ruta','${privilege}');`), 'f');
       }
       const expected = role === 'service_role' ? 't' : 'f';
-      for (const signature of ['treksafe_consultar_puntos_ruta(uuid,uuid)', 'treksafe_guardar_puntos_ruta(uuid,uuid,bigint,jsonb)']) {
+      for (const signature of ['treksafe_consultar_puntos_ruta(uuid,uuid)', 'treksafe_guardar_puntos_ruta(uuid,uuid,integer,jsonb)']) {
         assert.equal(await sql(`SELECT has_function_privilege('${role}','public.${signature}','EXECUTE');`), expected);
       }
       await assert.rejects(sql(`SET ROLE ${role}; SELECT * FROM public.puntos_ruta;`), /permission denied|permiso denegado/i);
     }
     assert.equal(await sql("SELECT relrowsecurity FROM pg_class WHERE oid='public.puntos_ruta'::regclass;"), 't');
     await assert.rejects(sql(`SET ROLE anon; SELECT ${readCall()};`), /permission denied|permiso denegado/i);
+  });
+  await test('ultimo incremento INTEGER y no-op en el maximo conservan el contrato', async () => {
+    await sql(`UPDATE public.expediciones SET version=2147483646 WHERE id='${plan}';`);
+    const result = await save([point(1, { nombre: 'Ultima version' })], 2147483646);
+    assert.equal(result.tipo, 'guardado');
+    assert.equal(result.ruta.expedicion.version, 2147483647);
+    const before = await snapshot();
+    assert.equal((await save(result.ruta.puntos, 2147483647)).tipo, 'guardado');
+    assert.deepEqual(await snapshot(), before);
+  });
+  await test('rango INTEGER agotado rechaza cambios sin tocar puntos ni metadatos', async () => {
+    const before = await snapshot();
+    await assert.rejects(save([], 2147483647), /Se agoto el rango de version del plan/);
+    assert.deepEqual(await snapshot(), before);
   });
   if (withBackend) {
     env.TREKSAFE_HU32_TEST_PG = JSON.stringify({ host: '127.0.0.1', port, user, database: 'postgres' });

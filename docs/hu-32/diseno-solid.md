@@ -43,7 +43,7 @@ El ensamblaje de infraestructura construye el repositorio Supabase y lo inyecta 
 | --- | --- | --- |
 | **SRP**, p. 40 | Separar recepción HTTP, validación, coordinación de negocio y persistencia permite cambiar cada responsabilidad de forma acotada. | `controladorPuntosRuta.ts`, `puntosRuta.dto.ts`, `ServicioPuntosRuta` y `RepositorioPuntosRuta`. Pruebas independientes del servicio, adaptador y rutas. |
 | **OCP**, p. 46 | El caso de uso consume contratos de datos estables. Se puede conectar otra implementación conservando su lógica. | Puertos de consulta/guardado; el mismo servicio recibe colaboradores sustitutos en `servicioPuntosRuta.test.ts`. La extensión demostrada es la persistencia. |
-| **LSP**, p. 52 | Sustituir una implementación exige conservar resultados, rechazos, IDs y reglas de versión; compartir firmas no basta. | Los mismos 12 escenarios de `contratoPuntosRuta.test.ts` pasan en memoria y PostgreSQL. El redondeo decimal del sustituto respeta los empates negativos del servidor. Las pruebas SQL añaden rollback y concurrencia reales. |
+| **LSP**, p. 52 | Sustituir una implementación exige conservar resultados, rechazos, IDs y reglas de versión; compartir firmas no basta. | `contratoPuntosRuta.test.ts` ejecuta los mismos escenarios en memoria y PostgreSQL: 12 originales más dos para el límite INTEGER. El redondeo decimal del sustituto respeta los empates negativos del servidor. Las pruebas SQL añaden rollback y concurrencia reales. |
 | **ISP**, p. 58 | Lectura y escritura tienen contratos pequeños; no obligan a implementar correo, rescate o salud. | `IConsultaPuntosRuta` e `IGuardadoPuntosRuta` tienen una operación cada una. Una prueba inyecta lectores y escritores separados. |
 | **DIP**, p. 64 | La aplicación recibe interfaces mediante constructor. Los detalles Supabase se conectan fuera del servicio. | `servicioPuntosRuta.ts` no importa infraestructura, Express ni repositorios concretos. `infrastructure/composition/puntosRuta.ts` realiza el ensamblaje. |
 
@@ -65,7 +65,7 @@ Las interfaces especializadas cumplen el papel de acceso a datos previsto para H
 
 **Identidad separada de posición.** El UUID del punto permanece al editar o reordenar. La restricción de orden es diferible durante la actualización, por lo que intercambiar posiciones no exige borrar y recrear puntos. Esto conserva referencias que utilizará HU-34.
 
-**Versión única compartida.** HU-32 propone consumir la misma versión del plan que HU-26. La migración exige su existencia, pero no la crea unilateralmente. Los tests usan un fixture; la coordinación con Favio y Sebastian sigue pendiente antes de DEV.
+**Versión única compartida.** HU-32 consume `expediciones.version INTEGER`, conforme al acuerdo del equipo del 3 de noviembre de 2026 y a HU-26. El límite 2147483647 está definido en el dominio y lo reutilizan el DTO y el sustituto en memoria. La migración exige la columna y su tipo exacto, pero no la crea ni la convierte. Los tests usan un fixture; el orden de aplicación se coordina con Favio/Sebastian antes de DEV.
 
 **Consulta actual y recuperación explícita.** La PWA usa NetworkOnly para puntos. Ante conflicto o respuesta incierta conserva la edición y consulta al servidor; elegir otra base no dispara un guardado automático. Se evita reutilizar una lista cacheada de otro momento o usuario.
 

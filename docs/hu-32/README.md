@@ -4,10 +4,15 @@ Responsable: **Andriy Hitoshi Enciso Rojas (@Hitoshi)**. Release 2, sprint 1, **
 
 Estado al 1 de noviembre de 2026: implementación local y validación integrada completadas; paquete preparado para revisión del equipo. La aceptación del PO y la integración en DEV están pendientes. Este documento no cambia el estado del tablero o del backlog.
 
+Actualización del 3 de noviembre de 2026: el equipo indicó `expediciones.version INTEGER` conforme a HU-26. HU-32 se adapta a ese contrato para el PR #63, comunicado por Andriy; véase [ajuste INTEGER](ajuste-integer.md). El commit y push permanecen a cargo de Andriy.
+
+Validación posterior al ajuste: typechecks/builds aprobados, 50 pruebas backend, 12 de interfaz, 39 comprobaciones SQL, 28 de contrato y 9 escenarios integrados aprobados. El runner completo finalizó con código 0 y cerró los procesos temporales.
+
 ## Entrega para revisar
 
 | Documento | Uso |
 | --- | --- |
+| [Ajuste INTEGER para PR #63](ajuste-integer.md) | Contrato compartido con HU-26, límites y verificación posterior a las siete fases. |
 | [Cierre de fase 7](fase-7-entrega.md) | Alcance final, comprobaciones de entrega y pendientes con responsables. |
 | [Guía de demostración](guia-demostracion.md) | Reproducción automatizada aislada y recorrido manual para la Review. |
 | [Diseño SOLID y CRC](diseno-solid.md) | Diagrama, responsabilidades y evidencia para sustentar el diseño en ISW2. |
@@ -37,12 +42,12 @@ Los grupos tienen casos repetidos entre ejecuciones; no representan una suma de 
 
 ## Condiciones para integrar en DEV
 
-1. Favio y Sebastian acuerdan la versión única del plan y su migración. El SQL preparado espera `expediciones.version BIGINT NOT NULL` con default, inicial 1 según la propuesta.
+1. Integrar primero la migración de HU-26 que aporta `expediciones.version INTEGER NOT NULL` con default (fixture inicial: 1). Nombre y tipo confirmados por el mensaje del equipo; coordinar con Favio/Sebastian las reglas de incremento y aplicación.
 2. Sebastian coordina el orden y la aplicación de la migración de versión y de `hu32_puntos_ruta.sql`; registra entorno, fecha, archivo y commit que proporcione Andriy.
 3. Se revisa la compatibilidad con edición/cancelación de otras ramas y la política de cron compartido. El fixture de las pruebas no instala la versión en DEV ni incorpora HU-27.
 4. El equipo revisa el cambio y Marko registra su aceptación funcional. Ariana coordina la revisión y la evidencia.
 
-Git, ramas, commits, push y PR permanecen bajo el control de Andriy. No se creó ni publicó un PR desde este trabajo.
+Git, ramas, commits, push y PR permanecen bajo el control de Andriy. Andriy comunicó el PR #63; el asistente no lo consultó ni modificó.
 
 ## Trazabilidad de las siete fases
 

@@ -8,18 +8,18 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_catalog.pg_attribute
         WHERE attrelid = pg_catalog.to_regclass('public.expediciones')
-          AND attname = 'version' AND atttypid = 'bigint'::regtype
+          AND attname = 'version' AND atttypid = 'integer'::regtype
           AND attnotnull AND atthasdef AND NOT attisdropped
     ) THEN
-        RAISE EXCEPTION 'HU32_VERSION_REQUERIDA: se requiere expediciones.version BIGINT NOT NULL con default'
-            USING HINT = 'Coordinar la version unica del plan con Favio y Sebastian antes de aplicar HU-32.';
+        RAISE EXCEPTION 'HU32_VERSION_REQUERIDA: se requiere expediciones.version INTEGER NOT NULL con default'
+            USING HINT = 'Aplicar primero la migracion de version compartida de HU-26.';
     END IF;
 END;
 $precondicion$;
 
--- Mantener la version dentro de los enteros seguros de JavaScript.
+-- Version positiva en el rango INTEGER compartido con HU-26.
 ALTER TABLE public.expediciones ADD CONSTRAINT hu32_chk_version_segura
-    CHECK (version BETWEEN 1 AND 9007199254740991);
+    CHECK (version BETWEEN 1 AND 2147483647);
 
 CREATE FUNCTION public.treksafe_normalizar_nombre_punto(p_nombre text)
 RETURNS text LANGUAGE sql IMMUTABLE STRICT
@@ -195,7 +195,7 @@ $func$;
 
 CREATE FUNCTION public.treksafe_guardar_puntos_ruta(
     p_senderista_id uuid, p_expedicion_id uuid,
-    p_version_esperada bigint, p_puntos jsonb
+    p_version_esperada integer, p_puntos jsonb
 )
 RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY DEFINER
 SET search_path = pg_catalog, pg_temp
@@ -207,9 +207,9 @@ DECLARE
     v_ruta jsonb;
     v_constraint text;
 BEGIN
-    IF p_version_esperada IS NULL OR p_version_esperada NOT BETWEEN 1 AND 9007199254740991 THEN
+    IF p_version_esperada IS NULL OR p_version_esperada NOT BETWEEN 1 AND 2147483647 THEN
         RETURN jsonb_build_object('tipo', 'datos_invalidos', 'detalles',
-            jsonb_build_object('versionEsperada', jsonb_build_array('La version debe ser un entero positivo seguro')));
+            jsonb_build_object('versionEsperada', jsonb_build_array('La version debe ser un entero entre 1 y 2147483647')));
     END IF;
     v_validacion := public.treksafe_validar_puntos_ruta(p_puntos);
     IF v_validacion->>'tipo' = 'datos_invalidos' THEN
@@ -244,7 +244,7 @@ BEGIN
     IF v_ruta->'puntos' = v_puntos THEN
         RETURN jsonb_build_object('tipo', 'guardado', 'ruta', v_ruta);
     END IF;
-    IF v_plan.version = 9007199254740991 THEN
+    IF v_plan.version = 2147483647 THEN
         RAISE EXCEPTION 'Se agoto el rango de version del plan';
     END IF;
 
@@ -305,8 +305,8 @@ REVOKE ALL ON TABLE public.puntos_ruta FROM PUBLIC, anon, authenticated, service
 REVOKE ALL ON FUNCTION public.treksafe_normalizar_nombre_punto(text) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.treksafe_validar_puntos_ruta(jsonb) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.treksafe_consultar_puntos_ruta(uuid, uuid) FROM PUBLIC, anon, authenticated, service_role;
-REVOKE ALL ON FUNCTION public.treksafe_guardar_puntos_ruta(uuid, uuid, bigint, jsonb) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.treksafe_guardar_puntos_ruta(uuid, uuid, integer, jsonb) FROM PUBLIC, anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.treksafe_consultar_puntos_ruta(uuid, uuid) TO service_role;
-GRANT EXECUTE ON FUNCTION public.treksafe_guardar_puntos_ruta(uuid, uuid, bigint, jsonb) TO service_role;
+GRANT EXECUTE ON FUNCTION public.treksafe_guardar_puntos_ruta(uuid, uuid, integer, jsonb) TO service_role;
 
 COMMIT;
