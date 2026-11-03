@@ -59,8 +59,25 @@ jobs:
       - name: Verificar TypeScript
         run: npm run typecheck --prefix frontend
 
-      - name: Ejecutar pruebas de equipo si existen
-        run: npm run test:equipo --if-present --prefix frontend
+      - name: Verificar tipos de pruebas
+        run: npm run typecheck:tests --prefix frontend
 
       - name: Compilar frontend
         run: npm run build --prefix frontend
+        env:
+          VITE_API_URL: /api
+
+      - name: Instalar Chromium para pruebas PWA
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Probar privacidad con Service Worker activo
+        run: npm run test:equipo --prefix frontend
+
+      - name: Adjuntar evidencia PWA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencia-privacidad-pwa
+          path: frontend/test-results/
+          if-no-files-found: ignore

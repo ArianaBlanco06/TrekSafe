@@ -1,4 +1,4 @@
-import { getToken, limpiarSesion } from '@/lib/sesion';
+import { getToken, getSessionScope, limpiarSesion } from '@/lib/sesion';
 import { handleUnauthorized } from '@/lib/eventosAuth';
 
 const API_URL = import.meta.env.VITE_API_URL ?? '/api';
@@ -35,20 +35,26 @@ export async function peticionApi<T>(
   options: RequestInit = {},
   auth = false,
 ): Promise<T> {
+  const scope = auth ? getSessionScope() : null;
+  const token = auth ? getToken() : null;
+  const comprobarSesion = () => {
+    if (auth && (scope !== getSessionScope() || token !== getToken())) {
+      throw new ErrorClienteApi('La sesión cambió durante la solicitud.', 401, 'SESSION_CHANGED');
+    }
+  };
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
   };
 
   if (auth) {
-    const token = getToken();
     if (!token) throw new ErrorClienteApi('Sesión expirada', 401);
     headers.Authorization = `Bearer ${token}`;
   }
 
   let res: Response;
   try {
-    res = await fetch(`${API_URL}${path}`, { ...options, headers });
+    res = await fetch(`${API_URL}${path}`, { ...options, headers, cache: 'no-store' });
   } catch {
     throw new ErrorClienteApi(
       'No se pudo conectar con el servidor. Verifica que el backend esté corriendo.',
@@ -56,6 +62,7 @@ export async function peticionApi<T>(
     );
   }
 
+  comprobarSesion();
   if (res.status === 401 && auth) {
     handleUnauthorized();
     throw new ErrorClienteApi('Sesión expirada. Inicia sesión nuevamente.', 401, 'UNAUTHORIZED');
@@ -63,6 +70,7 @@ export async function peticionApi<T>(
 
   if (!res.ok) {
     const err = await parsearError(res);
+    comprobarSesion();
     throw new ErrorClienteApi(
       err.mensaje ?? 'Error en la solicitud',
       res.status,
@@ -72,7 +80,9 @@ export async function peticionApi<T>(
   }
 
   if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
+  const data = await res.json() as T;
+  comprobarSesion();
+  return data;
 }
 
 export const api = {
