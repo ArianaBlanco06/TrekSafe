@@ -18,9 +18,12 @@ Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos `sprint*
 |---|---|---|
 | `002_hu26_version_y_eventos_plan.sql` | Columna `expediciones.version` y tabla `eventos_plan` | Esquema inicial |
 | `003_hu26_rpc_editar_expedicion.sql` | Función `treksafe_editar_expedicion` | `002` |
+| `004_hu27_estado_cancelada.sql` | Valor `cancelada` en `estado_expedicion_enum` | Esquema inicial |
 
-Estas dos migraciones son re-ejecutables. No dependen de `000_registro_migraciones.sql`: si la tabla `treksafe_migraciones` existe, registran su aplicación, y si no existe, continúan.
+Estas migraciones son re-ejecutables. No dependen de `000_registro_migraciones.sql`: si la tabla `treksafe_migraciones` existe, registran su aplicación, y si no existe, continúan.
 
 ## Despliegue
 
 Aplica las migraciones **antes** de desplegar el backend. El código de HU-26 selecciona `expediciones.version`, por lo que sin `002` también fallarían los listados y `GET /api/expediciones/activa`.
+
+`004` debe ejecutarse **sola y confirmada** antes de `005`: Postgres no permite usar un valor de enum nuevo en la misma transacción que lo agrega. Un valor de enum no se puede quitar; revertir `004` exige recrear el tipo.
