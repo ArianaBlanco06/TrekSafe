@@ -1,0 +1,66 @@
+
+name: TrekSafe CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend - validaciones
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v7
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci --prefix backend
+
+      - name: Verificar TypeScript
+        run: npm run typecheck --prefix backend
+
+      - name: Ejecutar pruebas
+        run: npm test --prefix backend
+
+      - name: Compilar backend
+        run: npm run build --prefix backend
+
+  frontend:
+    name: Frontend - validaciones
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v7
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci --prefix frontend
+
+      - name: Verificar TypeScript
+        run: npm run typecheck --prefix frontend
+
+      - name: Ejecutar pruebas de equipo si existen
+        run: npm run test:equipo --if-present --prefix frontend
+
+      - name: Compilar frontend
+        run: npm run build --prefix frontend
