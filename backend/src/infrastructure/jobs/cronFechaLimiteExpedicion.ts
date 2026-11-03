@@ -1,7 +1,7 @@
 import { ServicioNotificacionAlerta } from '../../application/services/servicioNotificacionAlerta.js';
 import { ServicioAlertaRescate } from '../../application/services/servicioAlertaRescate.js';
 import { ServicioCorreo } from '../email/ServicioCorreo.js';
-import { loadEnv } from '../config/env.js';
+import { loadEnv, type Env } from '../config/env.js';
 import { RepositorioExpedicion } from '../repositories/RepositorioExpedicion.js';
 import { cronHealth } from './cronState.js';
 
@@ -34,8 +34,12 @@ export async function ejecutarTickFechaLimite(
   return { promovidas, enAlerta: idsEnAlerta.length, correosContacto, correosRescate };
 }
 
-export function iniciarCronFechaLimiteExpedicion(): () => void {
-  const { cronIntervalMs } = loadEnv();
+export function iniciarCronFechaLimiteExpedicion(
+  configuracion: Pick<Env, 'cronEnabled' | 'cronIntervalMs'> = loadEnv(),
+): () => void {
+  const { cronEnabled, cronIntervalMs } = configuracion;
+  // No instanciar repositorios, ejecutar el primer tick ni crear un timer al desactivar.
+  if (!cronEnabled) return () => {};
   const repo = new RepositorioExpedicion();
   const alertasContacto = new ServicioNotificacionAlerta();
   const alertasRescate = new ServicioAlertaRescate();
