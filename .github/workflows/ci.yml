@@ -28,7 +28,7 @@ jobs:
 
       - name: Instalar dependencias
         run: npm ci --prefix backend
-
+      
       - name: Verificar TypeScript
         run: npm run typecheck --prefix backend
 
@@ -52,12 +52,16 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-
+      
       - name: Instalar dependencias
         run: npm ci --prefix frontend
 
+      - name: Instalar dependencias del backend para pruebas integradas
+        run: npm ci --prefix backend
+
       - name: Verificar TypeScript
         run: npm run typecheck --prefix frontend
+
 
       - name: Ejecutar pruebas de equipo si existen
         run: npm run test:equipo --if-present --prefix frontend
