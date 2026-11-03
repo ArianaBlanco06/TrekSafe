@@ -1,4 +1,10 @@
 import { z } from 'zod';
+import {
+  MAX_MINUTOS_AMPLIACION,
+  MAX_MOTIVO_AMPLIACION,
+  MIN_MINUTOS_AMPLIACION,
+  MIN_MOTIVO_AMPLIACION,
+} from '../../domain/value-objects/ampliacionRetorno.js';
 import { MAX_MOTIVO_CANCELACION } from '../../domain/value-objects/cancelacionPlan.js';
 import {
   camposExpedicionSchema,
@@ -48,6 +54,26 @@ export const cancelarExpedicionSchema = z.object({
     .nullish(),
 });
 
+/**
+ * HU-35. Exige `versionEsperada` (compare-and-swap) y `operacionId` (un doble toque no
+ * suma dos veces). Los minutos se suman a la hora de retorno estimada, no a "ahora".
+ */
+export const ampliarRetornoSchema = z.object({
+  versionEsperada: z.number().int().min(1),
+  operacionId: z.string().uuid('Identificador de operación inválido'),
+  minutos: z
+    .number({ invalid_type_error: 'Los minutos deben ser un número' })
+    .int('Los minutos deben ser un número entero')
+    .min(MIN_MINUTOS_AMPLIACION, `Amplía al menos ${MIN_MINUTOS_AMPLIACION} minuto`)
+    .max(MAX_MINUTOS_AMPLIACION, `Amplía como máximo ${MAX_MINUTOS_AMPLIACION} minutos`),
+  motivo: z
+    .string({ required_error: 'El motivo es obligatorio' })
+    .trim()
+    .min(MIN_MOTIVO_AMPLIACION, `El motivo debe tener al menos ${MIN_MOTIVO_AMPLIACION} caracteres`)
+    .max(MAX_MOTIVO_AMPLIACION, `El motivo admite como máximo ${MAX_MOTIVO_AMPLIACION} caracteres`),
+});
+
 export type EntradaConfirmarRetorno = z.infer<typeof confirmarRetornoSchema>;
 export type EntradaEditarExpedicion = z.infer<typeof editarExpedicionSchema>;
 export type EntradaCancelarExpedicion = z.infer<typeof cancelarExpedicionSchema>;
+export type EntradaAmpliarRetorno = z.infer<typeof ampliarRetornoSchema>;
