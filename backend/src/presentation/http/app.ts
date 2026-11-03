@@ -22,6 +22,11 @@ export function createApp() {
 
   app.use(helmet());
   app.use(cors({ origin: env.corsOrigin, credentials: true }));
+  // Evitar tambien persistencia en la cache HTTP del navegador o proxies.
+  app.use(env.apiPrefix, (_req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    next();
+  });
   app.use(express.json({ limit: '100kb' }));
 
   app.get(`${env.apiPrefix}/salud`, (_req, res) => {
