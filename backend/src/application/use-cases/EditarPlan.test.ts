@@ -105,6 +105,14 @@ class ExpedicionDAOEnMemoria implements IExpedicionDAO {
   async cancelarPlan(): Promise<never> {
     throw new Error('HU-27: estas pruebas no cancelan planes (ver CancelarPlan.test.ts)');
   }
+
+  async contarAmpliaciones(): Promise<never> {
+    throw new Error('HU-35: estas pruebas no amplían el retorno (ver AmpliarRetorno.test.ts)');
+  }
+
+  async ampliarRetorno(): Promise<never> {
+    throw new Error('HU-35: estas pruebas no amplían el retorno (ver AmpliarRetorno.test.ts)');
+  }
 }
 
 function planInicial(cambios: Partial<PlanExpedicion> = {}): PlanExpedicion {
