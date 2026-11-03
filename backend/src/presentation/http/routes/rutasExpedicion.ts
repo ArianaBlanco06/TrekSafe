@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { CancelarPlan } from '../../../application/use-cases/CancelarPlan.js';
 import { EditarPlan } from '../../../application/use-cases/EditarPlan.js';
 import { ObtenerPlan } from '../../../application/use-cases/ObtenerPlan.js';
 import { getSupabaseAdmin } from '../../../infrastructure/database/supabase.js';
@@ -18,9 +19,11 @@ import { crearControladorPlanExpedicion } from '../controllers/controladorPlanEx
 export function crearRutasExpedicion(): Router {
   const router = Router();
   const dao = new ExpedicionDAOSupabase(getSupabaseAdmin());
+  const reloj = new RelojSistema();
   const planes = crearControladorPlanExpedicion(
     new ObtenerPlan(dao),
-    new EditarPlan(dao, new RelojSistema()),
+    new EditarPlan(dao, reloj),
+    new CancelarPlan(dao, reloj),
   );
 
   router.use(middlewareAutenticacion, requerirRol('senderista'));
@@ -29,6 +32,7 @@ export function crearRutasExpedicion(): Router {
   router.get('/historial', asyncHandler(obtenerHistorialExpediciones));
   router.get('/:id', asyncHandler(planes.obtener));
   router.put('/:id', asyncHandler(planes.editar));
+  router.post('/:id/cancelar', asyncHandler(planes.cancelar));
   router.post('/:id/confirmar-retorno', asyncHandler(confirmarRetorno));
   router.post('/', asyncHandler(crearExpedicion));
   router.get('/', asyncHandler(listarExpediciones));
