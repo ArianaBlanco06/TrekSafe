@@ -168,4 +168,4 @@ Para HU-36 y HU-37 (lectura), y HU-27 y HU-35 (escritura). Se crea en `backend/m
 - Inserta el evento dentro de la misma función que modifica el plan.
 - Solo `service_role` puede leer e insertar. RLS deniega a `anon` y `authenticated`.
 - Antes de mostrar eventos, filtra por propietario. `cambios` puede contener lugares, coordenadas y nombres de acompañantes, y ids de contactos.
-- Los eventos se eliminan en cascada con su expedición. La anonimización de `RepositorioUsuario.anonimizarHistorialRutas` todavía **no** los limpia.
+- Los eventos se eliminan en cascada con su expedición. Desde HU-27, `RepositorioUsuario.anonimizarHistorialRutas` deja `cambios = '{}'` y `motivo = NULL` en los eventos de las expediciones que anonimiza (ver `docs/hu-27/diseno.md`).
