@@ -241,7 +241,11 @@ export class RepositorioExpedicion {
       return data as string[];
     }
 
-    // Fallback si la función RPC no está migrada aún
+    // Fallback si la función RPC no está migrada aún. Se registra para que no pase inadvertido.
+    console.error(
+      '[RepositorioExpedicion] treksafe_marcar_expiradas_en_progreso_como_alerta falló; se usa la alternativa:',
+      error?.message ?? 'respuesta inesperada',
+    );
     const ahoraMs = Date.now();
     const ahoraIso = new Date().toISOString();
 
@@ -252,25 +256,31 @@ export class RepositorioExpedicion {
 
     if (errorConsulta) throw new ErrorAplicacion(500, errorConsulta.message);
 
-    const idsExpirados = (filas ?? [])
-      .filter(
-        (fila) =>
-          new Date(calcularFechaLimite(fila.hora_retorno_estimada, fila.minutos_tolerancia)).getTime() <
-          ahoraMs,
-      )
-      .map((fila) => fila.id);
+    const expiradas = (filas ?? []).filter(
+      (fila) =>
+        new Date(calcularFechaLimite(fila.hora_retorno_estimada, fila.minutos_tolerancia)).getTime() <
+        ahoraMs,
+    );
 
-    if (idsExpirados.length === 0) return [];
+    // Compare-and-swap por fila (HU-35): el UPDATE exige la hora y la tolerancia leídas.
+    // Si el senderista amplió el retorno entre la lectura y la escritura, la hora ya no
+    // coincide y la fila no se marca: así no se genera una alerta falsa.
+    const marcadas: string[] = [];
+    for (const fila of expiradas) {
+      const { data: actualizada, error: errorActualizar } = await this.supabase
+        .from('expediciones')
+        .update({ estado: 'alerta', actualizado_en: ahoraIso })
+        .eq('id', fila.id)
+        .eq('estado', 'en_progreso')
+        .eq('hora_retorno_estimada', fila.hora_retorno_estimada)
+        .eq('minutos_tolerancia', fila.minutos_tolerancia)
+        .select('id')
+        .maybeSingle();
 
-    const { data: actualizadas, error: errorActualizar } = await this.supabase
-      .from('expediciones')
-      .update({ estado: 'alerta', actualizado_en: ahoraIso })
-      .in('id', idsExpirados)
-      .eq('estado', 'en_progreso')
-      .select('id');
-
-    if (errorActualizar) throw new ErrorAplicacion(500, errorActualizar.message);
-    return (actualizadas ?? []).map((fila) => fila.id);
+      if (errorActualizar) throw new ErrorAplicacion(500, errorActualizar.message);
+      if (actualizada) marcadas.push(actualizada.id);
+    }
+    return marcadas;
   }
 
   async completarConfirmacionRetorno(expedicionId: string, senderistaId: string): Promise<FilaExpedicion> {
