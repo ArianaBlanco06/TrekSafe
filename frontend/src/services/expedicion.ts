@@ -91,6 +91,32 @@ export function editarExpedicion(
   );
 }
 
+/** Mismo límite que `cancelarExpedicionSchema` en el backend. */
+export const MAX_MOTIVO_CANCELACION = 200;
+
+export type ResultadoCancelacion = {
+  id: string;
+  version: number;
+  estado: 'cancelada';
+};
+
+/**
+ * HU-27. El `operacionId` debe generarse una sola vez por intento y reutilizarse en
+ * los reintentos: así el servidor devuelve el mismo resultado sin repetir la cancelación.
+ */
+export function cancelarExpedicion(
+  id: string,
+  motivo: string,
+  operacionId: string = crypto.randomUUID(),
+) {
+  const motivoLimpio = motivo.trim();
+  return api.post<{ mensaje: string; expedicion: ResultadoCancelacion }>(
+    `/expediciones/${id}/cancelar`,
+    { operacionId, ...(motivoLimpio ? { motivo: motivoLimpio } : {}) },
+    true,
+  );
+}
+
 export function confirmarRetorno(expedicionId: string, contrasena: string) {
   return api.post<{
     mensaje: string;
