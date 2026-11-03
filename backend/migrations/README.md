@@ -21,6 +21,7 @@ Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos `sprint*
 | `004_hu27_estado_cancelada.sql` | Valor `cancelada` en `estado_expedicion_enum` | Esquema inicial |
 | `005_hu27_rpc_cancelar_expedicion.sql` | Función `treksafe_cancelar_expedicion` | `002` y `004` confirmada |
 | `006_hu27_permiso_anonimizar_eventos.sql` | `UPDATE (cambios, motivo)` sobre `eventos_plan` para `service_role` (anonimización ARCO) | `002` |
+| `007_hu35_rpc_ampliar_retorno.sql` | Funciones `treksafe_fecha_limite` y `treksafe_ampliar_retorno` | `002` |
 
 Estas migraciones son re-ejecutables. No dependen de `000_registro_migraciones.sql`: si la tabla `treksafe_migraciones` existe, registran su aplicación, y si no existe, continúan.
 
@@ -29,3 +30,5 @@ Estas migraciones son re-ejecutables. No dependen de `000_registro_migraciones.s
 Aplica las migraciones **antes** de desplegar el backend. El código de HU-26 selecciona `expediciones.version`, por lo que sin `002` también fallarían los listados y `GET /api/expediciones/activa`.
 
 `004` debe ejecutarse **sola y confirmada** antes de `005`: Postgres no permite usar un valor de enum nuevo en la misma transacción que lo agrega. Un valor de enum no se puede quitar; revertir `004` exige recrear el tipo.
+
+`007` no reemplaza `treksafe_marcar_expiradas_en_progreso_como_alerta` (cron, `init_schema.sql`). `treksafe_fecha_limite` repite su fórmula del límite; si alguna vez cambia, hay que cambiar las tres definiciones a la vez: la del cron, la de `007` y `calcularFechaLimite` en `backend/src/domain/entities/Expedicion.ts`.
