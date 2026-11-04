@@ -27,7 +27,11 @@ describe('Politica HTTP de privacidad', () => {
     server.closeAllConnections();
     await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
   });
-  for (const endpoint of ['/usuario/ficha-medica', '/usuario/contactos', '/expediciones', '/rescate/alertas']) {
+  for (const endpoint of [
+    '/usuario/ficha-medica', '/usuario/contactos', '/expediciones', '/rescate/alertas',
+    // HU-30 (listas de equipo) y HU-26 (plan a editar) tambien son datos privados.
+    '/usuario/listas-equipo', '/expediciones/00000000-0000-4000-8000-000000000000',
+  ]) {
     it(`${endpoint}: el rechazo sin autenticacion tampoco se almacena`, async () => {
       const response = await fetch(`${base}/api${endpoint}`);
       assert.equal(response.status, 401);
@@ -38,9 +42,9 @@ describe('Politica HTTP de privacidad', () => {
     ctx.mock.method(console, 'error', () => {});
     for (const [endpoint, options, status] of [
       ['/salud', undefined, 200], ['/inexistente', undefined, 404],
-      // El manejador existente responde 500 a errores del parser; no se cambia
-      // esa politica en este fix. Incluso ese rechazo debe llevar no-store.
-      ['/auth/iniciar-sesion', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{' }, 500],
+      // Desde HU-30 el rechazo del parser es 400; este fix no cambia esa politica,
+      // solo exige que incluso ese rechazo lleve no-store.
+      ['/auth/iniciar-sesion', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{' }, 400],
     ] as const) {
       const response = await fetch(`${base}/api${endpoint}`, options);
       assert.equal(response.status, status);

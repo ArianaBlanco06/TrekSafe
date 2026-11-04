@@ -23,6 +23,18 @@ const users = {
   b: { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', correoElectronico: 'cuenta-b@example.invalid', rol: 'senderista' },
 };
 const created = [];
+// HU-26 (plan editable con version) y HU-30 (listas de equipo) en memoria, por cuenta.
+const planId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+const contactoId = account => `${account}ccccccc-cccc-4ccc-8ccc-cccccccccccc`;
+const planes = Object.fromEntries(Object.keys(users).map(account => [account, {
+  id: planId, lugarInicio: 'Inicio del plan', lugarFin: 'Destino del plan',
+  coordenadasInicio: '-9.04500, -77.60800', coordenadasFin: '-9.01050, -77.60420',
+  horaInicio: '2099-11-15T12:00:00Z', horaRetornoEstimada: '2099-11-15T18:00:00Z',
+  minutosTolerancia: 30, estado: 'programada', version: 1, creadoEn: '2026-11-04T12:00:00Z',
+  idsContactos: [contactoId(account)], nombresAcompanantes: ['Acompañante ficticio'],
+}]));
+const equipos = { a: [], b: [] };
+const conIds = items => items.map(item => ({ ...item, id: item.id ?? crypto.randomUUID() }));
 const contentTypes = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html',
   '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
 const json = (res, status, body) => {
@@ -86,15 +98,50 @@ const server = createServer(async (req, res) => {
         condiciones: `condicion-${account}`, medicamentos: '', consentimientoFirmado: true,
       } });
       if (url.pathname === '/api/usuario/contactos') return json(res, 200, { contactos: [{
-        id: `${account}ccccccc-cccc-4ccc-8ccc-cccccccccccc`, nombreCompleto: `Contacto privado ${account.toUpperCase()}`,
+        id: contactoId(account), nombreCompleto: `Contacto privado ${account.toUpperCase()}`,
         parentesco: 'Amistad', telefono: account === 'a' ? '999111111' : '999222222',
         correoElectronico: `contacto-${account}@example.invalid`,
       }] });
+      if (url.pathname === '/api/usuario/listas-equipo') {
+        if (req.method === 'POST') {
+          const data = await readJson(req);
+          const ahora = new Date().toISOString();
+          const lista = { id: crypto.randomUUID(), senderistaId: users[account].id, nombre: data.nombre,
+            items: conIds(data.items ?? []), creadoEn: ahora, actualizadoEn: ahora };
+          equipos[account].push(lista);
+          return json(res, 201, { lista });
+        }
+        return json(res, 200, { listas: equipos[account] });
+      }
+      if (url.pathname.startsWith('/api/usuario/listas-equipo/')) {
+        const id = decodeURIComponent(url.pathname.slice('/api/usuario/listas-equipo/'.length));
+        const indice = equipos[account].findIndex(lista => lista.id === id);
+        if (indice < 0) return json(res, 404, { mensaje: 'Lista no encontrada' });
+        if (req.method === 'DELETE') {
+          equipos[account].splice(indice, 1);
+          res.writeHead(204, { 'Cache-Control': 'private, max-age=3600' });
+          return res.end();
+        }
+        if (req.method === 'PUT') {
+          const data = await readJson(req);
+          equipos[account][indice] = { ...equipos[account][indice], nombre: data.nombre,
+            items: conIds(data.items ?? []), actualizadoEn: new Date().toISOString() };
+        }
+        return json(res, 200, { lista: equipos[account][indice] });
+      }
       if (url.pathname === '/api/expediciones/activa') return json(res, 200, { expedicion: null });
+      if (url.pathname === `/api/expediciones/${planId}`) {
+        if (req.method === 'PUT') {
+          const { versionEsperada, operacionId: _operacionId, ...campos } = await readJson(req);
+          if (versionEsperada !== planes[account].version) return json(res, 409, { mensaje: 'Versión obsoleta' });
+          planes[account] = { ...planes[account], ...campos, version: versionEsperada + 1 };
+        }
+        return json(res, 200, { expedicion: planes[account] });
+      }
       if (url.pathname === '/api/expediciones' && req.method === 'POST') {
         const data = await readJson(req);
         created.push({ account, ...data });
-        return json(res, 201, { expedicion: { id: crypto.randomUUID(), estado: 'programada', ...data } });
+        return json(res, 201, { expedicion: { id: crypto.randomUUID(), estado: 'programada', version: 1, ...data } });
       }
       if (url.pathname === '/api/expediciones') return json(res, 200, { expediciones: [] });
       if (url.pathname.startsWith('/api/rescate/')) return json(res, 200, { alertas: [], privado: `rescate-${account}` });
