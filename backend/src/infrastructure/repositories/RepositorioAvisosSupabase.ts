@@ -5,6 +5,8 @@ import type {
 } from '../../domain/repositories/INotificacionDAO.js';
 import { ErrorAplicacion } from '../../shared/errors/ErrorAplicacion.js';
 import { getSupabaseAdmin } from '../database/supabase.js';
+import fs from 'node:fs';
+import path from 'node:path';
 
 type FilaAviso = {
   id: string;
@@ -36,16 +38,40 @@ function mapearFilaAAviso(fila: FilaAviso): Aviso {
 
 export class RepositorioAvisosSupabase implements INotificacionDAO {
   private readonly supabase = getSupabaseAdmin();
-  // Almacén en memoria de contingencia para pruebas mientras Sebastian aplica la migración SQL en DEV
-  private static memoriaFallback: Aviso[] = [];
   private static advertenciaMostrada = false;
   private static usandoFallbackMemoria = false;
+
+  private static obtenerRutaArchivo(): string {
+    return path.resolve(process.cwd(), '.avisos_dev.json');
+  }
+
+  private static cargarAvisosLocales(): Aviso[] {
+    try {
+      const ruta = RepositorioAvisosSupabase.obtenerRutaArchivo();
+      if (fs.existsSync(ruta)) {
+        const contenido = fs.readFileSync(ruta, 'utf-8');
+        return JSON.parse(contenido) as Aviso[];
+      }
+    } catch {
+      // Ignorar fallo de lectura
+    }
+    return [];
+  }
+
+  private static guardarAvisosLocales(avisos: Aviso[]): void {
+    try {
+      const ruta = RepositorioAvisosSupabase.obtenerRutaArchivo();
+      fs.writeFileSync(ruta, JSON.stringify(avisos, null, 2), 'utf-8');
+    } catch {
+      // Ignorar fallo de escritura
+    }
+  }
 
   private registrarFallbackMemoria(): void {
     RepositorioAvisosSupabase.usandoFallbackMemoria = true;
     if (!RepositorioAvisosSupabase.advertenciaMostrada) {
       console.warn(
-        '[Avisos] Tabla avisos_usuario pendiente de aplicar por Sebastian en Supabase DEV. Operando con almacén de pruebas en memoria.',
+        '[Avisos] Tabla avisos_usuario pendiente de aplicar por Sebastian en Supabase DEV. Operando con almacén de pruebas local sincronizado.',
       );
       RepositorioAvisosSupabase.advertenciaMostrada = true;
     }
@@ -58,6 +84,7 @@ export class RepositorioAvisosSupabase implements INotificacionDAO {
     }
 
     if (RepositorioAvisosSupabase.usandoFallbackMemoria) {
+      const avisos = RepositorioAvisosSupabase.cargarAvisosLocales();
       const nuevo: Aviso = {
         id: `aviso-mock-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         usuarioId: datos.usuarioId,
@@ -69,7 +96,8 @@ export class RepositorioAvisosSupabase implements INotificacionDAO {
         leido: false,
         creadoEn: new Date().toISOString(),
       };
-      RepositorioAvisosSupabase.memoriaFallback.unshift(nuevo);
+      avisos.unshift(nuevo);
+      RepositorioAvisosSupabase.guardarAvisosLocales(avisos);
       return nuevo;
     }
 
@@ -90,6 +118,7 @@ export class RepositorioAvisosSupabase implements INotificacionDAO {
 
       if (error?.code === 'PGRST205') {
         this.registrarFallbackMemoria();
+        const avisos = RepositorioAvisosSupabase.cargarAvisosLocales();
         const nuevo: Aviso = {
           id: `aviso-mock-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
           usuarioId: datos.usuarioId,
@@ -101,7 +130,8 @@ export class RepositorioAvisosSupabase implements INotificacionDAO {
           leido: false,
           creadoEn: new Date().toISOString(),
         };
-        RepositorioAvisosSupabase.memoriaFallback.unshift(nuevo);
+        avisos.unshift(nuevo);
+        RepositorioAvisosSupabase.guardarAvisosLocales(avisos);
         return nuevo;
       }
 
@@ -117,6 +147,7 @@ export class RepositorioAvisosSupabase implements INotificacionDAO {
     } catch (err) {
       if (err instanceof ErrorAplicacion) throw err;
       this.registrarFallbackMemoria();
+      const avisos = RepositorioAvisosSupabase.cargarAvisosLocales();
       const nuevo: Aviso = {
         id: `aviso-mock-${Date.now()}`,
         usuarioId: datos.usuarioId,
@@ -128,12 +159,22 @@ export class RepositorioAvisosSupabase implements INotificacionDAO {
         leido: false,
         creadoEn: new Date().toISOString(),
       };
-      RepositorioAvisosSupabase.memoriaFallback.unshift(nuevo);
+      avisos.unshift(nuevo);
+      RepositorioAvisosSupabase.guardarAvisosLocales(avisos);
       return nuevo;
     }
   }
 
   async listarPorUsuario(usuarioId: string, soloNoLeidos = false): Promise<Aviso[]> {
+    if (RepositorioAvisosSupabase.usandoFallbackMemoria) {
+      const avisos = RepositorioAvisosSupabase.cargarAvisosLocales();
+      return avisos.filter((a) => {
+        if (a.usuarioId !== usuarioId) return false;
+        if (soloNoLeidos && a.leido) return false;
+        return true;
+      });
+    }
+
     try {
       let query = this.supabase
         .from('avisos_usuario')
@@ -149,7 +190,8 @@ export class RepositorioAvisosSupabase implements INotificacionDAO {
 
       if (error?.code === 'PGRST205') {
         this.registrarFallbackMemoria();
-        return RepositorioAvisosSupabase.memoriaFallback.filter((a) => {
+        const avisos = RepositorioAvisosSupabase.cargarAvisosLocales();
+        return avisos.filter((a) => {
           if (a.usuarioId !== usuarioId) return false;
           if (soloNoLeidos && a.leido) return false;
           return true;
@@ -164,7 +206,8 @@ export class RepositorioAvisosSupabase implements INotificacionDAO {
     } catch (err) {
       if (err instanceof ErrorAplicacion) throw err;
       this.registrarFallbackMemoria();
-      return RepositorioAvisosSupabase.memoriaFallback.filter((a) => {
+      const avisos = RepositorioAvisosSupabase.cargarAvisosLocales();
+      return avisos.filter((a) => {
         if (a.usuarioId !== usuarioId) return false;
         if (soloNoLeidos && a.leido) return false;
         return true;
@@ -174,9 +217,8 @@ export class RepositorioAvisosSupabase implements INotificacionDAO {
 
   async contarNoLeidos(usuarioId: string): Promise<number> {
     if (RepositorioAvisosSupabase.usandoFallbackMemoria) {
-      return RepositorioAvisosSupabase.memoriaFallback.filter(
-        (a) => a.usuarioId === usuarioId && !a.leido,
-      ).length;
+      const avisos = RepositorioAvisosSupabase.cargarAvisosLocales();
+      return avisos.filter((a) => a.usuarioId === usuarioId && !a.leido).length;
     }
 
     try {
@@ -191,9 +233,8 @@ export class RepositorioAvisosSupabase implements INotificacionDAO {
 
       if (count === null || error?.code === 'PGRST205') {
         this.registrarFallbackMemoria();
-        return RepositorioAvisosSupabase.memoriaFallback.filter(
-          (a) => a.usuarioId === usuarioId && !a.leido,
-        ).length;
+        const avisos = RepositorioAvisosSupabase.cargarAvisosLocales();
+        return avisos.filter((a) => a.usuarioId === usuarioId && !a.leido).length;
       }
 
       if (error) {
@@ -203,13 +244,21 @@ export class RepositorioAvisosSupabase implements INotificacionDAO {
       return count ?? 0;
     } catch {
       this.registrarFallbackMemoria();
-      return RepositorioAvisosSupabase.memoriaFallback.filter(
-        (a) => a.usuarioId === usuarioId && !a.leido,
-      ).length;
+      const avisos = RepositorioAvisosSupabase.cargarAvisosLocales();
+      return avisos.filter((a) => a.usuarioId === usuarioId && !a.leido).length;
     }
   }
 
   async marcarComoLeido(id: string, usuarioId: string): Promise<boolean> {
+    if (RepositorioAvisosSupabase.usandoFallbackMemoria) {
+      const avisos = RepositorioAvisosSupabase.cargarAvisosLocales();
+      const aviso = avisos.find((a) => a.id === id && a.usuarioId === usuarioId);
+      if (!aviso) return false;
+      aviso.leido = true;
+      RepositorioAvisosSupabase.guardarAvisosLocales(avisos);
+      return true;
+    }
+
     try {
       const { data, error } = await this.supabase
         .from('avisos_usuario')
@@ -220,11 +269,11 @@ export class RepositorioAvisosSupabase implements INotificacionDAO {
 
       if (error?.code === 'PGRST205') {
         this.registrarFallbackMemoria();
-        const aviso = RepositorioAvisosSupabase.memoriaFallback.find(
-          (a) => a.id === id && a.usuarioId === usuarioId,
-        );
+        const avisos = RepositorioAvisosSupabase.cargarAvisosLocales();
+        const aviso = avisos.find((a) => a.id === id && a.usuarioId === usuarioId);
         if (!aviso) return false;
         aviso.leido = true;
+        RepositorioAvisosSupabase.guardarAvisosLocales(avisos);
         return true;
       }
 
@@ -235,16 +284,29 @@ export class RepositorioAvisosSupabase implements INotificacionDAO {
       return (data?.length ?? 0) > 0;
     } catch {
       this.registrarFallbackMemoria();
-      const aviso = RepositorioAvisosSupabase.memoriaFallback.find(
-        (a) => a.id === id && a.usuarioId === usuarioId,
-      );
+      const avisos = RepositorioAvisosSupabase.cargarAvisosLocales();
+      const aviso = avisos.find((a) => a.id === id && a.usuarioId === usuarioId);
       if (!aviso) return false;
       aviso.leido = true;
+      RepositorioAvisosSupabase.guardarAvisosLocales(avisos);
       return true;
     }
   }
 
   async marcarTodosComoLeidos(usuarioId: string): Promise<number> {
+    if (RepositorioAvisosSupabase.usandoFallbackMemoria) {
+      const avisos = RepositorioAvisosSupabase.cargarAvisosLocales();
+      let cant = 0;
+      for (const a of avisos) {
+        if (a.usuarioId === usuarioId && !a.leido) {
+          a.leido = true;
+          cant++;
+        }
+      }
+      RepositorioAvisosSupabase.guardarAvisosLocales(avisos);
+      return cant;
+    }
+
     try {
       const { data, error } = await this.supabase
         .from('avisos_usuario')
@@ -255,13 +317,15 @@ export class RepositorioAvisosSupabase implements INotificacionDAO {
 
       if (error?.code === 'PGRST205') {
         this.registrarFallbackMemoria();
+        const avisos = RepositorioAvisosSupabase.cargarAvisosLocales();
         let cant = 0;
-        for (const a of RepositorioAvisosSupabase.memoriaFallback) {
+        for (const a of avisos) {
           if (a.usuarioId === usuarioId && !a.leido) {
             a.leido = true;
             cant++;
           }
         }
+        RepositorioAvisosSupabase.guardarAvisosLocales(avisos);
         return cant;
       }
 
@@ -272,18 +336,26 @@ export class RepositorioAvisosSupabase implements INotificacionDAO {
       return data?.length ?? 0;
     } catch {
       this.registrarFallbackMemoria();
+      const avisos = RepositorioAvisosLocales();
       let cant = 0;
-      for (const a of RepositorioAvisosSupabase.memoriaFallback) {
+      for (const a of avisos) {
         if (a.usuarioId === usuarioId && !a.leido) {
           a.leido = true;
           cant++;
         }
       }
+      RepositorioAvisosSupabase.guardarAvisosLocales(avisos);
       return cant;
     }
   }
 
   async obtenerPorId(id: string, usuarioId: string): Promise<Aviso | null> {
+    if (RepositorioAvisosSupabase.usandoFallbackMemoria) {
+      const avisos = RepositorioAvisosSupabase.cargarAvisosLocales();
+      const a = avisos.find((av) => av.id === id && av.usuarioId === usuarioId);
+      return a ? { ...a } : null;
+    }
+
     try {
       const { data, error } = await this.supabase
         .from('avisos_usuario')
@@ -294,9 +366,8 @@ export class RepositorioAvisosSupabase implements INotificacionDAO {
 
       if (error?.code === 'PGRST205') {
         this.registrarFallbackMemoria();
-        const a = RepositorioAvisosSupabase.memoriaFallback.find(
-          (av) => av.id === id && av.usuarioId === usuarioId,
-        );
+        const avisos = RepositorioAvisosSupabase.cargarAvisosLocales();
+        const a = avisos.find((av) => av.id === id && av.usuarioId === usuarioId);
         return a ? { ...a } : null;
       }
 
@@ -307,14 +378,19 @@ export class RepositorioAvisosSupabase implements INotificacionDAO {
       return data ? mapearFilaAAviso(data as FilaAviso) : null;
     } catch {
       this.registrarFallbackMemoria();
-      const a = RepositorioAvisosSupabase.memoriaFallback.find(
-        (av) => av.id === id && av.usuarioId === usuarioId,
-      );
+      const avisos = RepositorioAvisosSupabase.cargarAvisosLocales();
+      const a = avisos.find((av) => av.id === id && av.usuarioId === usuarioId);
       return a ? { ...a } : null;
     }
   }
 
   async obtenerPorEventoId(usuarioId: string, eventoId: string): Promise<Aviso | null> {
+    if (RepositorioAvisosSupabase.usandoFallbackMemoria) {
+      const avisos = RepositorioAvisosSupabase.cargarAvisosLocales();
+      const a = avisos.find((av) => av.usuarioId === usuarioId && av.eventoId === eventoId);
+      return a ? { ...a } : null;
+    }
+
     try {
       const { data, error } = await this.supabase
         .from('avisos_usuario')
@@ -325,9 +401,8 @@ export class RepositorioAvisosSupabase implements INotificacionDAO {
 
       if (error?.code === 'PGRST205') {
         this.registrarFallbackMemoria();
-        const a = RepositorioAvisosSupabase.memoriaFallback.find(
-          (av) => av.usuarioId === usuarioId && av.eventoId === eventoId,
-        );
+        const avisos = RepositorioAvisosSupabase.cargarAvisosLocales();
+        const a = avisos.find((av) => av.usuarioId === usuarioId && av.eventoId === eventoId);
         return a ? { ...a } : null;
       }
 
@@ -338,9 +413,8 @@ export class RepositorioAvisosSupabase implements INotificacionDAO {
       return data ? mapearFilaAAviso(data as FilaAviso) : null;
     } catch {
       this.registrarFallbackMemoria();
-      const a = RepositorioAvisosSupabase.memoriaFallback.find(
-        (av) => av.usuarioId === usuarioId && av.eventoId === eventoId,
-      );
+      const avisos = RepositorioAvisosSupabase.cargarAvisosLocales();
+      const a = avisos.find((av) => av.usuarioId === usuarioId && av.eventoId === eventoId);
       return a ? { ...a } : null;
     }
   }
