@@ -4,8 +4,9 @@
 
 La primera entrega de `feat/hu-28-repetir` incorporó el núcleo del Factory Method.
 La segunda añade las consultas de Supabase y la API que se describen más abajo.
-El borrador no es una expedición guardada: la creación posterior asignará un id
-nuevo y validará las fechas y los contactos al confirmar. La interfaz sigue pendiente.
+El borrador no es una expedición guardada: la creación posterior asigna un id
+nuevo y valida las fechas y los contactos al confirmar. La tercera entrega conecta
+el historial con el formulario, como se describe más abajo.
 
 Se reutilizan sin cambios `CreadorPlan`, `IPlanEditable`, `IContactosVigentes` y
 `verificarContratoCreadorPlan` de la referencia local de HU-29
@@ -128,16 +129,88 @@ y consultas, la nueva comprobación de privacidad y las 161 pruebas de la suite
 ordinaria del backend, junto con el typecheck y el build. La suite PostgreSQL
 condicionada de HU-30 no se ejecutó en esta fase. El frontend no cambia todavía.
 
+## Tercera entrega: historial y formulario
+
+El historial muestra «Repetir expedición» para cada origen completado. El enlace
+abre `/senderista/expedicion/nueva?repetir=<id>`; la URL contiene únicamente el id,
+no una copia del plan. Sin red se indica que es necesario conectarse para
+recuperarlo.
+
+`PrepararExpedicionDesdeHistorial` solicita el borrador mediante el cliente HTTP
+autenticado y sin caché, presenta carga, error y reintento, y solo entonces monta
+el formulario. La página utiliza una clave de cuenta/sesión y origen; la carga
+descarta resultados tardíos al salir o cambiar de sesión. Recuperar el origen no
+escribe el borrador en Web Storage ni crea una expedición.
+
+`FormularioCrearExpedicion` reutiliza la creación existente e inicializa ruta,
+coordenadas, tolerancia, acompañantes y contactos sugeridos. Ambas fechas empiezan
+vacías. Se exige una salida futura y un retorno posterior. El usuario debe
+confirmar que revisó los contactos; modificar su selección invalida esa
+confirmación. Al cargar la lista actual de contactos se descartan las sugerencias
+que ya no están disponibles. Los fallos de carga ofrecen reintento y no habilitan
+la revisión si no hay contactos visibles.
+
+La creación envía solamente los campos admitidos por `crearExpedicion`: excluye
+el id y el estado originales, `origenId`, alertas, confirmaciones y datos médicos.
+El backend existente asigna la nueva identidad y vuelve a validar las fechas y la
+propiedad de los contactos. El formulario bloquea envíos simultáneos, conserva lo
+escrito ante un fallo y permite reintentar.
+
+Reconectar no vuelve a cargar el origen ni descarta el formulario. Se mantiene el
+flujo offline existente: una vez abierto y revisado el formulario, el usuario
+puede guardar expresamente un borrador de su sesión para sincronizarlo después.
+Ese guardado y la plantilla local de ruta siguen usando el almacenamiento aislado
+por sesión del fix de privacidad. La lectura de la API no se convierte en caché.
+
+Las pruebas de esta entrega montan React y el router con el cliente HTTP real y
+respuestas sustitutas. Sustituyen únicamente el componente de mapa para evitar
+depender de un DOM en las pruebas de componentes. Comprueban el enlace, la carga,
+los campos vacíos, fechas inválidas, revisión de contactos, selección eliminada,
+reintentos, doble envío, reconexión, guardado offline y cambio de sesión. No
+sustituyen la revisión visual ni la prueba de nueva identidad en PostgreSQL/DEV.
+
+El 4 de noviembre de 2026, con Node 22.23.4, pasaron las 14 pruebas nuevas del
+recorrido y las 37 pruebas ordinarias del frontend. El recorrido PostgreSQL de
+HU-30 se omitió por no disponer de su base local desechable en esta ejecución.
+También pasaron el chequeo de tipos del frontend, el chequeo de tipos de las
+pruebas PWA, el build y las 12 regresiones de privacidad/PWA en Edge con el worker
+real y un servidor local de datos ficticios. Para estas últimas se construyó con
+`VITE_API_URL=/api` únicamente en el proceso de pruebas, sin editar los `.env`.
+Estas regresiones cubren también el formulario ordinario y la sincronización
+offline existentes; no comprueban el recorrido nuevo contra Supabase DEV.
+El ejecutor terminó con `12 passed`; fue necesario detener su servidor temporal
+después de los casos por un bloqueo del cierre automático en Windows.
+
+```powershell
+npm.cmd run test:equipo --prefix frontend
+npm.cmd run typecheck --prefix frontend
+npm.cmd run typecheck:tests --prefix frontend
+npm.cmd run build --prefix frontend
+```
+
+## Cuarta entrega: recorrido real en DEV y evidencia
+
+Se verificó el recorrido completo con Edge, el login y la API reales de TrekSafe
+y PostgREST de Supabase DEV. El formulario creó otra expedición, se comprobó su
+persistencia al recargar y se contrastaron la nueva fila y sus relaciones con el
+origen. La cuenta B no pudo acceder al borrador de A. También se comprobaron los
+rechazos de fechas antiguas y contactos borrados o ajenos, y la limpieza de los
+datos ficticios de la prueba.
+
+El alcance, los resultados, las cuatro capturas y los comandos están en
+[hu-28-validacion.md](hu-28-validacion.md). La prueba optativa
+`npm.cmd run test:hu28:dev --prefix frontend` necesita `HU28_DEV_RUN=1`; no se
+ejecuta como parte de las suites ordinarias ni introduce rutas de prueba en la API.
+
 ## Pendientes para completar HU-28
 
-1. Añadir «Repetir expedición» al historial y cargar el formulario de creación.
-2. Exigir fechas nuevas y revisión de contactos; guardar con otro id y conservar
-   la expedición original.
-3. Ejecutar las comprobaciones de persistencia real, interfaz y el recorrido de DEV.
-4. Coordinar los puntos intermedios con su responsable. El contrato actual de
+1. Coordinar los puntos intermedios con su responsable. El contrato actual de
    HU-29 no tiene ese campo: esta entrega conserva el contrato existente. La copia
    de puntos disponibles sigue pendiente y debe validarse antes de aceptar el
    alcance completo. No se reemplazarán puntos existentes por una colección vacía.
+2. Adjuntar la evidencia al issue y al PR de HU-28, recibir la revisión técnica y
+   la aceptación del equipo, y coordinar la integración del contrato con HU-29.
 
-Las pruebas de estas entregas usan destinos sustitutos y datos ficticios. No
-acreditan una integración completa de HU-29 ni una validación contra Supabase DEV.
+Las tres primeras entregas utilizaron sustitutos; la cuarta sí acredita el
+recorrido real en Supabase DEV para el alcance sin puntos intermedios. No se
+declara integrada HU-29 ni aceptada la historia completa.

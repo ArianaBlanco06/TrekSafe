@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "typecheck:tests": "tsc --noEmit -p tsconfig.tests.json",
     "test:equipo": "tsx --tsconfig tsconfig.json --test src/**/*.test.ts src/**/*.test.tsx",
-    "test:pwa:privacidad": "playwright test --config playwright.privacy.config.ts"
+    "test:pwa:privacidad": "playwright test --config playwright.privacy.config.ts",
+    "test:hu28:dev": "playwright test --config playwright.hu28-dev.config.ts"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
