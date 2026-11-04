@@ -51,6 +51,13 @@ export const crearExpedicionSchema = z
     horaInicio: z.string().min(1, 'Hora de salida obligatoria'),
     horaRetornoEstimada: z.string().min(1, 'Hora de retorno obligatoria'),
     minutosTolerancia: z.coerce.number().int().min(1).max(480).default(30),
+    minutosRecordatorio: z.coerce
+      .number()
+      .int()
+      .refine((v) => v === 15 || v === 30 || v === 60, {
+        message: 'La anticipación del recordatorio debe ser 15, 30 o 60 minutos',
+      })
+      .default(30),
     idsContactos: z.array(z.string().uuid()).min(1, 'Selecciona al menos un contacto'),
     nombresAcompanantes: z
       .array(z.string().trim().min(2))

@@ -33,6 +33,7 @@ export function PaginaCrearExpedicion() {
   const [horaInicio, setHoraInicio] = useState('');
   const [horaRetornoEstimada, setHoraRetornoEstimada] = useState('');
   const [minutosTolerancia, setMinutosTolerancia] = useState(30);
+  const [minutosRecordatorio, setMinutosRecordatorio] = useState<15 | 30 | 60>(30);
   const [idsContactosSeleccionados, setIdsContactosSeleccionados] = useState<string[]>([]);
   const [nombresAcompanantes, setNombresAcompanantes] = useState<string[]>(['']);
   const [objetivoSelector, setObjetivoSelector] = useState<CoordinatePickerTarget>('start');
@@ -176,6 +177,7 @@ export function PaginaCrearExpedicion() {
       horaInicio: new Date(horaInicio).toISOString(),
       horaRetornoEstimada: new Date(horaRetornoEstimada).toISOString(),
       minutosTolerancia,
+      minutosRecordatorio,
       idsContactos: idsContactosSeleccionados,
       nombresAcompanantes: acompanantesValidos,
     };
@@ -434,6 +436,29 @@ export function PaginaCrearExpedicion() {
             value={minutosTolerancia}
             onChange={(e) => setMinutosTolerancia(Number(e.target.value))}
           />
+        </div>
+
+        <div>
+          <FieldLabel htmlFor="exp-recordatorio">Anticipación del recordatorio in-app</FieldLabel>
+          <p className="text-xs text-muted-foreground mb-2">
+            Elige con cuánta anticipación recibirás el aviso en tu bandeja antes de la hora de retorno estimada.
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            {[15, 30, 60].map((min) => (
+              <button
+                key={min}
+                type="button"
+                onClick={() => setMinutosRecordatorio(min as 15 | 30 | 60)}
+                className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all ${
+                  minutosRecordatorio === min
+                    ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                    : 'bg-card text-foreground border-border hover:bg-muted/50'
+                }`}
+              >
+                {min} min {min === 30 && '(Inicial)'}
+              </button>
+            ))}
+          </div>
         </div>
 
         <fieldset>
