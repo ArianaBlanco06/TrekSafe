@@ -7,7 +7,8 @@ import { apiEquipoEnMemoria, promesaPendiente } from '../testing/listasEquipoApi
 import type { ListaEquipo, ListasEquipoApi } from '../services/listasEquipo';
 
 function boton(raiz: ReactTestInstance, texto: string) {
-  return raiz.findAllByType('button').find((elemento) => elemento.children.some((hijo) => typeof hijo === 'string' && hijo.trim() === texto))!;
+  const ambito = raiz.findAllByType('dialog')[0] ?? raiz;
+  return ambito.findAllByType('button').find((elemento) => elemento.children.some((hijo) => typeof hijo === 'string' && hijo.trim() === texto))!;
 }
 async function pulsar(raiz: ReactTestInstance, texto: string) {
   await act(async () => { boton(raiz, texto).props.onClick(); });
@@ -25,7 +26,7 @@ async function enviar(raiz: ReactTestInstance) {
 async function preparar(t: TestContext, api: ListasEquipoApi) {
   const anteriorWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
   const anteriorNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
-  const eventos = Object.assign(new EventTarget(), { confirm: (_mensaje: string): boolean => true });
+  const eventos = new EventTarget();
   const navegador = { onLine: true };
   Object.defineProperty(globalThis, 'window', { configurable: true, value: eventos });
   Object.defineProperty(globalThis, 'navigator', { configurable: true, value: navegador });
@@ -52,7 +53,7 @@ describe('Pantalla HU-30: React sin navegador', () => {
     assert.equal(raiz.findAllByType('form').length, 0);
     assert.equal((await api.listar())[0].nombre, 'Montaña');
     assert.deepEqual((await api.listar())[0].items, []);
-    assert.match(JSON.stringify(arbol.toJSON()), /Lista guardada/);
+    assert.match(JSON.stringify(arbol.toJSON()), /Lista creada/);
   });
 
   it('muestra errores de nombres sin enviar datos y deja quitar un ítem vacío', async (t) => {
@@ -94,7 +95,7 @@ describe('Pantalla HU-30: React sin navegador', () => {
     let consultas = 0;
     const obtener = api.obtener;
     api.obtener = async (id) => { consultas++; return obtener(id); };
-    const { raiz } = await preparar(t, api);
+    const { raiz, arbol } = await preparar(t, api);
     await pulsar(raiz, 'Editar');
     assert.equal(consultas, 1);
     nombreLista(raiz, 'Invierno');
@@ -102,11 +103,17 @@ describe('Pantalla HU-30: React sin navegador', () => {
     await pulsar(raiz, 'Añadir ítem');
     itemNombre(raiz, 1, 'Abrigo');
     await enviar(raiz);
+    assert.equal(raiz.findAllByType('dialog').length, 1);
+    assert.equal((await api.obtener(original.id)).nombre, 'Equipo');
+    await pulsar(raiz, 'Confirmar cambios');
     const guardada = await api.obtener(original.id);
     assert.equal(guardada.nombre, 'Invierno');
     assert.equal(guardada.items[0].id, original.items[0].id);
     assert.equal(guardada.items[0].nombre, 'Casco nuevo');
     assert.notEqual(guardada.items[1].id, original.items[0].id);
+    assert.equal(raiz.findAllByType('dialog').length, 0);
+    assert.equal(raiz.findAllByType('form').length, 0);
+    assert.match(JSON.stringify(arbol.toJSON()), /Lista actualizada/);
   });
 
   it('cancelar una edición no modifica los datos guardados', async (t) => {
@@ -116,6 +123,12 @@ describe('Pantalla HU-30: React sin navegador', () => {
     await pulsar(raiz, 'Editar');
     nombreLista(raiz, 'Cambio sin guardar');
     itemNombre(raiz, 0, 'Otro casco');
+    await enviar(raiz);
+    // Escape cancela solamente la confirmación y mantiene el borrador de edición.
+    act(() => { raiz.findByType('dialog').props.onCancel({ preventDefault() {} }); });
+    assert.equal(raiz.findAllByType('dialog').length, 0);
+    assert.equal(raiz.findByProps({ placeholder: 'Ej. Equipo de alta montaña' }).props.value, 'Cambio sin guardar');
+    assert.deepEqual(await api.obtener(lista.id), lista);
     await pulsar(raiz, 'Cancelar');
     assert.deepEqual(await api.obtener(lista.id), lista);
     assert.equal(raiz.findAllByType('form').length, 0);
@@ -139,16 +152,95 @@ describe('Pantalla HU-30: React sin navegador', () => {
     assert.equal((await api.listar())[0].nombre, 'Equipo pendiente');
   });
 
-  it('solo elimina después de aceptar la confirmación simulada', async (t) => {
+  it('solo elimina después de confirmar en el diálogo de la PWA y permite cancelar', async (t) => {
     const api = apiEquipoEnMemoria();
     await api.crear({ nombre: 'Equipo', items: [] });
-    const { raiz, eventos } = await preparar(t, api);
-    eventos.confirm = () => false;
+    const { raiz, arbol } = await preparar(t, api);
     await pulsar(raiz, 'Eliminar');
+    assert.equal(raiz.findByType('dialog').props.role, 'alertdialog');
     assert.equal((await api.listar()).length, 1);
-    eventos.confirm = () => true;
+    await pulsar(raiz, 'Cancelar');
+    assert.equal(raiz.findAllByType('dialog').length, 0);
+    assert.equal((await api.listar()).length, 1);
     await pulsar(raiz, 'Eliminar');
+    await pulsar(raiz, 'Eliminar lista');
+    assert.equal(raiz.findAllByType('dialog').length, 0);
     assert.deepEqual(await api.listar(), []);
+    assert.match(JSON.stringify(arbol.toJSON()), /Lista eliminada/);
+  });
+
+  it('conserva el diálogo y los datos si falla la eliminación y permite reintentar', async (t) => {
+    const api = apiEquipoEnMemoria();
+    const lista = await api.crear({ nombre: 'Equipo', items: [] });
+    const eliminar = api.eliminar;
+    api.eliminar = async () => { throw new Error('No se pudo eliminar.'); };
+    const { raiz, arbol } = await preparar(t, api);
+    await pulsar(raiz, 'Eliminar');
+    await pulsar(raiz, 'Eliminar lista');
+    assert.equal(raiz.findAllByType('dialog').length, 1);
+    assert.match(raiz.findByType('dialog').findByProps({ role: 'alert' }).children.join(''), /No se pudo eliminar/);
+    assert.deepEqual(await api.obtener(lista.id), lista);
+    assert.doesNotMatch(JSON.stringify(arbol.toJSON()), /Lista eliminada/);
+    api.eliminar = eliminar;
+    await pulsar(raiz, 'Eliminar lista');
+    assert.equal(raiz.findAllByType('dialog').length, 0);
+    assert.deepEqual(await api.listar(), []);
+  });
+
+  it('conserva el borrador y la confirmación si falla la edición y permite reintentar', async (t) => {
+    const api = apiEquipoEnMemoria();
+    const lista = await api.crear({ nombre: 'Equipo', items: [] });
+    const actualizar = api.actualizar;
+    api.actualizar = async () => { throw new Error('No se pudo actualizar.'); };
+    const { raiz, arbol } = await preparar(t, api);
+    await pulsar(raiz, 'Editar');
+    nombreLista(raiz, 'Equipo de invierno');
+    await enviar(raiz);
+    await pulsar(raiz, 'Confirmar cambios');
+    assert.equal(raiz.findAllByType('dialog').length, 1);
+    assert.equal(raiz.findByProps({ placeholder: 'Ej. Equipo de alta montaña' }).props.value, 'Equipo de invierno');
+    assert.match(JSON.stringify(arbol.toJSON()), /No se pudo actualizar/);
+    assert.doesNotMatch(JSON.stringify(arbol.toJSON()), /Lista actualizada/);
+    assert.deepEqual(await api.obtener(lista.id), lista);
+    api.actualizar = actualizar;
+    await pulsar(raiz, 'Confirmar cambios');
+    assert.equal((await api.obtener(lista.id)).nombre, 'Equipo de invierno');
+    assert.equal(raiz.findAllByType('dialog').length, 0);
+    assert.equal(raiz.findAllByType('form').length, 0);
+  });
+
+  it('bloquea el doble envío y el cierre mientras se elimina una lista', async (t) => {
+    const api = apiEquipoEnMemoria();
+    await api.crear({ nombre: 'Equipo', items: [] });
+    const eliminar = api.eliminar;
+    const pendiente = promesaPendiente<void>();
+    let llamadas = 0;
+    api.eliminar = async (id) => { llamadas++; await pendiente.promesa; await eliminar(id); };
+    const { raiz } = await preparar(t, api);
+    await pulsar(raiz, 'Eliminar');
+    await pulsar(raiz, 'Eliminar lista');
+    assert.equal(boton(raiz, 'Eliminando…').props.disabled, true);
+    assert.equal(boton(raiz, 'Cancelar').props.disabled, true);
+    await pulsar(raiz, 'Eliminando…');
+    act(() => { raiz.findByType('dialog').props.onCancel({ preventDefault() {} }); });
+    assert.equal(raiz.findAllByType('dialog').length, 1);
+    assert.equal(llamadas, 1);
+    await act(async () => { pendiente.resolver(); });
+    assert.deepEqual(await api.listar(), []);
+    assert.equal(raiz.findAllByType('dialog').length, 0);
+  });
+
+  it('impide confirmar sin conexión y permite cancelar el diálogo', async (t) => {
+    const api = apiEquipoEnMemoria();
+    await api.crear({ nombre: 'Equipo', items: [] });
+    const { raiz, eventos, navegador } = await preparar(t, api);
+    await pulsar(raiz, 'Eliminar');
+    await act(async () => { navegador.onLine = false; eventos.dispatchEvent(new Event('offline')); });
+    assert.equal(boton(raiz, 'Eliminar lista').props.disabled, true);
+    await pulsar(raiz, 'Eliminar lista');
+    assert.equal((await api.listar()).length, 1);
+    await pulsar(raiz, 'Cancelar');
+    assert.equal(raiz.findAllByType('dialog').length, 0);
   });
 
   it('mantiene lo escrito al perder conexión y habilita el guardado al reconectar', async (t) => {

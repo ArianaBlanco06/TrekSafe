@@ -1,7 +1,6 @@
--- HU-30, fase 5. Aplicar después de 20261101_hu30_listas_equipo.sql.
+-- Aplicar después de 20261101_hu30_listas_equipo.sql.
 BEGIN;
 
--- Mantiene el orden del formulario sin depender del orden físico de PostgreSQL.
 ALTER TABLE public.items_lista_equipo ADD COLUMN posicion INTEGER;
 WITH posiciones AS (
     SELECT id, (ROW_NUMBER() OVER (PARTITION BY lista_equipo_id ORDER BY id) - 1)::INTEGER AS valor
@@ -15,7 +14,6 @@ ALTER TABLE public.items_lista_equipo
     ADD CONSTRAINT uq_items_lista_equipo_posicion UNIQUE (lista_equipo_id, posicion)
         DEFERRABLE INITIALLY DEFERRED;
 
--- Validación compartida de las escrituras. No lee datos ni otorga privilegios.
 CREATE FUNCTION public.treksafe_validar_datos_lista_equipo(p_datos JSONB, p_permitir_ids BOOLEAN)
 RETURNS VOID LANGUAGE plpgsql IMMUTABLE SECURITY INVOKER SET search_path = '' AS $$
 DECLARE
@@ -107,7 +105,6 @@ DECLARE
     v_item JSONB;
     v_posicion BIGINT;
 BEGIN
-    -- El bloqueo serializa edición y eliminación sobre la misma lista.
     PERFORM 1 FROM public.listas_equipo
     WHERE id = p_lista_id AND senderista_id = p_senderista_id FOR UPDATE;
     IF NOT FOUND THEN RETURN NULL; END IF;
@@ -159,7 +156,6 @@ BEGIN
 END;
 $$;
 
--- Sin SECURITY DEFINER: los permisos del ejecutor siguen siendo necesarios.
 REVOKE ALL ON FUNCTION public.treksafe_validar_datos_lista_equipo(JSONB, BOOLEAN),
     public.treksafe_obtener_lista_equipo(UUID, UUID), public.treksafe_listar_listas_equipo(UUID),
     public.treksafe_crear_lista_equipo(UUID, JSONB), public.treksafe_actualizar_lista_equipo(UUID, UUID, JSONB),

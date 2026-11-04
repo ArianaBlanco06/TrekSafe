@@ -85,7 +85,7 @@ export function useListasEquipo(api: ListasEquipoApi, enLinea: boolean) {
       setListas((anteriores) => anteriores.some((actual) => actual.id === lista.id)
         ? anteriores.map((actual) => actual.id === lista.id ? lista : actual)
         : [...anteriores, lista]);
-      setMensaje('Lista guardada.');
+      setMensaje(id === undefined ? 'Lista creada.' : 'Lista actualizada.');
     }, true);
   }
 

@@ -1,7 +1,4 @@
--- HU-30: listas personales de equipo.
--- Requiere el esquema inicial de TrekSafe y los roles de Supabase.
--- Aplicar una sola vez, en el orden acordado con el responsable de migraciones.
-
+-- aplicar una sola vez
 BEGIN;
 
 CREATE TABLE public.listas_equipo (
@@ -46,8 +43,6 @@ COMMENT ON TABLE public.items_lista_equipo IS
 COMMENT ON COLUMN public.listas_equipo.actualizado_en IS
     'La operacion de escritura debe actualizar esta fecha junto con la lista y sus items.';
 
--- La API usa su JWT propio y service_role. No se expone acceso directo al cliente.
--- service_role evita RLS: el futuro DAO debe filtrar SIEMPRE por senderista_id.
 ALTER TABLE public.listas_equipo ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.items_lista_equipo ENABLE ROW LEVEL SECURITY;
 

@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Backpack, ChevronLeft, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { Backpack, CheckCircle2, ChevronLeft, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { DialogoConfirmacion } from '@/components/DialogoConfirmacion';
 import { FormularioListaEquipo } from '@/components/equipo/FormularioListaEquipo';
 import { useAutenticacion } from '@/context/ContextoAutenticacion';
 import { useEstadoEnLinea } from '@/hooks/useEstadoEnLinea';
 import { useListasEquipo } from '@/hooks/useListasEquipo';
-import { listasEquipoApi, type ListaEquipo, type ListasEquipoApi } from '@/services/listasEquipo';
+import { listasEquipoApi, type DatosListaEquipo, type ListaEquipo, type ListasEquipoApi } from '@/services/listasEquipo';
+
+type Confirmacion = { tipo: 'eliminar'; lista: ListaEquipo }
+  | { tipo: 'editar'; lista: ListaEquipo; datos: DatosListaEquipo };
 
 export function PaginaListasEquipo() {
   const { usuario } = useAutenticacion();
@@ -17,6 +21,7 @@ export function GestionListasEquipo({ api }: { api: ListasEquipoApi }) {
   const enLinea = useEstadoEnLinea();
   const equipo = useListasEquipo(api, enLinea);
   const [editor, setEditor] = useState<{ lista?: ListaEquipo } | null>(null);
+  const [confirmacion, setConfirmacion] = useState<Confirmacion | null>(null);
   const bloqueado = equipo.ocupado || equipo.cargando;
 
   function cerrarEditor() {
@@ -29,8 +34,20 @@ export function GestionListasEquipo({ api }: { api: ListasEquipoApi }) {
     if (lista) setEditor({ lista });
   }
 
-  async function eliminar(lista: ListaEquipo) {
-    if (window.confirm(`¿Eliminar la lista «${lista.nombre}» y todos sus ítems?`)) await equipo.eliminar(lista.id);
+  function cerrarConfirmacion() {
+    if (equipo.ocupado) return;
+    setConfirmacion(null);
+    equipo.limpiarMensajes();
+  }
+
+  async function confirmarOperacion() {
+    if (!confirmacion || equipo.ocupado || !enLinea) return;
+    if (confirmacion.tipo === 'eliminar') {
+      if (await equipo.eliminar(confirmacion.lista.id)) setConfirmacion(null);
+    } else if (await equipo.guardar(confirmacion.datos, confirmacion.lista.id)) {
+      setConfirmacion(null);
+      setEditor(null);
+    }
   }
 
   return (
@@ -55,11 +72,19 @@ export function GestionListasEquipo({ api }: { api: ListasEquipoApi }) {
           ocupado={bloqueado} enLinea={enLinea} error={equipo.errorOperacion}
           onCancelar={cerrarEditor}
           onGuardar={async (datos) => {
-            if (await equipo.guardar(datos, editor.lista?.id)) setEditor(null);
+            if (editor.lista) {
+              equipo.limpiarMensajes();
+              setConfirmacion({ tipo: 'editar', lista: editor.lista, datos });
+            } else if (await equipo.guardar(datos)) setEditor(null);
           }} />
       ) : (
         <>
-          {equipo.mensaje && <p role="status" className="text-sm text-primary mb-4">{equipo.mensaje}</p>}
+          {equipo.mensaje && (
+            <div role="status" className="mb-4 flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 p-3 text-sm text-primary">
+              <CheckCircle2 size={18} className="shrink-0" aria-hidden="true" />
+              {equipo.mensaje}
+            </div>
+          )}
           {equipo.errorOperacion && <p role="alert" className="error-banner mb-4">{equipo.errorOperacion}</p>}
           <button type="button" className="btn-primary inline-flex justify-center items-center gap-2 mb-5"
             disabled={bloqueado || !enLinea} onClick={() => { equipo.limpiarMensajes(); setEditor({}); }}>
@@ -96,7 +121,10 @@ export function GestionListasEquipo({ api }: { api: ListasEquipoApi }) {
                     className="flex-1 min-h-12 inline-flex justify-center items-center gap-2 rounded-xl bg-muted text-sm font-semibold disabled:opacity-50">
                     <Pencil size={16} aria-hidden="true" /> Editar
                   </button>
-                  <button type="button" disabled={bloqueado || !enLinea} onClick={() => { void eliminar(lista); }}
+                  <button type="button" disabled={bloqueado || !enLinea} onClick={() => {
+                    equipo.limpiarMensajes();
+                    setConfirmacion({ tipo: 'eliminar', lista });
+                  }}
                     aria-label={`Eliminar lista ${lista.nombre}`}
                     className="min-h-12 px-3 inline-flex justify-center items-center gap-2 rounded-xl text-destructive text-sm font-semibold disabled:opacity-50">
                     <Trash2 size={16} aria-hidden="true" /> Eliminar
@@ -107,6 +135,23 @@ export function GestionListasEquipo({ api }: { api: ListasEquipoApi }) {
           </ul>
           {equipo.ocupado && <p role="status" className="text-sm text-muted-foreground mt-3">Procesando…</p>}
         </>
+      )}
+      {confirmacion && (
+        <DialogoConfirmacion
+          titulo={confirmacion.tipo === 'eliminar' ? '¿Eliminar esta lista?' : '¿Guardar los cambios?'}
+          textoConfirmar={confirmacion.tipo === 'eliminar' ? 'Eliminar lista' : 'Confirmar cambios'}
+          textoProcesando={confirmacion.tipo === 'eliminar' ? 'Eliminando…' : 'Guardando…'}
+          destructivo={confirmacion.tipo === 'eliminar'} ocupado={equipo.ocupado}
+          deshabilitado={!enLinea || equipo.cargando} error={equipo.errorOperacion}
+          onCancelar={cerrarConfirmacion} onConfirmar={() => { void confirmarOperacion(); }}>
+          {confirmacion.tipo === 'eliminar' ? (
+            <>
+              <p>Se eliminará la lista «{confirmacion.lista.nombre}» y todos sus ítems.</p>
+              <p>Esta acción no se puede deshacer.</p>
+            </>
+          ) : <p>Se guardarán los cambios en el nombre y los ítems de «{confirmacion.lista.nombre}».</p>}
+          {!enLinea && <p role="status">Conéctate para {confirmacion.tipo === 'eliminar' ? 'eliminar la lista' : 'guardar los cambios'}.</p>}
+        </DialogoConfirmacion>
       )}
     </div>
   );

@@ -19,7 +19,7 @@ it('HU-30: React, HTTP y PostgreSQL conservan listas y aíslan dos usuarios', { 
   const fetchReal = globalThis.fetch;
   const descriptores = new Map(['window', 'navigator', 'sessionStorage'].map((nombre) =>
     [nombre, Object.getOwnPropertyDescriptor(globalThis, nombre)]));
-  const ventana = Object.assign(new EventTarget(), { confirm: (): boolean => false });
+  const ventana = new EventTarget();
   let token = '';
   let arbol: ReactTestRenderer | undefined;
   Object.defineProperty(globalThis, 'window', { configurable: true, value: ventana });
@@ -52,7 +52,8 @@ it('HU-30: React, HTTP y PostgreSQL conservan listas y aíslan dos usuarios', { 
     assert.fail('La vista no alcanzó el estado esperado dentro del plazo local de pruebas.');
   }
   function boton(texto: string) {
-    return raiz().findAllByType('button').find((elemento) => elemento.children.some((hijo) =>
+    const ambito = raiz().findAllByType('dialog')[0] ?? raiz();
+    return ambito.findAllByType('button').find((elemento) => elemento.children.some((hijo) =>
       typeof hijo === 'string' && hijo.trim() === texto))!;
   }
   async function pulsar(texto: string) { await act(async () => { boton(texto).props.onClick(); }); }
@@ -64,6 +65,7 @@ it('HU-30: React, HTTP y PostgreSQL conservan listas y aíslan dos usuarios', { 
   }
   async function guardar() {
     await act(async () => { raiz().findByType('form').props.onSubmit({ preventDefault() {} }); });
+    if (raiz().findAllByType('dialog').length > 0) await pulsar('Confirmar cambios');
     await hasta(() => raiz().findAllByType('form').length === 0);
   }
   async function sesion(actor: string) {
@@ -123,10 +125,11 @@ it('HU-30: React, HTTP y PostgreSQL conservan listas y aíslan dos usuarios', { 
   await sesion(senderistaA);
   assert.doesNotMatch(JSON.stringify(arbol!.toJSON()), /Equipo personal B/);
   assert.deepEqual(await listasEquipoApi.obtener(listaA.id), editada);
-  await pulsar('Eliminar'); // confirmación simulada rechazada
-  assert.equal((await listasEquipoApi.listar()).length, 1);
-  ventana.confirm = () => true;
   await pulsar('Eliminar');
+  await pulsar('Cancelar');
+  assert.equal((await listasEquipoApi.listar()).length, 1);
+  await pulsar('Eliminar');
+  await pulsar('Eliminar lista');
   await hasta(() => raiz().findAllByProps({ 'aria-label': `Eliminar lista ${editada.nombre}` }).length === 0);
   assert.deepEqual(await listasEquipoApi.listar(), []);
   const restantes = await pool.query('SELECT id,senderista_id FROM public.listas_equipo');
