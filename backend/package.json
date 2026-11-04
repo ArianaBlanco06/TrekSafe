@@ -10,8 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test src/**/*.test.ts",
     "test:mail": "tsx scripts/test-mail.ts",
-    "test:rescue-alert": "tsx scripts/test-rescue-alert.ts",
-    "seed:avisos": "tsx scripts/seed-avisos-demo.ts"
+    "test:rescue-alert": "tsx scripts/test-rescue-alert.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
