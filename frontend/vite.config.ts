@@ -26,6 +26,8 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
+      // 'autoUpdate' recarga todas las ventanas abiertas al activarse un Service Worker nuevo, y eso
+      // descarta formularios a medio editar. Así, la versión nueva se activa al cerrar las pestañas.
       registerType: 'prompt',
       includeAssets: ['favicon.svg'],
       manifest: {
@@ -51,6 +53,7 @@ export default defineConfig({
           {
             // No hay respuestas API autorizadas para almacenamiento offline.
             // Authorization cubre tambien APIs configuradas en otro origen.
+            // Incluye el plan de HU-26 cuya versionEsperada exige una lectura vigente.
             urlPattern: ({ request, url }) => request.headers.has('authorization')
               || /^\/(?:api|rest\/v1)(?:\/|$)/.test(url.pathname),
             handler: 'NetworkOnly',

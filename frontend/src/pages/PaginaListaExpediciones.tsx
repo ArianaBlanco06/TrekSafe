@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, Plus } from 'lucide-react';
+import { ChevronRight, Pencil, Plus } from 'lucide-react';
 import { obtenerExpediciones, type Expedicion } from '@/services/expedicion';
 
 const ETIQUETA_ESTADO: Record<string, string> = {
@@ -101,6 +101,14 @@ export function PaginaListaExpediciones() {
                     {esAlerta ? 'Ver expedición en alerta' : 'Ver expedición activa'}{' '}
                     <ChevronRight size={16} />
                   </p>
+                )}
+                {exp.estado === 'programada' && (
+                  <Link
+                    to={`/expediciones/${exp.id}/editar`}
+                    className="text-sm font-semibold mt-3 inline-flex items-center gap-1 text-primary min-h-12"
+                  >
+                    <Pencil size={14} /> Editar
+                  </Link>
                 )}
               </div>
             );
