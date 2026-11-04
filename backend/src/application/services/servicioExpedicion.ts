@@ -8,6 +8,7 @@ import {
 import { RepositorioAutenticacionPostgres } from '../../infrastructure/repositories/RepositorioAutenticacionPostgres.js';
 import { RepositorioUsuario } from '../../infrastructure/repositories/RepositorioUsuario.js';
 import { verificarContrasena } from '../../infrastructure/security/password.js';
+import { ServicioNotificacionRetornoSeguro } from './ServicioNotificacionRetornoSeguro.js';
 
 export type ResumenExpedicionActiva = {
   id: string;
@@ -29,6 +30,7 @@ export class ServicioExpedicion {
     private readonly repoExpedicion = new RepositorioExpedicion(),
     private readonly repoUsuario = new RepositorioUsuario(),
     private readonly repoAuth = new RepositorioAutenticacionPostgres(),
+    private readonly servicioNotificacionRetorno = new ServicioNotificacionRetornoSeguro(),
   ) {}
 
   async crearExpedicion(senderistaId: string, entrada: EntradaCrearExpedicion) {
@@ -69,6 +71,7 @@ export class ServicioExpedicion {
       horaInicio: entrada.horaInicio,
       horaRetornoEstimada: entrada.horaRetornoEstimada,
       minutosTolerancia: entrada.minutosTolerancia,
+      minutosRecordatorio: entrada.minutosRecordatorio ?? 30,
       estado: estado as 'programada' | 'en_progreso',
       idsContactos: entrada.idsContactos,
       nombresAcompanantes: entrada.nombresAcompanantes,
@@ -137,11 +140,24 @@ export class ServicioExpedicion {
       throw new ErrorAplicacion(401, 'Contraseña incorrecta', 'CONTRASENA_INVALIDA');
     }
 
+    const eraAlerta = expedicion.estado === 'alerta';
     const completada = await this.repoExpedicion.completarConfirmacionRetorno(expedicionId, senderistaId);
+    const confirmadoEn = completada.actualizado_en ?? new Date().toISOString();
+
+    // Notificar retorno seguro a contactos mediante el Outbox (HU-44)
+    try {
+      await this.servicioNotificacionRetorno.notificarRetornoSeguro(
+        expedicionId,
+        confirmadoEn,
+        eraAlerta,
+      );
+    } catch (err) {
+      console.error(`[RetornoSeguro] Error al programar outbox para expedición ${expedicionId}:`, err);
+    }
 
     return {
       expedicion: mapearExpedicion(completada),
-      confirmadoEn: completada.actualizado_en ?? new Date().toISOString(),
+      confirmadoEn,
     };
   }
 
@@ -181,6 +197,7 @@ function mapearExpedicion(fila: {
   hora_inicio: string;
   hora_retorno_estimada: string;
   minutos_tolerancia: number;
+  minutos_recordatorio?: number;
   estado: string;
   creado_en?: string;
   actualizado_en?: string;
@@ -192,6 +209,7 @@ function mapearExpedicion(fila: {
     horaInicio: fila.hora_inicio,
     horaRetornoEstimada: fila.hora_retorno_estimada,
     minutosTolerancia: fila.minutos_tolerancia,
+    minutosRecordatorio: fila.minutos_recordatorio ?? 30,
     estado: fila.estado,
     creadoEn: fila.creado_en,
     actualizadoEn: fila.actualizado_en,
