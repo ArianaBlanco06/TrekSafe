@@ -1,4 +1,5 @@
 import type { EstadoExpedicion } from '../value-objects/enums.js';
+import type { UmbralRecordatorioMinutos } from '../strategies/IReglaRecordatorio.js';
 
 export type Expedicion = {
   id: string;
@@ -10,6 +11,7 @@ export type Expedicion = {
   horaInicio: string;
   horaRetornoEstimada: string;
   minutosTolerancia: number;
+  minutosRecordatorio?: UmbralRecordatorioMinutos;
   estado: EstadoExpedicion;
   creadoEn?: string;
   actualizadoEn?: string;

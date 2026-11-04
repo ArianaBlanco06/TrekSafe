@@ -7,6 +7,8 @@ node_modules/
 .env.*.local
 backend/.env
 frontend/.env
+.avisos_dev.json
+backend/.avisos_dev.json
 
 # Build outputs
 dist/

@@ -1,5 +1,6 @@
 import { ServicioNotificacionAlerta } from '../../application/services/servicioNotificacionAlerta.js';
 import { ServicioAlertaRescate } from '../../application/services/servicioAlertaRescate.js';
+import { ServicioRecordatorioExpedicion } from '../../application/services/servicioRecordatorioExpedicion.js';
 import { ServicioCorreo } from '../email/ServicioCorreo.js';
 import { loadEnv, type Env } from '../config/env.js';
 import { RepositorioExpedicion } from '../repositories/RepositorioExpedicion.js';
@@ -10,14 +11,21 @@ export type ResultadoTickCron = {
   enAlerta: number;
   correosContacto: number;
   correosRescate: number;
+  recordatorios?: number;
 };
 
 export async function ejecutarTickFechaLimite(
   repo = new RepositorioExpedicion(),
   alertasContacto = new ServicioNotificacionAlerta(),
   alertasRescate = new ServicioAlertaRescate(),
+  recordatorios = new ServicioRecordatorioExpedicion(),
 ): Promise<ResultadoTickCron> {
   const promovidas = await repo.promoverProgramadasListas();
+
+  // HU-38: Procesamiento de recordatorios preventivos con patrón Strategy
+  const resRecordatorios = await recordatorios.procesarRecordatorios();
+
+  // CA-03: Alertas críticas de seguridad independientes
   const idsEnAlerta = await repo.marcarEnProgresoExpiradaComoAlerta();
 
   let correosContacto = 0;
@@ -31,7 +39,13 @@ export async function ejecutarTickFechaLimite(
     correosRescate += rescate.enviados + rescate.registrados;
   }
 
-  return { promovidas, enAlerta: idsEnAlerta.length, correosContacto, correosRescate };
+  return {
+    promovidas,
+    enAlerta: idsEnAlerta.length,
+    correosContacto,
+    correosRescate,
+    recordatorios: resRecordatorios.avisosGenerados,
+  };
 }
 
 export function iniciarCronFechaLimiteExpedicion(

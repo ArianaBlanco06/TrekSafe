@@ -69,6 +69,7 @@ export class ServicioExpedicion {
       horaInicio: entrada.horaInicio,
       horaRetornoEstimada: entrada.horaRetornoEstimada,
       minutosTolerancia: entrada.minutosTolerancia,
+      minutosRecordatorio: entrada.minutosRecordatorio ?? 30,
       estado: estado as 'programada' | 'en_progreso',
       idsContactos: entrada.idsContactos,
       nombresAcompanantes: entrada.nombresAcompanantes,
@@ -181,6 +182,7 @@ function mapearExpedicion(fila: {
   hora_inicio: string;
   hora_retorno_estimada: string;
   minutos_tolerancia: number;
+  minutos_recordatorio?: number;
   estado: string;
   creado_en?: string;
   actualizado_en?: string;
@@ -192,6 +194,7 @@ function mapearExpedicion(fila: {
     horaInicio: fila.hora_inicio,
     horaRetornoEstimada: fila.hora_retorno_estimada,
     minutosTolerancia: fila.minutos_tolerancia,
+    minutosRecordatorio: fila.minutos_recordatorio ?? 30,
     estado: fila.estado,
     creadoEn: fila.creado_en,
     actualizadoEn: fila.actualizado_en,
