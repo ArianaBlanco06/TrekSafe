@@ -8,6 +8,7 @@ import {
 import { RepositorioAutenticacionPostgres } from '../../infrastructure/repositories/RepositorioAutenticacionPostgres.js';
 import { RepositorioUsuario } from '../../infrastructure/repositories/RepositorioUsuario.js';
 import { verificarContrasena } from '../../infrastructure/security/password.js';
+import { ServicioNotificacionRetornoSeguro } from './ServicioNotificacionRetornoSeguro.js';
 
 export type ResumenExpedicionActiva = {
   id: string;
@@ -29,6 +30,7 @@ export class ServicioExpedicion {
     private readonly repoExpedicion = new RepositorioExpedicion(),
     private readonly repoUsuario = new RepositorioUsuario(),
     private readonly repoAuth = new RepositorioAutenticacionPostgres(),
+    private readonly servicioNotificacionRetorno = new ServicioNotificacionRetornoSeguro(),
   ) {}
 
   async crearExpedicion(senderistaId: string, entrada: EntradaCrearExpedicion) {
@@ -138,11 +140,24 @@ export class ServicioExpedicion {
       throw new ErrorAplicacion(401, 'Contraseña incorrecta', 'CONTRASENA_INVALIDA');
     }
 
+    const eraAlerta = expedicion.estado === 'alerta';
     const completada = await this.repoExpedicion.completarConfirmacionRetorno(expedicionId, senderistaId);
+    const confirmadoEn = completada.actualizado_en ?? new Date().toISOString();
+
+    // Notificar retorno seguro a contactos mediante el Outbox (HU-44)
+    try {
+      await this.servicioNotificacionRetorno.notificarRetornoSeguro(
+        expedicionId,
+        confirmadoEn,
+        eraAlerta,
+      );
+    } catch (err) {
+      console.error(`[RetornoSeguro] Error al programar outbox para expedición ${expedicionId}:`, err);
+    }
 
     return {
       expedicion: mapearExpedicion(completada),
-      confirmadoEn: completada.actualizado_en ?? new Date().toISOString(),
+      confirmadoEn,
     };
   }
 
