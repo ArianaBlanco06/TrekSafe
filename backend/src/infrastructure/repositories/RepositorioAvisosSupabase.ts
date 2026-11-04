@@ -336,7 +336,7 @@ export class RepositorioAvisosSupabase implements INotificacionDAO {
       return data?.length ?? 0;
     } catch {
       this.registrarFallbackMemoria();
-      const avisos = RepositorioAvisosLocales();
+      const avisos = RepositorioAvisosSupabase.cargarAvisosLocales();
       let cant = 0;
       for (const a of avisos) {
         if (a.usuarioId === usuarioId && !a.leido) {
