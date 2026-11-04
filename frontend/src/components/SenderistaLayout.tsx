@@ -5,6 +5,7 @@ import { useAutenticacion } from '@/context/ContextoAutenticacion';
 import { MobileShell } from '@/components/Layout';
 import { BannerOffline } from '@/components/BannerOffline';
 import { AnfitrionRecordatorioSenderista } from '@/components/AnfitrionRecordatorioSenderista';
+import { BotonCampanaAvisos } from '@/components/BotonCampanaAvisos';
 import { obtenerExpedicionActiva } from '@/services/expedicion';
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
@@ -46,9 +47,12 @@ export function SenderistaLayout() {
       <div className="min-h-screen flex flex-col pb-20">
         <header className="px-6 py-4 flex items-center justify-between border-b border-border">
           <h1 className="text-lg font-bold">TrekSafe</h1>
-          <button type="button" onClick={handleLogout} aria-label="Cerrar sesión" className="btn-touch">
-            <LogOut size={20} className="text-muted-foreground" />
-          </button>
+          <div className="flex items-center gap-1">
+            <BotonCampanaAvisos />
+            <button type="button" onClick={handleLogout} aria-label="Cerrar sesión" className="btn-touch">
+              <LogOut size={20} className="text-muted-foreground" />
+            </button>
+          </div>
         </header>
 
         <BannerOffline />
