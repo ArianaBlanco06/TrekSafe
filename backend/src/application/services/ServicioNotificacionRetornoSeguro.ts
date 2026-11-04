@@ -31,7 +31,7 @@ export class ServicioNotificacionRetornoSeguro {
     fueAlertaPrevia = false,
   ): Promise<ResultadoNotificacionRetorno> {
     console.log(`[RetornoSeguro] Iniciando notificación para expedición ${expedicionId}...`);
-    const contexto = await this.repoAlerta.buscarContextoAlerta(expedicionId);
+    const contexto = await this.repoAlerta.buscarContextoAlerta(expedicionId, true);
     if (!contexto) {
       console.warn(`[RetornoSeguro] No se encontró contexto o datos de expedición ${expedicionId}`);
       return {
