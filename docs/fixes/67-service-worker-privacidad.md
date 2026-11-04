@@ -2,6 +2,8 @@
 
 Fecha: 3 de noviembre de 2026. Responsable: Andriy Hitoshi Enciso Rojas (@Hitoshi).
 
+Actualización del 4 de noviembre: [integración real de develop, HU-29 y HU-30](68-integracion-real-2026-11-04.md), con 158 pruebas backend, 32 frontend y 17 escenarios PWA aprobados. Ese informe sustituye los pendientes de integración y resultados anteriores de esta página; la revisión técnica sigue siendo obligatoria.
+
 Rama indicada por el equipo y seleccionada por Andriy: `fix/service-worker-privacidad`. Referencia: [issue #67](https://github.com/ArianaBlanco06/TrekSafe/issues/67). Corrige el problema preexistente documentado durante HU-26; no se atribuye su introducción a Favio.
 
 Estado: implementación y validación local terminadas, con evidencia de DevTools. El commit/push, la ejecución remota de GitHub Actions y la revisión de otro integrante están pendientes. No se modificaron `.env`, Supabase ni el estado de Git.

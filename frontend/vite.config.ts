@@ -54,6 +54,7 @@ export default defineConfig({
             // No hay respuestas API autorizadas para almacenamiento offline.
             // Authorization cubre tambien APIs configuradas en otro origen.
             // Incluye el plan de HU-26 cuya versionEsperada exige una lectura vigente.
+            // Tambien cubre las listas personales de equipo de HU-30.
             urlPattern: ({ request, url }) => request.headers.has('authorization')
               || /^\/(?:api|rest\/v1)(?:\/|$)/.test(url.pathname),
             handler: 'NetworkOnly',

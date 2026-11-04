@@ -15,6 +15,7 @@ import { PaginaInicioSenderista } from '@/pages/PaginaInicioSenderista';
 import { PaginaPerfilSenderista } from '@/pages/PaginaPerfilSenderista';
 import { PaginaFichaMedica } from '@/pages/PaginaFichaMedica';
 import { PaginaContactos } from '@/pages/PaginaContactos';
+import { PaginaListasEquipo } from '@/pages/PaginaListasEquipo';
 import { PaginaHistorialExpediciones } from '@/pages/PaginaHistorialExpediciones';
 import { PaginaPlantillas } from '@/pages/PaginaPlantillas';
 import { PaginaPrivacidad } from '@/pages/PaginaPrivacidad';
@@ -64,6 +65,7 @@ export function App() {
               <Route path="perfil" element={<PaginaPerfilSenderista />} />
               <Route path="perfil/medica" element={<PaginaFichaMedica />} />
               <Route path="perfil/contactos" element={<PaginaContactos />} />
+              <Route path="perfil/equipo" element={<PaginaListasEquipo />} />
               <Route path="perfil/historial" element={<PaginaHistorialExpediciones />} />
               <Route path="perfil/plantillas" element={<PaginaPlantillas />} />
               <Route path="perfil/privacidad" element={<PaginaPrivacidad />} />

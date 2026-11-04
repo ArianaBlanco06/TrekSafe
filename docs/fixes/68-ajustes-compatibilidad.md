@@ -2,6 +2,8 @@
 
 Fecha: 3 de noviembre de 2026. Responsable: Andriy Hitoshi Enciso Rojas (@Hitoshi).
 
+Actualización del 4 de noviembre: HU-26, HU-29 y HU-30 ya se incorporaron a la rama del fix por autorización del usuario. La [integración real](68-integracion-real-2026-11-04.md) registra conflictos y pruebas sobre esa combinación. Este documento conserva el contraste previo mediante snapshots.
+
 Esta revisión modifica el fix de `fix/service-worker-privacidad` para el [PR #68 existente](https://github.com/ArianaBlanco06/TrekSafe/pull/68), que resuelve el issue #67. No se crea otro PR ni se hace merge. Git, commit y push siguen a cargo de Andriy. No se modificaron `.env`, Supabase o migraciones SQL.
 
 ## Fuentes contrastadas

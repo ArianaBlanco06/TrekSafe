@@ -1,5 +1,6 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": { "types": ["node", "vite/client"] },
-  "include": ["playwright.privacy.config.ts", "tests/**/*.ts"]
+  "include": ["playwright.privacy.config.ts", "tests/**/*.ts", "src/**/*.test.ts", "src/**/*.test.tsx"],
+  "exclude": []
 }

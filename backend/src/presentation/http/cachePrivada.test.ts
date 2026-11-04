@@ -27,7 +27,8 @@ describe('Politica HTTP de privacidad', () => {
     server.closeAllConnections();
     await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
   });
-  for (const endpoint of ['/usuario/ficha-medica', '/usuario/contactos', '/expediciones', '/rescate/alertas']) {
+  for (const endpoint of ['/usuario/ficha-medica', '/usuario/contactos', '/expediciones', '/rescate/alertas',
+    '/plantillas', '/usuario/listas-equipo']) {
     it(`${endpoint}: el rechazo sin autenticacion tampoco se almacena`, async () => {
       const response = await fetch(`${base}/api${endpoint}`);
       assert.equal(response.status, 401);

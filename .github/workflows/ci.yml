@@ -66,12 +66,7 @@ jobs:
         run: npm run typecheck:tests --prefix frontend
 
       - name: Ejecutar pruebas TSX de HU-30
-        if: ${{ hashFiles('frontend/src/services/listasEquipo.test.ts') != '' }}
         run: npm run test:equipo --prefix frontend
-
-      - name: Informar disponibilidad de HU-30
-        if: ${{ hashFiles('frontend/src/services/listasEquipo.test.ts') == '' }}
-        run: echo "HU-30 aun no esta integrada en esta rama; su suite TSX se ejecutara cuando esten sus archivos."
 
       - name: Compilar frontend
         run: npm run build --prefix frontend

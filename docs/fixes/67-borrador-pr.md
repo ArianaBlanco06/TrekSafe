@@ -2,7 +2,9 @@
 
 Título sugerido: **fix(pwa): excluir datos privados de caché y aislar borradores por sesión**
 
-Rama: `fix/service-worker-privacidad`. Destino: `develop`. Actualizar el PR #68 existente; no crear otro ni hacer merge. El asistente no ejecutó Git ni publicó cambios.
+Rama: `fix/service-worker-privacidad`. Destino: `develop`. Actualizar el PR #68 existente; no crear otro ni hacer merge. Las operaciones Git de esta actualización fueron autorizadas expresamente por Andriy el 4 de noviembre.
+
+Actualización del 4 de noviembre: el usuario autorizó también las operaciones Git y la incorporación real de HU-29/HU-30. El [informe de integración](68-integracion-real-2026-11-04.md) contiene el alcance y las pruebas actuales; las menciones previas a copias temporales describen la revisión del 3 de noviembre.
 
 ---
 
