@@ -9,6 +9,8 @@
     "start": "node dist/main.js",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test src/**/*.test.ts",
+    "test:migraciones": "node --import tsx --test src/infrastructure/migraciones/migraciones.test.ts",
+    "test:frontend-logica": "node --import tsx --test ../frontend/src/lib/plantillasCuentaLogica.test.ts",
     "test:mail": "tsx scripts/test-mail.ts",
     "test:rescue-alert": "tsx scripts/test-rescue-alert.ts"
   },

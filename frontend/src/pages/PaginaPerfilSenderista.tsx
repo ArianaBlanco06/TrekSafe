@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ChevronRight, Heart, Map, Phone, Shield } from 'lucide-react';
+import { Bookmark, ChevronRight, Heart, Map, Phone, Shield } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useAutenticacion } from '@/context/ContextoAutenticacion';
 
@@ -45,6 +45,17 @@ export function PaginaPerfilSenderista() {
           <div className="flex items-center gap-3">
             <Map size={20} className="text-primary" />
             <span className="font-medium">Historial de expediciones</span>
+          </div>
+          <ChevronRight size={18} className="text-muted-foreground" />
+        </Link>
+
+        <Link
+          to="/senderista/perfil/plantillas"
+          className="flex items-center justify-between bg-card border border-border rounded-2xl p-4"
+        >
+          <div className="flex items-center gap-3">
+            <Bookmark size={20} className="text-primary" />
+            <span className="font-medium">Mis plantillas de ruta</span>
           </div>
           <ChevronRight size={18} className="text-muted-foreground" />
         </Link>
