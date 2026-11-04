@@ -8,11 +8,13 @@ export { calcularFechaLimite };
 
 export type FilaExpedicion = {
   id: string;
+  senderista_id?: string;
   lugar_inicio: string;
   lugar_fin: string;
   hora_inicio: string;
   hora_retorno_estimada: string;
   minutos_tolerancia: number;
+  minutos_recordatorio?: number;
   estado: string;
   creado_en?: string;
   actualizado_en?: string;
@@ -65,6 +67,7 @@ export class RepositorioExpedicion {
       horaInicio: string;
       horaRetornoEstimada: string;
       minutosTolerancia: number;
+      minutosRecordatorio?: number;
       estado: 'programada' | 'en_progreso';
       idsContactos: string[];
       nombresAcompanantes: string[];
@@ -77,23 +80,47 @@ export class RepositorioExpedicion {
       ? parseDecimalCoordinates(input.coordenadasFin)?.formatted ?? null
       : null;
 
-    const { data: expedicion, error } = await this.supabase
+    const payloadInsercion: Record<string, unknown> = {
+      senderista_id: senderistaId,
+      lugar_inicio: input.lugarInicio,
+      lugar_fin: input.lugarFin,
+      coordenadas_inicio: coordsInicio,
+      coordenadas_fin: coordsFin,
+      hora_inicio: input.horaInicio,
+      hora_retorno_estimada: input.horaRetornoEstimada,
+      minutos_tolerancia: input.minutosTolerancia,
+      estado: input.estado,
+    };
+    if (input.minutosRecordatorio) {
+      payloadInsercion.minutos_recordatorio = input.minutosRecordatorio;
+    }
+
+    let { data: expedicion, error } = await this.supabase
       .from('expediciones')
-      .insert({
-        senderista_id: senderistaId,
-        lugar_inicio: input.lugarInicio,
-        lugar_fin: input.lugarFin,
-        coordenadas_inicio: coordsInicio,
-        coordenadas_fin: coordsFin,
-        hora_inicio: input.horaInicio,
-        hora_retorno_estimada: input.horaRetornoEstimada,
-        minutos_tolerancia: input.minutosTolerancia,
-        estado: input.estado,
-      })
+      .insert(payloadInsercion)
       .select(
         'id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada, minutos_tolerancia, estado, creado_en',
       )
       .single();
+
+    // Fallback si la columna minutos_recordatorio aún no ha sido aplicada por Sebastian en DEV
+    const esColumnaFaltante =
+      error?.code === 'PGRST204' ||
+      error?.code === '42703' ||
+      error?.message?.includes('minutos_recordatorio');
+
+    if (esColumnaFaltante && payloadInsercion.minutos_recordatorio) {
+      delete payloadInsercion.minutos_recordatorio;
+      const reintento = await this.supabase
+        .from('expediciones')
+        .insert(payloadInsercion)
+        .select(
+          'id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada, minutos_tolerancia, estado, creado_en',
+        )
+        .single();
+      expedicion = reintento.data;
+      error = reintento.error;
+    }
 
     if (error || !expedicion) throw new ErrorAplicacion(500, error?.message ?? 'Error al crear expedición');
 
@@ -295,5 +322,49 @@ export class RepositorioExpedicion {
     }
 
     return data;
+  }
+
+  async buscarEnProgresoParaRecordatorio(): Promise<
+    Array<{
+      id: string;
+      senderistaId: string;
+      horaRetornoEstimada: string;
+      minutosRecordatorio: number;
+    }>
+  > {
+    const { data, error } = await this.supabase
+      .from('expediciones')
+      .select('id, senderista_id, hora_retorno_estimada, minutos_recordatorio')
+      .eq('estado', 'en_progreso');
+
+    const esColumnaFaltante =
+      error?.code === 'PGRST204' ||
+      error?.code === '42703' ||
+      error?.message?.includes('minutos_recordatorio');
+
+    if (esColumnaFaltante) {
+      const { data: fallback, error: errFallback } = await this.supabase
+        .from('expediciones')
+        .select('id, senderista_id, hora_retorno_estimada')
+        .eq('estado', 'en_progreso');
+
+      if (errFallback) throw new ErrorAplicacion(500, errFallback.message);
+
+      return (fallback ?? []).map((f) => ({
+        id: f.id,
+        senderistaId: f.senderista_id,
+        horaRetornoEstimada: f.hora_retorno_estimada,
+        minutosRecordatorio: 30,
+      }));
+    }
+
+    if (error) throw new ErrorAplicacion(500, error.message);
+
+    return (data ?? []).map((f) => ({
+      id: f.id,
+      senderistaId: f.senderista_id,
+      horaRetornoEstimada: f.hora_retorno_estimada,
+      minutosRecordatorio: f.minutos_recordatorio ?? 30,
+    }));
   }
 }

@@ -7,6 +7,7 @@ export type Expedicion = {
   horaInicio: string;
   horaRetornoEstimada: string;
   minutosTolerancia: number;
+  minutosRecordatorio?: 15 | 30 | 60;
   estado: string;
   creadoEn: string;
 };
@@ -42,6 +43,7 @@ export function crearExpedicion(datos: {
   horaInicio: string;
   horaRetornoEstimada: string;
   minutosTolerancia: number;
+  minutosRecordatorio?: 15 | 30 | 60;
   idsContactos: string[];
   nombresAcompanantes: string[];
 }) {

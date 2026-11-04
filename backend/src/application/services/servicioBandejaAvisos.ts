@@ -83,6 +83,15 @@ export class ServicioBandejaAvisos {
   }
 
   /**
+   * Busca un aviso específico por clave de evento e ID de usuario.
+   */
+  async buscarPorEvento(usuarioId: string, eventoId: string): Promise<RespuestaAvisoDTO | null> {
+    if (!usuarioId || !eventoId) return null;
+    const aviso = await this.notificacionDAO.obtenerPorEventoId(usuarioId, eventoId);
+    return aviso ? mapearADTO(aviso) : null;
+  }
+
+  /**
    * CA-03 & Generador de Avisos por Evento (DoD Backlog):
    * Genera un aviso a partir de un evento de expedición, asegurando que:
    * 1. Pertenezca únicamente al usuario destinatario (autorización).
