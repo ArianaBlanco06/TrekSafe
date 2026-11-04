@@ -2,7 +2,7 @@
 
 Título sugerido: **fix(pwa): excluir datos privados de caché y aislar borradores por sesión**
 
-Rama comunicada por Andriy: `fix/service-worker-privacidad`. Destino sugerido: `develop`. El asistente no ejecutó Git ni publicó un PR.
+Rama: `fix/service-worker-privacidad` (PR #68). Destino: `develop`. Reconstruida el 4 de noviembre de 2026 sobre `develop`; no incluye HU-29 ni vuelve a incorporar HU-30.
 
 ---
 
@@ -21,9 +21,10 @@ Closes #67
 ## Validación y evidencias
 
 - Typechecks/builds de ambos proyectos y `npm ci` frontend aprobados con Node 22.
-- 14 pruebas backend y 9 escenarios PWA aprobados, con dos cuentas ficticias y worker activo.
+- 126 pruebas backend, 23 de HU-30 (`test:equipo`) y 12 escenarios PWA (`test:pwa:privacidad`) aprobados. Las suites que requieren PostgreSQL quedan omitidas y no se cuentan como aprobadas.
 - Capturas reales de Application → Cache storage e inventario: `docs/fixes/evidencias-67/`.
 - Política, alcance offline, reproducción y matriz: `docs/fixes/67-service-worker-privacidad.md`.
+- Compatibilidad con HU-26/HU-30 y contrato para HU-29: `docs/fixes/68-ajustes-compatibilidad.md`.
 - CI ejecuta la suite PWA con Chromium y adjunta el informe como `evidencia-privacidad-pwa`.
 
 Los datos antiguos sin propietario se descartan. Plantillas/borradores nuevos se eliminan al cerrar sesión. Los contactos requieren red tras una recarga; permanecen en memoria mientras la aplicación sigue abierta.

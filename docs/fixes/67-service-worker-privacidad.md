@@ -4,7 +4,7 @@ Fecha: 3 de noviembre de 2026. Responsable: Andriy Hitoshi Enciso Rojas (@Hitosh
 
 Rama indicada por el equipo y seleccionada por Andriy: `fix/service-worker-privacidad`. Referencia: [issue #67](https://github.com/ArianaBlanco06/TrekSafe/issues/67). Corrige el problema preexistente documentado durante HU-26; no se atribuye su introducción a Favio.
 
-Estado: implementación y validación local terminadas, con evidencia de DevTools. El commit/push, la ejecución remota de GitHub Actions y la revisión de otro integrante están pendientes. No se modificaron `.env`, Supabase ni el estado de Git.
+Estado (4 de noviembre de 2026): rama reconstruida sobre `develop` (con HU-26 y HU-30 integradas) para que el PR #68 contenga solo este fix. Los ajustes de compatibilidad están en [68-ajustes-compatibilidad.md](68-ajustes-compatibilidad.md). No se modificaron `.env`, Supabase ni migraciones.
 
 ## Política de datos offline
 
@@ -20,7 +20,7 @@ Este alcance offline fue confirmado por Andriy. Tras recargar sin conexión, las
 
 ## Cambios y responsabilidades
 
-- [vite.config.ts](../../frontend/vite.config.ts): sustituye NetworkFirst sobre `/api/*` por NetworkOnly. También cubre peticiones con Authorization a una API en otro origen y excluye API del fallback de navegación. No se añade ninguna lista de endpoints API cacheables.
+- [vite.config.ts](../../frontend/vite.config.ts): sustituye NetworkFirst sobre `/api/*` por NetworkOnly. También cubre peticiones con Authorization a una API en otro origen y excluye API del fallback de navegación. No se añade ninguna lista de endpoints API cacheables. Se conservan `registerType: 'prompt'`, `clientsClaim` y las reglas NetworkOnly de HU-26 y HU-30.
 - [sw-privacy.js](../../frontend/public/sw-privacy.js): al activar el nuevo worker, retira `treksafe-api`, `treksafe-offline-v1` y entradas API/autenticadas de otras cachés, conservando los assets públicos y los borradores v2 válidos.
 - [privacidadCache.ts](../../frontend/src/lib/privacidadCache.ts): retira también las claves legacy del almacenamiento local. Serializa la limpieza de salida y entrada de sesión; el nuevo login espera su finalización.
 - [sesion.ts](../../frontend/src/lib/sesion.ts) y [ContextoAutenticacion.tsx](../../frontend/src/context/ContextoAutenticacion.tsx): invalidan primero las credenciales/ámbito anterior, limpian los datos privados del origen y la memoria de contactos, y después establecen la nueva sesión. La expiración 401 usa el mismo flujo.
@@ -29,25 +29,26 @@ Este alcance offline fue confirmado por Andriy. Tras recargar sin conexión, las
 - [clienteApi.ts](../../frontend/src/services/clienteApi.ts): usa `cache: no-store` y descarta respuestas, cuerpos demorados o 401 pertenecientes a una sesión anterior.
 - [app.ts](../../backend/src/presentation/http/app.ts): devuelve `Cache-Control: no-store` en el prefijo API, también antes del parser JSON y de la autenticación.
 
-La separación mantiene SRP: autenticación, política de limpieza, almacenamiento offline y transporte tienen responsabilidades distintas. La política explícita de claves evita convertir el almacén offline en un repositorio de respuestas API. No se modifican contratos de expedición, SQL ni control de versiones de HU-26/HU-32.
+La separación mantiene SRP: autenticación, política de limpieza, almacenamiento offline y transporte tienen responsabilidades distintas. La política explícita de claves evita convertir el almacén offline en un repositorio de respuestas API. No se modifican contratos HTTP de expedición (HU-26) ni de listas de equipo (HU-30), SQL ni control de versiones de HU-26/HU-32.
 
 La limpieza de salida/entrada elimina las cachés privadas de TrekSafe en este origen; no borra el precache público ni la preferencia de tema. Como Cache Storage/localStorage se comparten entre pestañas del mismo origen, también retira borradores privados allí presentes. No conserva una copia de seguridad de datos sensibles eliminados.
 
 ## Validación ejecutada
 
-Entorno local: Windows, Node 22.23.4 y Edge 156.0.4314.58. Las pruebas usan el build de producción, un Service Worker activo y dos cuentas ficticias en la misma sesión de navegador. La API de estas pruebas es un servidor local de fixtures: no es Supabase ni se ejecuta el cron.
+Entorno local: Windows 11, Node 22 y Edge 156. Las pruebas PWA usan el build de producción, un Service Worker activo y dos cuentas ficticias en la misma sesión de navegador. La API de estas pruebas es un servidor local de fixtures: no es Supabase ni se ejecuta el cron. En CI (Linux) la misma suite usa Chromium de Playwright.
 
 | Comprobación | Resultado |
 | --- | --- |
-| `npm ci` del frontend con el lock actualizado | Aprobado |
-| Typecheck de backend y frontend; tipos de pruebas | Aprobados |
-| Build backend y PWA frontend | Aprobados |
-| Pruebas backend | 14 aprobadas, incluidas cinco de cabeceras HTTP |
-| Pruebas PWA con navegador | 9 aprobadas |
+| `npm ci` de backend y frontend | Aprobado |
+| Typecheck backend, frontend y tipos de pruebas | Aprobados |
+| Build backend y PWA frontend (`VITE_API_URL=/api`) | Aprobados |
+| `npm test --prefix backend` | 126 aprobadas, 0 fallidas. La suite «HU-30 PostgreSQL desechable» queda **omitida** (sin base de pruebas) y no se cuenta como aprobada |
+| `npm run test:equipo --prefix frontend` (HU-30) | 23 aprobadas, 1 **omitida** (flujo con PostgreSQL) |
+| `npm run test:pwa:privacidad --prefix frontend` | 12 aprobadas |
 
-Los nueve escenarios cubren limpieza legacy sin migración insegura; actualización desde un worker vulnerable que realmente guardó la ficha; API médica/contactos/expediciones/rescate sin fallback; shell/plantillas/borradores offline y sincronización de la misma cuenta; dos cuentas y logout; respuestas/401/cuerpos tardíos; escritura pendiente al salir; fallback local sin Cache API; expiración 401.
+Los doce escenarios PWA cubren: limpieza legacy sin migración insegura; actualización desde un worker vulnerable que realmente guardó la ficha médica; API médica/contactos/expediciones/rescate sin fallback; shell/plantillas/borradores offline y sincronización de la misma cuenta; dos cuentas y logout; respuestas/401/cuerpos tardíos; escritura pendiente al salir; fallback local sin Cache API; expiración 401; y, en `compatibilidad.spec.ts`, HU-26 (el worker nuevo espera sin recargar un formulario abierto; edición con `versionEsperada` sin cachear el plan) y HU-30 (consultar, crear, editar y eliminar listas sin dejar respuestas en Cache Storage ni Web Storage, y sin mostrar listas de A a B).
 
-La API fixture devuelve intencionalmente cabeceras cacheables: el worker y cliente deben impedir persistencia incluso así. Las cinco pruebas backend comprueban por separado la política real `no-store` en `createApp`, sin consultas a la base de datos. El test del parser conserva su respuesta 500 histórica; este fix no cambia ese manejo de errores.
+La API fixture devuelve intencionalmente cabeceras cacheables: el worker y cliente deben impedir persistencia incluso así. Las pruebas backend comprueban por separado la política real `no-store` en `createApp` (incluidas las rutas de HU-30 y la de edición de HU-26), sin consultas a la base de datos. El rechazo de JSON malformado responde 400 desde HU-30; este fix no cambia ese manejo y solo exige `no-store` también en ese error.
 
 ## Evidencia de DevTools
 
@@ -79,9 +80,10 @@ npm.cmd run typecheck:tests --prefix frontend
 $env:VITE_API_URL = '/api'
 npm.cmd run build --prefix frontend
 npm.cmd run test:equipo --prefix frontend
+npm.cmd run test:pwa:privacidad --prefix frontend
 ```
 
-En Windows se usa Edge instalado. En Linux/CI instalar Chromium con `npx playwright install --with-deps chromium` desde `frontend` antes de ejecutar las pruebas. El build debe usar `/api` para dirigir la aplicación al servidor local de fixtures. No se inicia la API habitual ni se necesita editar `.env`.
+En Windows se usa Edge instalado. En Linux/CI instalar Chromium con `npx playwright install --with-deps chromium` desde `frontend` antes de ejecutar las pruebas. En Git Bash, `VITE_API_URL=/api` se convierte en una ruta de Windows; usar PowerShell o `MSYS_NO_PATHCONV=1`. El build debe usar `/api` para dirigir la aplicación al servidor local de fixtures. No se inicia la API habitual ni se necesita editar `.env`.
 
 Para regenerar las capturas del panel real en Edge/Windows, una vez terminado el build y sin otro servidor en el puerto 4174:
 
@@ -96,7 +98,6 @@ Para revisión manual en el entorno coordinado, abrir DevTools → Application �
 
 ## Pendientes antes de integrar
 
-1. Andriy revisa los cambios y hace commit/push exclusivamente en `fix/service-worker-privacidad`.
-2. Abrir/actualizar el PR del fix con `Closes #67` y adjuntar estas evidencias; [borrador preparado](67-borrador-pr.md).
-3. Confirmar los jobs backend/frontend de GitHub Actions después del push. Los checks locales pasaron; no se inventa un resultado remoto.
-4. Obtener revisión técnica de otro integrante y validar el entorno DEV coordinado antes de integrar. Esta ejecución no registra una aprobación externa.
+1. Confirmar los jobs backend/frontend de GitHub Actions del PR #68.
+2. Revisión técnica de otro integrante y autorización del Scrum Master antes del merge.
+3. Cuando se integre HU-29 (PR #59), aplicar el contrato descrito en [68-ajustes-compatibilidad.md](68-ajustes-compatibilidad.md).

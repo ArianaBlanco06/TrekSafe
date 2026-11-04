@@ -1,23 +1,23 @@
 {
-  "fecha": "2026-11-03",
+  "fecha": "2026-11-04",
   "navegador": "156.0.4314.58",
   "cuentas": "Dos cuentas ficticias, mismo contexto de navegador",
   "inventory": [
     {
       "name": "workbox-precache-v2-http://127.0.0.1:4174/",
       "requests": [
-        "http://127.0.0.1:4174/sw-privacy.js?__WB_REVISION__=2e5fb2a4ca2fc5487e21c8cac38f402d",
-        "http://127.0.0.1:4174/index.html?__WB_REVISION__=e7575e43396308f150d1e75d30c09994",
+        "http://127.0.0.1:4174/sw-privacy.js?__WB_REVISION__=385aa211b0ffb2ee4caa4a6a3f8cc8d4",
+        "http://127.0.0.1:4174/index.html?__WB_REVISION__=6bd196b3bbcc46173f94e753afbed91b",
         "http://127.0.0.1:4174/favicon.svg?__WB_REVISION__=ec464b58f38fabd3108233e6e56ccfa3",
         "http://127.0.0.1:4174/assets/workbox-window.prod.es5-BBnX5xw4.js",
-        "http://127.0.0.1:4174/assets/RescueExpeditionsMap-C4IE9yJv.js",
-        "http://127.0.0.1:4174/assets/Polyline-c6fFgzCg.js",
-        "http://127.0.0.1:4174/assets/mapMarkers-DzH8uBM0.js",
+        "http://127.0.0.1:4174/assets/RescueExpeditionsMap-BQSqyAvT.js",
+        "http://127.0.0.1:4174/assets/Polyline-56WHVTMe.js",
         "http://127.0.0.1:4174/assets/mapMarkers-CIGW-MKW.css",
-        "http://127.0.0.1:4174/assets/index-C_E6tsOW.css",
-        "http://127.0.0.1:4174/assets/index-azdzOI51.js",
-        "http://127.0.0.1:4174/assets/ExpeditionRouteMap-BQQdCDyH.js",
-        "http://127.0.0.1:4174/assets/CoordinatePickerMap-u1BmSzbu.js",
+        "http://127.0.0.1:4174/assets/mapMarkers-CDF-p4Qr.js",
+        "http://127.0.0.1:4174/assets/index-l3AXoDA7.css",
+        "http://127.0.0.1:4174/assets/index-DBST0ZNP.js",
+        "http://127.0.0.1:4174/assets/ExpeditionRouteMap-BICQhZxu.js",
+        "http://127.0.0.1:4174/assets/CoordinatePickerMap-B6W33ztV.js",
         "http://127.0.0.1:4174/manifest.webmanifest?__WB_REVISION__=37d047a30b6abb47c2dd827fbd01cc04"
       ]
     }
