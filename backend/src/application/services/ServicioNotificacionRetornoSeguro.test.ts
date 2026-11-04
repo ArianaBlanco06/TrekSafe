@@ -45,6 +45,17 @@ class MockRepositorioOutbox implements IRepositorioOutbox {
   async marcarFallido(): Promise<void> {}
   async marcarIncierto(): Promise<void> {}
   async liberarLease(): Promise<void> {}
+  async buscarPorId(id: string): Promise<MensajeOutbox | null> {
+    return this.items.find((i) => i.id === id) ?? null;
+  }
+  async listarPorExpedicion(expedicionId: string): Promise<MensajeOutbox[]> {
+    return this.items.filter((i) => i.metadata?.expedicionId === expedicionId);
+  }
+  async reencolarParaReintentoManual(id: string): Promise<MensajeOutbox> {
+    const item = this.items.find((i) => i.id === id);
+    if (!item) throw new Error('Not found');
+    return item;
+  }
 }
 
 class MockRepositorioAlerta {

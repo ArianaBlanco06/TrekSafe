@@ -440,4 +440,116 @@ export class RepositorioOutboxSupabase implements IRepositorioOutbox {
       this.guardarArchivoLocal(items);
     }
   }
+
+  async buscarPorId(id: string): Promise<MensajeOutbox | null> {
+    if (!this.usandoFallbackMemoria) {
+      try {
+        const { data, error } = await this.supabase
+          .from('outbox_notificaciones')
+          .select('*')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (error) {
+          if (
+            error.code === '42P01' ||
+            error.code === 'PGRST204' ||
+            error.code === 'PGRST205'
+          ) {
+            this.usandoFallbackMemoria = true;
+          } else {
+            throw new ErrorAplicacion(500, error.message);
+          }
+        } else if (data) {
+          return this.mapearFila(data);
+        }
+      } catch (err) {
+        if (!this.usandoFallbackMemoria) throw err;
+      }
+    }
+
+    const items = this.leerArchivoLocal();
+    return items.find((i) => i.id === id) ?? null;
+  }
+
+  async listarPorExpedicion(expedicionId: string): Promise<MensajeOutbox[]> {
+    if (!this.usandoFallbackMemoria) {
+      try {
+        const { data, error } = await this.supabase
+          .from('outbox_notificaciones')
+          .select('*')
+          .contains('metadata', { expedicionId })
+          .order('creado_en', { ascending: false });
+
+        if (error) {
+          if (
+            error.code === '42P01' ||
+            error.code === 'PGRST204' ||
+            error.code === 'PGRST205'
+          ) {
+            this.usandoFallbackMemoria = true;
+          } else {
+            throw new ErrorAplicacion(500, error.message);
+          }
+        } else if (data) {
+          return data.map((d: any) => this.mapearFila(d));
+        }
+      } catch (err) {
+        if (!this.usandoFallbackMemoria) throw err;
+      }
+    }
+
+    const items = this.leerArchivoLocal();
+    return items.filter((i) => i.metadata?.expedicionId === expedicionId);
+  }
+
+  async reencolarParaReintentoManual(id: string): Promise<MensajeOutbox> {
+    const ahora = new Date();
+    if (!this.usandoFallbackMemoria) {
+      try {
+        const { data, error } = await this.supabase
+          .from('outbox_notificaciones')
+          .update({
+            estado: 'pendiente',
+            proximo_intento_en: ahora.toISOString(),
+            bloqueado_hasta: null,
+            bloqueado_por: null,
+            actualizado_en: ahora.toISOString(),
+          })
+          .eq('id', id)
+          .select()
+          .single();
+
+        if (error) {
+          if (
+            error.code === '42P01' ||
+            error.code === 'PGRST204' ||
+            error.code === 'PGRST205'
+          ) {
+            this.usandoFallbackMemoria = true;
+          } else {
+            throw new ErrorAplicacion(500, error.message);
+          }
+        } else if (data) {
+          return this.mapearFila(data);
+        }
+      } catch (err) {
+        if (!this.usandoFallbackMemoria) throw err;
+      }
+    }
+
+    const items = this.leerArchivoLocal();
+    const item = items.find((i) => i.id === id);
+    if (!item) {
+      throw new ErrorAplicacion(404, 'Mensaje outbox no encontrado');
+    }
+
+    item.estado = 'pendiente';
+    item.proximoIntentoEn = ahora;
+    item.bloqueadoHasta = null;
+    item.bloqueadoPor = null;
+    item.actualizadoEn = ahora;
+    this.guardarArchivoLocal(items);
+    return item;
+  }
 }

@@ -9,6 +9,10 @@ import {
   actualizarBitacoraRescate,
   confirmarAlerta,
 } from '../controllers/controladorRescate.js';
+import {
+  listarDespachosIncidente,
+  reintentarDespachoIncidente,
+} from '../controllers/controladorEntregaIncidente.js';
 
 export function crearRutasRescate(): Router {
   const router = Router();
@@ -21,6 +25,10 @@ export function crearRutasRescate(): Router {
   router.get('/alertas/:expedicionId', asyncHandler(obtenerDetalleAlerta));
   router.patch('/alertas/:expedicionId/bitacora', asyncHandler(actualizarBitacoraRescate));
   router.post('/alertas/:expedicionId/confirmar', asyncHandler(confirmarAlerta));
+
+  // HU-46: Revisar la entrega de avisos de un incidente y reintento manual
+  router.get('/alertas/:id/despachos', asyncHandler(listarDespachosIncidente));
+  router.post('/alertas/:id/despachos/:mensajeId/reintentar', asyncHandler(reintentarDespachoIncidente));
 
   return router;
 }

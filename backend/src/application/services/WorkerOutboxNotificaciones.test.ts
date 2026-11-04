@@ -124,6 +124,21 @@ class RepositorioOutboxMemoria implements IRepositorioOutbox {
       item.bloqueadoPor = null;
     }
   }
+
+  async buscarPorId(id: string): Promise<MensajeOutbox | null> {
+    return this.items.find((i) => i.id === id) ?? null;
+  }
+
+  async listarPorExpedicion(expedicionId: string): Promise<MensajeOutbox[]> {
+    return this.items.filter((i) => i.metadata?.expedicionId === expedicionId);
+  }
+
+  async reencolarParaReintentoManual(id: string): Promise<MensajeOutbox> {
+    const item = this.items.find((i) => i.id === id);
+    if (!item) throw new Error('Not found');
+    item.estado = 'pendiente';
+    return item;
+  }
 }
 
 class TransporteSustituto implements ITransporteCorreo {
