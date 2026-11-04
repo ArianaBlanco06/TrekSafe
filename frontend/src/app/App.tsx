@@ -20,6 +20,7 @@ import { PaginaPrivacidad } from '@/pages/PaginaPrivacidad';
 import { PaginaRevocacionDatos } from '@/pages/PaginaRevocacionDatos';
 import { PaginaListaExpediciones } from '@/pages/PaginaListaExpediciones';
 import { PaginaCrearExpedicion } from '@/pages/PaginaCrearExpedicion';
+import { PaginaBandejaAvisos } from '@/pages/PaginaBandejaAvisos';
 import { PaginaExpedicionActiva } from '@/pages/PaginaExpedicionActiva';
 import { PaginaRetornoConfirmado } from '@/pages/PaginaRetornoConfirmado';
 
@@ -59,6 +60,7 @@ export function App() {
               }
             >
               <Route index element={<PaginaInicioSenderista />} />
+              <Route path="avisos" element={<PaginaBandejaAvisos />} />
               <Route path="perfil" element={<PaginaPerfilSenderista />} />
               <Route path="perfil/medica" element={<PaginaFichaMedica />} />
               <Route path="perfil/contactos" element={<PaginaContactos />} />

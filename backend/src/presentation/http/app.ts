@@ -7,6 +7,7 @@ import { ServicioCorreo } from '../../infrastructure/email/ServicioCorreo.js';
 import { errorHandler, notFoundHandler } from '../../shared/errors/errorHandler.js';
 import { createRateLimiter } from './middleware/rateLimitMiddleware.js';
 import { crearRutasAutenticacion } from './routes/rutasAutenticacion.js';
+import { crearRutasAvisos } from './routes/rutasAvisos.js';
 import { crearRutasExpedicion } from './routes/rutasExpedicion.js';
 import { crearRutasRescate } from './routes/rutasRescate.js';
 import { crearRutasUsuario } from './routes/rutasUsuario.js';
@@ -39,6 +40,7 @@ export function createApp() {
   app.use(`${env.apiPrefix}/usuario`, crearRutasUsuario());
   app.use(`${env.apiPrefix}/expediciones`, crearRutasExpedicion());
   app.use(`${env.apiPrefix}/rescate`, crearRutasRescate());
+  app.use(`${env.apiPrefix}/avisos`, crearRutasAvisos());
 
   app.use(notFoundHandler);
   app.use(errorHandler);
