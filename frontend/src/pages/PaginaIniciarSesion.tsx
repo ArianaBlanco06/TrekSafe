@@ -36,7 +36,7 @@ export function PaginaIniciarSesion() {
         );
         return;
       }
-      loginSession(res.token, res.usuario);
+      await loginSession(res.token, res.usuario);
       navigate(res.usuario.rol === 'rescatista' ? '/rescatista' : '/senderista');
     } catch (err) {
       const mensaje = err instanceof Error ? err.message : 'Error al iniciar sesión';
@@ -53,7 +53,7 @@ export function PaginaIniciarSesion() {
     setCargando(true);
     try {
       const res = await iniciarSesion({ correoElectronico: demoCorreo, contrasena: demoContrasena });
-      loginSession(res.token, res.usuario);
+      await loginSession(res.token, res.usuario);
       navigate(res.usuario.rol === 'rescatista' ? '/rescatista' : '/senderista');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error en acceso demo');

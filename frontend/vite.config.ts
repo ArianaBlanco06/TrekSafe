@@ -44,11 +44,16 @@ export default defineConfig({
         ],
       },
       workbox: {
+        importScripts: ['sw-privacy.js'],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api/],
+        navigateFallbackDenylist: [/^\/(?:api|rest\/v1)(?:\/|$)/],
         clientsClaim: true,
         runtimeCaching: [
+          {
+            urlPattern: ({ url }) => /^\/api\/usuario\/listas-equipo(?:\/|$)/.test(url.pathname),
+            handler: 'NetworkOnly',
+          },
           {
             // El plan fija la versionEsperada de la edición: nunca debe leerse de la caché.
             urlPattern: ({ url }) =>
@@ -56,13 +61,11 @@ export default defineConfig({
             handler: 'NetworkOnly',
           },
           {
-            urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'treksafe-api',
-              networkTimeoutSeconds: 8,
-              cacheableResponse: { statuses: [0, 200] },
-            },
+            // No hay respuestas API autorizadas para almacenamiento offline.
+            // Authorization cubre tambien APIs configuradas en otro origen.
+            urlPattern: ({ request, url }) => request.headers.has('authorization')
+              || /^\/(?:api|rest\/v1)(?:\/|$)/.test(url.pathname),
+            handler: 'NetworkOnly',
           },
         ],
       },

@@ -9,6 +9,6 @@ export function setUnauthorizedHandler(handler: ManejadorNoAutorizado | null) {
 }
 
 export function handleUnauthorized() {
-  limpiarSesion();
-  onNoAutorizado?.();
+  if (onNoAutorizado) onNoAutorizado();
+  else void limpiarSesion().catch(() => console.error('No se pudo completar la limpieza local de la sesión.'));
 }
