@@ -6,6 +6,7 @@ import { CoordinatePickerMapLazy } from '@/components/maps/CoordinatePickerMapLa
 import type { CoordinatePickerTarget } from '@/components/maps/CoordinatePickerMap';
 import { useEstadoEnLinea } from '@/hooks/useEstadoEnLinea';
 import { validateCoordinateInput } from '@/lib/coordinates';
+import { getSessionScope } from '@/lib/sesion';
 import { cachearContactos, obtenerContactosCacheados } from '@/lib/offlineContacts';
 import {
   listarBorradoresExpedicion,
@@ -19,6 +20,7 @@ import { obtenerContactos, type ContactoEmergencia } from '@/services/usuario';
 import { crearExpedicion } from '@/services/expedicion';
 
 export function PaginaCrearExpedicion() {
+  const [scope] = useState(getSessionScope);
   const navigate = useNavigate();
   const enLinea = useEstadoEnLinea();
   const [contactos, setContactos] = useState<ContactoEmergencia[]>([]);
@@ -50,14 +52,14 @@ export function PaginaCrearExpedicion() {
   }, [errorCoordInicio, errorCoordFin]);
 
   useEffect(() => {
-    void listarPlantillasRuta().then(setPlantillas);
-    void listarBorradoresExpedicion().then((b) => setBorradoresPendientes(b.length));
+    void listarPlantillasRuta(scope).then(setPlantillas);
+    void listarBorradoresExpedicion(scope).then((b) => setBorradoresPendientes(b.length));
 
     if (enLinea) {
       obtenerContactos()
         .then((r) => {
           setContactos(r.contactos);
-          void cachearContactos(r.contactos);
+          void cachearContactos(r.contactos, scope);
         })
         .catch(() => {
           void obtenerContactosCacheados().then(setContactos);
@@ -65,16 +67,17 @@ export function PaginaCrearExpedicion() {
     } else {
       void obtenerContactosCacheados().then(setContactos);
     }
-  }, [enLinea]);
+  }, [enLinea, scope]);
 
   useEffect(() => {
     if (!enLinea) return;
 
     const sincronizarBorradores = async () => {
-      const borradores = await listarBorradoresExpedicion();
+      const borradores = await listarBorradoresExpedicion(scope);
       if (borradores.length === 0) return;
 
       for (const borrador of borradores) {
+        if (scope !== getSessionScope()) return;
         try {
           await crearExpedicion({
             lugarInicio: borrador.lugarInicio,
@@ -87,13 +90,13 @@ export function PaginaCrearExpedicion() {
             idsContactos: borrador.idsContactos,
             nombresAcompanantes: borrador.nombresAcompanantes,
           });
-          await eliminarBorradorExpedicion(borrador.id);
+          await eliminarBorradorExpedicion(borrador.id, scope);
         } catch {
           break;
         }
       }
 
-      const restantes = await listarBorradoresExpedicion();
+      const restantes = await listarBorradoresExpedicion(scope);
       setBorradoresPendientes(restantes.length);
       if (restantes.length === 0) {
         setInfo('Borradores offline sincronizados con el servidor.');
@@ -101,7 +104,7 @@ export function PaginaCrearExpedicion() {
     };
 
     void sincronizarBorradores();
-  }, [enLinea]);
+  }, [enLinea, scope]);
 
   const toggleContacto = (id: string) => {
     setIdsContactosSeleccionados((prev) =>
@@ -166,7 +169,7 @@ export function PaginaCrearExpedicion() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!puedeEnviar || !validarCoordenadas()) return;
+    if (!puedeEnviar || !validarCoordenadas() || scope !== getSessionScope()) return;
 
     const payload = {
       lugarInicio: lugarInicio.trim(),
@@ -189,18 +192,18 @@ export function PaginaCrearExpedicion() {
         ...payload,
         coordenadasInicio: coordenadasInicio.trim(),
         coordenadasFin: coordenadasFin.trim(),
-      });
+      }, scope);
       await guardarPlantillaRuta({
         lugarInicio: payload.lugarInicio,
         lugarFin: payload.lugarFin,
         coordenadasInicio: payload.coordenadasInicio,
         coordenadasFin: payload.coordenadasFin,
         minutosTolerancia: payload.minutosTolerancia,
-      });
-      const restantes = await listarBorradoresExpedicion();
+      }, scope);
+      const restantes = await listarBorradoresExpedicion(scope);
       setBorradoresPendientes(restantes.length);
-      setPlantillas(await listarPlantillasRuta());
-      setInfo('Sin conexión: borrador guardado en caché offline (Service Worker) para sincronizar después.');
+      setPlantillas(await listarPlantillasRuta(scope));
+      setInfo('Borrador guardado para sincronizar cuando vuelva la conexión. Se eliminará si cierras sesión.');
       setCargando(false);
       return;
     }
@@ -213,7 +216,7 @@ export function PaginaCrearExpedicion() {
         coordenadasInicio: payload.coordenadasInicio,
         coordenadasFin: payload.coordenadasFin,
         minutosTolerancia: payload.minutosTolerancia,
-      });
+      }, scope);
       navigate(
         expedicion.estado === 'en_progreso'
           ? '/senderista/expedicion/activa'
@@ -237,11 +240,11 @@ export function PaginaCrearExpedicion() {
 
       {!enLinea && (
         <div className="mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-100 text-sm flex items-center gap-2">
-          <WifiOff size={16} /> Modo offline: plantillas y borradores en caché del Service Worker.
+          <WifiOff size={16} /> Sin conexión: puedes usar tus plantillas y guardar borradores de esta sesión.
         </div>
       )}
 
-      {borradoresPendientes > 0 && enLinea && (
+      {borradoresPendientes > 0 && (
         <div className="mb-4 p-3 rounded-xl bg-primary/10 text-primary text-sm">
           {borradoresPendientes} borrador(es) pendiente(s) de sincronización.
         </div>
@@ -278,7 +281,7 @@ export function PaginaCrearExpedicion() {
               </Link>
             </>
           ) : (
-            'Sin contactos en caché. Conéctate una vez para sincronizar contactos antes de salir offline.'
+            'Conéctate para cargar tus contactos. Solo se conservan mientras la aplicación esté abierta.'
           )}
         </div>
       )}

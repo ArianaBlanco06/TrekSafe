@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom';
 import { ChevronLeft, Trash2 } from 'lucide-react';
 import { crearContacto, eliminarContacto, obtenerContactos, type ContactoEmergencia } from '@/services/usuario';
 import { cachearContactos } from '@/lib/offlineContacts';
+import { getSessionScope } from '@/lib/sesion';
 import { FieldError, FieldLabel } from '@/components/Layout';
 import { isValidEmail, isValidPhone } from '@/lib/validation';
 
 export function PaginaContactos() {
+  const [scope] = useState(getSessionScope);
   const [contactos, setContactos] = useState<ContactoEmergencia[]>([]);
   const [nombreCompleto, setNombreCompleto] = useState('');
   const [parentesco, setParentesco] = useState('');
@@ -19,7 +21,7 @@ export function PaginaContactos() {
     obtenerContactos()
       .then((r) => {
         setContactos(r.contactos);
-        void cachearContactos(r.contactos);
+        void cachearContactos(r.contactos, scope);
       })
       .catch((e) => setError(e instanceof Error ? e.message : 'Error al cargar'));
   };
