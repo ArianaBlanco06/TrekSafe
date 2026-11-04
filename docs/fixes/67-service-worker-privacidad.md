@@ -6,6 +6,8 @@ Rama indicada por el equipo y seleccionada por Andriy: `fix/service-worker-priva
 
 Estado: implementación y validación local terminadas, con evidencia de DevTools. El commit/push, la ejecución remota de GitHub Actions y la revisión de otro integrante están pendientes. No se modificaron `.env`, Supabase ni el estado de Git.
 
+Revisión del PR #68: se incorporó compatibilidad con HU-26, HU-29 y HU-30. El alcance, fuentes contrastadas, inventario de archivos y resultados adicionales están en [ajustes de compatibilidad](68-ajustes-compatibilidad.md). Se actualiza el PR existente; no se abre otro.
+
 ## Política de datos offline
 
 | Datos | Tratamiento |
@@ -13,6 +15,7 @@ Estado: implementación y validación local terminadas, con evidencia de DevTool
 | Respuestas de ficha médica, contactos, expediciones y rescate | Solo red. Ninguna respuesta API tiene autorización para almacenamiento offline. |
 | HTML, JS, CSS, iconos, fuentes y manifiesto de la aplicación | Precache de Workbox para abrir la PWA sin conexión. |
 | Plantillas y borradores creados expresamente en la sesión | Cache Storage y fallback local, en un ámbito propio de cuenta/sesión. Sobreviven a la recarga y se eliminan al cerrar sesión. |
+| Plantillas personales de HU-29 | Solo la clave `plantillas-cuenta:v1:{usuarioId}` del usuario activo y un sobre válido por `plantillasDesdeSobre`, dentro del mismo ámbito privado. |
 | Contactos del formulario ya abierto | Solo memoria de la sesión. Permiten completar el borrador al perder red; no se escriben en Cache Storage ni localStorage. |
 | Cachés antiguas y datos locales sin propietario | Se eliminan; no se importan a la cuenta que abra la aplicación. |
 
@@ -20,11 +23,11 @@ Este alcance offline fue confirmado por Andriy. Tras recargar sin conexión, las
 
 ## Cambios y responsabilidades
 
-- [vite.config.ts](../../frontend/vite.config.ts): sustituye NetworkFirst sobre `/api/*` por NetworkOnly. También cubre peticiones con Authorization a una API en otro origen y excluye API del fallback de navegación. No se añade ninguna lista de endpoints API cacheables.
+- [vite.config.ts](../../frontend/vite.config.ts): sustituye NetworkFirst sobre `/api/*` por NetworkOnly. También cubre peticiones con Authorization a una API en otro origen y excluye API del fallback de navegación. Conserva `registerType: 'prompt'` y `clientsClaim: true` de HU-26; no activa una actualización pendiente mientras se edita un formulario.
 - [sw-privacy.js](../../frontend/public/sw-privacy.js): al activar el nuevo worker, retira `treksafe-api`, `treksafe-offline-v1` y entradas API/autenticadas de otras cachés, conservando los assets públicos y los borradores v2 válidos.
 - [privacidadCache.ts](../../frontend/src/lib/privacidadCache.ts): retira también las claves legacy del almacenamiento local. Serializa la limpieza de salida y entrada de sesión; el nuevo login espera su finalización.
 - [sesion.ts](../../frontend/src/lib/sesion.ts) y [ContextoAutenticacion.tsx](../../frontend/src/context/ContextoAutenticacion.tsx): invalidan primero las credenciales/ámbito anterior, limpian los datos privados del origen y la memoria de contactos, y después establecen la nueva sesión. La expiración 401 usa el mismo flujo.
-- [offlineStorage.ts](../../frontend/src/lib/offlineStorage.ts): solo admite `route-templates` y `expedition-drafts`, con namespace por cuenta y nonce de sesión. Las lecturas y escrituras pendientes verifican el ámbito y no pueden repoblar datos después de salir. El fallback local aplica el mismo aislamiento.
+- [offlineStorage.ts](../../frontend/src/lib/offlineStorage.ts): admite las dos claves históricas y la clave personal exacta de HU-29 del usuario activo. Comprueba propietario/sobre y namespace por cuenta/nonce. Las lecturas y escrituras pendientes verifican el ámbito y no pueden repoblar datos después de salir. El fallback local aplica el mismo aislamiento.
 - [offlineContacts.ts](../../frontend/src/lib/offlineContacts.ts): conserva contactos únicamente en memoria. Los formularios capturan el ámbito original para descartar operaciones tardías de otra sesión.
 - [clienteApi.ts](../../frontend/src/services/clienteApi.ts): usa `cache: no-store` y descarta respuestas, cuerpos demorados o 401 pertenecientes a una sesión anterior.
 - [app.ts](../../backend/src/presentation/http/app.ts): devuelve `Cache-Control: no-store` en el prefijo API, también antes del parser JSON y de la autenticación.
@@ -43,11 +46,11 @@ Entorno local: Windows, Node 22.23.4 y Edge 156.0.4314.58. Las pruebas usan el b
 | Typecheck de backend y frontend; tipos de pruebas | Aprobados |
 | Build backend y PWA frontend | Aprobados |
 | Pruebas backend | 14 aprobadas, incluidas cinco de cabeceras HTTP |
-| Pruebas PWA con navegador | 9 aprobadas |
+| Pruebas PWA con navegador | 14 aprobadas; detalle de la revisión en el documento de compatibilidad |
 
-Los nueve escenarios cubren limpieza legacy sin migración insegura; actualización desde un worker vulnerable que realmente guardó la ficha; API médica/contactos/expediciones/rescate sin fallback; shell/plantillas/borradores offline y sincronización de la misma cuenta; dos cuentas y logout; respuestas/401/cuerpos tardíos; escritura pendiente al salir; fallback local sin Cache API; expiración 401.
+Los nueve escenarios originales cubren limpieza legacy sin migración insegura; actualización desde un worker vulnerable que realmente guardó la ficha; API médica/contactos/expediciones/rescate sin fallback; shell/plantillas/borradores offline y sincronización de la misma cuenta; dos cuentas y logout; respuestas/401/cuerpos tardíos; escritura pendiente al salir; fallback local sin Cache API; expiración 401. Se añaden cuatro de HU-29 y uno de actualización prompt sin pérdida del formulario.
 
-La API fixture devuelve intencionalmente cabeceras cacheables: el worker y cliente deben impedir persistencia incluso así. Las cinco pruebas backend comprueban por separado la política real `no-store` en `createApp`, sin consultas a la base de datos. El test del parser conserva su respuesta 500 histórica; este fix no cambia ese manejo de errores.
+La API fixture devuelve intencionalmente cabeceras cacheables: el worker y cliente deben impedir persistencia incluso así. Las cinco pruebas backend comprueban por separado la política real `no-store` en `createApp`, sin consultas a la base. El test del parser comprueba privacidad sin exigir un status específico: conserva compatibilidad con el 500 histórico y el 400 incorporado por HU-30.
 
 ## Evidencia de DevTools
 
@@ -78,10 +81,12 @@ npm.cmd run typecheck --prefix frontend
 npm.cmd run typecheck:tests --prefix frontend
 $env:VITE_API_URL = '/api'
 npm.cmd run build --prefix frontend
-npm.cmd run test:equipo --prefix frontend
+npm.cmd run test:pwa:privacidad --prefix frontend
 ```
 
 En Windows se usa Edge instalado. En Linux/CI instalar Chromium con `npx playwright install --with-deps chromium` desde `frontend` antes de ejecutar las pruebas. El build debe usar `/api` para dirigir la aplicación al servidor local de fixtures. No se inicia la API habitual ni se necesita editar `.env`.
+
+`test:equipo` queda reservado al comando TSX original de HU-30. CI ejecuta ambas suites por pasos distintos e instala también las dependencias backend en el job frontend. Mientras los fuentes de HU-30 no estén en esta rama, su paso informa esa ausencia. La comprobación adicional mediante snapshots fijados se reproduce con `npm.cmd run test:compatibilidad:hu29-hu30 --prefix frontend` y requiere lectura HTTPS de esos commits.
 
 Para regenerar las capturas del panel real en Edge/Windows, una vez terminado el build y sin otro servidor en el puerto 4174:
 
@@ -97,6 +102,6 @@ Para revisión manual en el entorno coordinado, abrir DevTools → Application �
 ## Pendientes antes de integrar
 
 1. Andriy revisa los cambios y hace commit/push exclusivamente en `fix/service-worker-privacidad`.
-2. Abrir/actualizar el PR del fix con `Closes #67` y adjuntar estas evidencias; [borrador preparado](67-borrador-pr.md).
+2. Actualizar únicamente el PR #68 existente, conservando `Closes #67` y estas evidencias; [cuerpo preparado](67-borrador-pr.md).
 3. Confirmar los jobs backend/frontend de GitHub Actions después del push. Los checks locales pasaron; no se inventa un resultado remoto.
 4. Obtener revisión técnica de otro integrante y validar el entorno DEV coordinado antes de integrar. Esta ejecución no registra una aprobación externa.

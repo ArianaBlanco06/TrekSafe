@@ -95,9 +95,26 @@ try {
   }
   await capture('01-antes-worker-vulnerable.png', 'treksafe-api');
   await page.goto(`${base}/iniciar-sesion`);
+  // Modo prompt: aceptar expresamente el relevo en esta pagina sin formulario.
+  async function waitForRegistration(activated) {
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const ready = await page.evaluate(async needsActive => {
+        const r = await navigator.serviceWorker.getRegistration();
+        const active = !!r?.active?.scriptURL.endsWith('/sw.js') && r.active.state === 'activated';
+        return needsActive ? active : active || !!r?.waiting?.scriptURL.endsWith('/sw.js');
+      }, activated).catch(() => false);
+      if (ready) return;
+      await delay(100);
+    }
+    throw new Error('El worker no alcanzo el estado esperado');
+  }
+  await waitForRegistration(false);
+  await page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.waiting?.postMessage({ type: 'SKIP_WAITING' }));
+  await waitForRegistration(true);
+  await page.waitForLoadState('networkidle');
   await page.waitForFunction(() => navigator.serviceWorker.controller?.scriptURL.endsWith('/sw.js'));
   await page.waitForLoadState('networkidle');
-  // El relevo del worker anterior provoca una recarga automatica de VitePWA.
+  // Esperar a que termine el relevo aceptado expresamente.
   await delay(1000);
   await page.goto(`${base}/iniciar-sesion`);
   async function login(account) {

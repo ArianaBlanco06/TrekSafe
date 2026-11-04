@@ -56,11 +56,22 @@ jobs:
       - name: Instalar dependencias
         run: npm ci --prefix frontend
 
+      - name: Instalar backend para pruebas integradas de HU-30
+        run: npm ci --prefix backend
+
       - name: Verificar TypeScript
         run: npm run typecheck --prefix frontend
 
       - name: Verificar tipos de pruebas
         run: npm run typecheck:tests --prefix frontend
+
+      - name: Ejecutar pruebas TSX de HU-30
+        if: ${{ hashFiles('frontend/src/services/listasEquipo.test.ts') != '' }}
+        run: npm run test:equipo --prefix frontend
+
+      - name: Informar disponibilidad de HU-30
+        if: ${{ hashFiles('frontend/src/services/listasEquipo.test.ts') == '' }}
+        run: echo "HU-30 aun no esta integrada en esta rama; su suite TSX se ejecutara cuando esten sus archivos."
 
       - name: Compilar frontend
         run: npm run build --prefix frontend
@@ -72,7 +83,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Probar privacidad con Service Worker activo
-        run: npm run test:equipo --prefix frontend
+        run: npm run test:pwa:privacidad --prefix frontend
 
       - name: Adjuntar evidencia PWA
         if: always()

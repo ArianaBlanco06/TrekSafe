@@ -1,8 +1,8 @@
-# PR preparado — Fix de privacidad #67
+# Actualización del PR #68 — Fix de privacidad #67
 
 Título sugerido: **fix(pwa): excluir datos privados de caché y aislar borradores por sesión**
 
-Rama comunicada por Andriy: `fix/service-worker-privacidad`. Destino sugerido: `develop`. El asistente no ejecutó Git ni publicó un PR.
+Rama: `fix/service-worker-privacidad`. Destino: `develop`. Actualizar el PR #68 existente; no crear otro ni hacer merge. El asistente no ejecutó Git ni publicó cambios.
 
 ---
 
@@ -14,6 +14,8 @@ Contactos permanecen solo en memoria; los borradores y plantillas explícitos se
 
 Corrección del problema preexistente reportado durante HU-26, sin modificar HU-32 ni la versión de expediciones.
 
+Los ajustes de revisión mantienen `prompt`/`clientsClaim` de HU-26 y admiten explícitamente la clave personal de HU-29, verificando propietario, sesión y sobre con su validador original. Se restaura `test:equipo` para TSX de HU-30 y se crea `test:pwa:privacidad` para Playwright. CI ejecuta ambas por separado cuando HU-30 está disponible y conserva sus dependencias frontend/backend.
+
 ## Issue relacionado
 
 Closes #67
@@ -21,9 +23,11 @@ Closes #67
 ## Validación y evidencias
 
 - Typechecks/builds de ambos proyectos y `npm ci` frontend aprobados con Node 22.
-- 14 pruebas backend y 9 escenarios PWA aprobados, con dos cuentas ficticias y worker activo.
+- 14 pruebas backend locales y 14 escenarios PWA aprobados con dos cuentas ficticias y worker activo; detalle en el documento de compatibilidad.
+- En copia temporal con los commits revisados: tipos de ambos proyectos aprobados, 59 pruebas backend aprobadas y 32 pruebas frontend HU-29/HU-30 aprobadas. Una integración frontend con PostgreSQL y la suite PostgreSQL backend se omiten expresamente; no se ejecutó SQL.
 - Capturas reales de Application → Cache storage e inventario: `docs/fixes/evidencias-67/`.
 - Política, alcance offline, reproducción y matriz: `docs/fixes/67-service-worker-privacidad.md`.
+- Ajustes, commits contrastados y archivos modificados: `docs/fixes/68-ajustes-compatibilidad.md`.
 - CI ejecuta la suite PWA con Chromium y adjunta el informe como `evidencia-privacidad-pwa`.
 
 Los datos antiguos sin propietario se descartan. Plantillas/borradores nuevos se eliminan al cerrar sesión. Los contactos requieren red tras una recarga; permanecen en memoria mientras la aplicación sigue abierta.

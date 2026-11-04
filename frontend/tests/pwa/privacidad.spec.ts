@@ -8,7 +8,24 @@ const users = {
 
 async function workerActivo(page: Page) {
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => undefined));
+  // Si aun no llego controllerchange, navegar antes de empezar el formulario.
+  if (!await page.evaluate(() => !!navigator.serviceWorker.controller)) await page.reload();
   await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller?.scriptURL.endsWith('/sw.js'))).toBe(true);
+}
+
+async function aceptarActualizacion(page: Page) {
+  await expect.poll(() => page.evaluate(async () => {
+    const registration = await navigator.serviceWorker.getRegistration();
+    return !!(registration?.waiting?.scriptURL.endsWith('/sw.js') || registration?.active?.scriptURL.endsWith('/sw.js'));
+  }).catch(() => false)).toBe(true);
+  // Una navegacion puede haber liberado el ultimo cliente del worker anterior.
+  await page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.waiting?.postMessage({ type: 'SKIP_WAITING' }));
+  // La activacion se pide expresamente solo cuando la prueba termino de editar.
+  await expect.poll(() => page.evaluate(async () => {
+    const r = await navigator.serviceWorker.getRegistration();
+    return !!r?.active?.scriptURL.endsWith('/sw.js') && r.active.state === 'activated';
+  }).catch(() => false)).toBe(true);
+  await page.waitForLoadState('networkidle');
 }
 
 async function login(page: Page, account: 'a' | 'b' = 'a') {
@@ -100,6 +117,7 @@ test('actualizacion desde worker vulnerable elimina la ficha cacheada', async ({
   expect((await inventario(page)).some(entry => entry.url.endsWith('/api/usuario/ficha-medica'))).toBe(true);
   await evidencia(page, info, 'antes-worker-vulnerable');
   await page.goto('/iniciar-sesion');
+  await aceptarActualizacion(page);
   await workerActivo(page);
   await expect.poll(() => page.evaluate(() => caches.has('treksafe-api'))).toBe(false);
   await evidencia(page, info, 'despues-worker-corregido');

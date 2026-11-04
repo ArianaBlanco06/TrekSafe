@@ -1,0 +1,52 @@
+{
+  "hu30": {
+    "pr": 62,
+    "files": [
+      "backend/src/application/services/servicioListasEquipo.test.ts",
+      "backend/src/application/services/servicioListasEquipo.ts",
+      "backend/src/domain/entities/ItemEquipo.ts",
+      "backend/src/domain/entities/ListaEquipo.test.ts",
+      "backend/src/domain/entities/ListaEquipo.ts",
+      "backend/src/domain/errors/ErrorValidacionEquipo.ts",
+      "backend/src/domain/repositories/IListasEquipoDAO.ts",
+      "backend/src/infrastructure/repositories/RepositorioListasEquipoSupabase.test.ts",
+      "backend/src/infrastructure/repositories/RepositorioListasEquipoSupabase.ts",
+      "backend/src/presentation/http/controllers/controladorListasEquipo.ts",
+      "backend/src/presentation/http/dto/listasEquipo.dto.ts",
+      "backend/src/presentation/http/routes/rutasListasEquipo.test.ts",
+      "backend/src/presentation/http/routes/rutasListasEquipo.ts",
+      "backend/src/testing/ListasEquipoDAOEnMemoria.test.ts",
+      "backend/src/testing/ListasEquipoDAOEnMemoria.ts",
+      "backend/src/testing/apiEquipoHttpPruebas.ts",
+      "backend/src/testing/clienteSupabasePostgresPruebas.ts",
+      "backend/src/testing/contextoPostgresEquipoPruebas.ts",
+      "backend/src/testing/contratoListasEquipoDAO.ts",
+      "backend/src/testing/hu30Postgres.integration.test.ts",
+      "frontend/src/components/DialogoConfirmacion.tsx",
+      "frontend/src/components/equipo/FormularioListaEquipo.tsx",
+      "frontend/src/hooks/useListasEquipo.test.tsx",
+      "frontend/src/hooks/useListasEquipo.ts",
+      "frontend/src/lib/listasEquipoFormulario.test.ts",
+      "frontend/src/lib/listasEquipoFormulario.ts",
+      "frontend/src/pages/PaginaListasEquipo.test.tsx",
+      "frontend/src/pages/PaginaListasEquipo.tsx",
+      "frontend/src/services/listasEquipo.test.ts",
+      "frontend/src/services/listasEquipo.ts",
+      "frontend/src/testing/hu30FlujoCompleto.integration.test.tsx",
+      "frontend/src/testing/listasEquipoApiPruebas.ts",
+      "backend/src/shared/errors/errorHandler.ts"
+    ],
+    "sha": "92ddf58156fa177260ca03230b7c69e5e599cef5"
+  },
+  "repo": "ArianaBlanco06/TrekSafe",
+  "hu29": {
+    "pr": 59,
+    "sha": "c1c68c14bb0cf5fc09fbdcba001289c8202991e8"
+  },
+  "hu26": {
+    "pr": 61,
+    "sha": "62f004825750cf7ee6032928c3fe888ab1944e84",
+    "registerType": "prompt",
+    "clientsClaim": true
+  }
+}

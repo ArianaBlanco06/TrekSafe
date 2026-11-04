@@ -1,7 +1,7 @@
 import { getToken, getSessionScope, limpiarSesion } from '@/lib/sesion';
 import { handleUnauthorized } from '@/lib/eventosAuth';
 
-const API_URL = import.meta.env.VITE_API_URL ?? '/api';
+const API_URL = import.meta.env?.VITE_API_URL ?? '/api';
 
 export type CuerpoErrorApi = {
   error?: string;

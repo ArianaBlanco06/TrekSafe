@@ -26,7 +26,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['favicon.svg'],
       manifest: {
         name: 'TrekSafe',
@@ -42,6 +42,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        clientsClaim: true,
         importScripts: ['sw-privacy.js'],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
         navigateFallback: '/index.html',

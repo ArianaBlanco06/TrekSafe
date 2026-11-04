@@ -38,13 +38,16 @@ describe('Politica HTTP de privacidad', () => {
     ctx.mock.method(console, 'error', () => {});
     for (const [endpoint, options, status] of [
       ['/salud', undefined, 200], ['/inexistente', undefined, 404],
-      // El manejador existente responde 500 a errores del parser; no se cambia
-      // esa politica en este fix. Incluso ese rechazo debe llevar no-store.
-      ['/auth/iniciar-sesion', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{' }, 500],
     ] as const) {
       const response = await fetch(`${base}/api${endpoint}`, options);
       assert.equal(response.status, status);
       assert.equal(response.headers.get('cache-control'), 'no-store');
     }
+    const malformed = await fetch(`${base}/api/auth/iniciar-sesion`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{',
+    });
+    // El fix comprueba privacidad; HU-30 mejora este rechazo de 500 a 400.
+    assert.ok(malformed.status >= 400 && malformed.status < 600);
+    assert.equal(malformed.headers.get('cache-control'), 'no-store');
   });
 });

@@ -4,3 +4,5 @@ export * as offline from '../../src/lib/offlineStorage';
 export * as rutas from '../../src/lib/offlineExpedicion';
 export * as contactos from '../../src/lib/offlineContacts';
 export * as api from '../../src/services/clienteApi';
+export * as plantillasHU29 from '../compatibilidad/hu29/cachePlantillasCuenta';
+export * as logicaHU29 from '../../src/lib/plantillasCuentaLogica';
