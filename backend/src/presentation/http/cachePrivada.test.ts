@@ -2,7 +2,6 @@ import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { createApp } from './app.js';
 
 // La configuracion historica carga .env al importar. Se sustituyen sus destinos
 // antes del primer createApp/loadEnv; ninguna prueba accede a la base o al cron.
@@ -13,6 +12,7 @@ Object.assign(process.env, {
   BREVO_API_KEY: '', SMTP_HOST: '', SMTP_USER: '', SMTP_PASS: '', CRON_ENABLED: 'false',
 });
 delete process.env.DATABASE_URL;
+const { createApp } = await import('./app.js');
 
 describe('Politica HTTP de privacidad', () => {
   let server: Server;
