@@ -3,6 +3,7 @@ export class ErrorAplicacion extends Error {
     public readonly codigoEstado: number,
     message: string,
     public readonly codigo?: string,
+    public readonly extras?: Record<string, unknown>,
   ) {
     super(message);
     this.name = 'ErrorAplicacion';

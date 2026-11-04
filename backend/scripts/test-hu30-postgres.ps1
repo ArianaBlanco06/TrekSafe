@@ -23,6 +23,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'No se pudo crear la base desechable.' }
     $files = @(
         'init_schema.sql',
+        'backend/migrations/002_hu26_version_y_eventos_plan.sql',
+        'backend/migrations/003_hu26_rpc_editar_expedicion.sql',
         'backend/migrations/20261101_hu30_listas_equipo.sql',
         'backend/migrations/20261101_hu30_operaciones_equipo.sql',
         'backend/migrations/tests/hu30_listas_equipo.test.sql',
