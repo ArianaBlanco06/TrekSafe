@@ -9,6 +9,8 @@ backend/.env
 frontend/.env
 .avisos_dev.json
 backend/.avisos_dev.json
+.outbox_dev.json
+backend/.outbox_dev.json
 
 # Build outputs
 dist/
