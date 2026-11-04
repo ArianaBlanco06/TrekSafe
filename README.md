@@ -233,6 +233,8 @@ Prefijo `/api` · `Authorization: Bearer <JWT>` · JSON `camelCase`
 | Rate limiting | 20 req / 15 min en auth |
 | Cliente | Solo `VITE_API_URL` (sin secretos) |
 
+La PWA conserva assets públicos y borradores/plantillas propios de la sesión; las respuestas API no se guardan para uso offline. Los datos locales privados se eliminan al cerrar sesión. Política, pruebas y evidencia en [fix de privacidad #67](docs/fixes/67-service-worker-privacidad.md).
+
 **Fuera de alcance:** GPS continuo IoT · APIs gubernamentales reales · SMS de pago.
 
 ## Equipo

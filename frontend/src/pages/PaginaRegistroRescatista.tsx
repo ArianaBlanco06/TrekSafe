@@ -45,7 +45,7 @@ export function PaginaRegistroRescatista() {
         numeroCredencial: numeroCredencial.trim(),
         fechaNacimiento,
       });
-      loginSession(res.token, res.usuario);
+      await loginSession(res.token, res.usuario);
       setVista('success');
     } catch (err) {
       const status = (err as Error & { status?: number }).status;
