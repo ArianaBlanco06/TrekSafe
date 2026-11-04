@@ -104,7 +104,12 @@ export class RepositorioExpedicion {
       .single();
 
     // Fallback si la columna minutos_recordatorio aún no ha sido aplicada por Sebastian en DEV
-    if (error?.code === '42703' && payloadInsercion.minutos_recordatorio) {
+    const esColumnaFaltante =
+      error?.code === 'PGRST204' ||
+      error?.code === '42703' ||
+      error?.message?.includes('minutos_recordatorio');
+
+    if (esColumnaFaltante && payloadInsercion.minutos_recordatorio) {
       delete payloadInsercion.minutos_recordatorio;
       const reintento = await this.supabase
         .from('expediciones')
@@ -332,7 +337,12 @@ export class RepositorioExpedicion {
       .select('id, senderista_id, hora_retorno_estimada, minutos_recordatorio')
       .eq('estado', 'en_progreso');
 
-    if (error?.code === '42703') {
+    const esColumnaFaltante =
+      error?.code === 'PGRST204' ||
+      error?.code === '42703' ||
+      error?.message?.includes('minutos_recordatorio');
+
+    if (esColumnaFaltante) {
       const { data: fallback, error: errFallback } = await this.supabase
         .from('expediciones')
         .select('id, senderista_id, hora_retorno_estimada')
