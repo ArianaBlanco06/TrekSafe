@@ -218,7 +218,7 @@ Prefijo `/api` · `Authorization: Bearer <JWT>` · JSON `camelCase`
 | Salud | `GET /salud` |
 | Auth | `POST /auth/registrar-senderista` · `registrar-rescatista` · `iniciar-sesion` |
 | Usuario | `/usuario/ficha-medica` · `/contactos` · `/privacidad/revocar` |
-| Expediciones | `POST /` · `GET /activa` · `GET /historial` · `POST /:id/confirmar-retorno` |
+| Expediciones | `POST /` · `GET /` · `GET /activa` · `GET /historial` · `GET /:id` · `PUT /:id` · `POST /:id/confirmar-retorno` |
 | Rescate | `/expediciones` · `/historial` · `/alertas` · confirmar · bitácora |
 
 ## Seguridad

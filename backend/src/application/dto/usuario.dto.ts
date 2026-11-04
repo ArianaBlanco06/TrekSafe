@@ -42,7 +42,7 @@ export const crearContactoSchema = z.object({
   correoElectronico: z.string().trim().email('Correo inválido'),
 });
 
-export const crearExpedicionSchema = z
+export const camposExpedicionSchema = z
   .object({
     lugarInicio: z.string().trim().min(3, 'Ubicación inicial obligatoria'),
     lugarFin: z.string().trim().min(3, 'Destino obligatorio'),
@@ -55,11 +55,21 @@ export const crearExpedicionSchema = z
     nombresAcompanantes: z
       .array(z.string().trim().min(2))
       .min(1, 'Agrega al menos un acompañante'),
-  })
-  .refine((d) => new Date(d.horaRetornoEstimada) > new Date(d.horaInicio), {
-    message: 'La hora de retorno debe ser posterior a la hora de salida',
-    path: ['horaRetornoEstimada'],
   });
+
+export function retornoPosteriorASalida(d: { horaInicio: string; horaRetornoEstimada: string }): boolean {
+  return new Date(d.horaRetornoEstimada) > new Date(d.horaInicio);
+}
+
+export const errorRetornoPosteriorASalida = {
+  message: 'La hora de retorno debe ser posterior a la hora de salida',
+  path: ['horaRetornoEstimada'],
+};
+
+export const crearExpedicionSchema = camposExpedicionSchema.refine(
+  retornoPosteriorASalida,
+  errorRetornoPosteriorASalida,
+);
 
 export type EntradaActualizarFichaMedica = z.infer<typeof actualizarFichaMedicaSchema>;
 export type EntradaCrearContacto = z.infer<typeof crearContactoSchema>;

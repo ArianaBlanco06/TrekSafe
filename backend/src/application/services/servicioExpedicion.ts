@@ -18,6 +18,7 @@ export type ResumenExpedicionActiva = {
   minutosTolerancia: number;
   fechaLimite: string;
   estado: string;
+  version: number;
   cantidadAcompanantes: number;
   cantidadContactos: number;
   acompanantes: string[];
@@ -105,6 +106,7 @@ export class ServicioExpedicion {
       minutosTolerancia: fila.minutos_tolerancia,
       fechaLimite: calcularFechaLimite(fila.hora_retorno_estimada, fila.minutos_tolerancia),
       estado: fila.estado,
+      version: fila.version,
       cantidadAcompanantes: acompanantes.length,
       cantidadContactos: contactos.length,
       acompanantes,
@@ -182,6 +184,7 @@ function mapearExpedicion(fila: {
   hora_retorno_estimada: string;
   minutos_tolerancia: number;
   estado: string;
+  version: number;
   creado_en?: string;
   actualizado_en?: string;
 }) {
@@ -193,6 +196,7 @@ function mapearExpedicion(fila: {
     horaRetornoEstimada: fila.hora_retorno_estimada,
     minutosTolerancia: fila.minutos_tolerancia,
     estado: fila.estado,
+    version: fila.version,
     creadoEn: fila.creado_en,
     actualizadoEn: fila.actualizado_en,
   };

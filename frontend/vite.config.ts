@@ -26,7 +26,9 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'autoUpdate' recarga todas las ventanas abiertas al activarse un Service Worker nuevo, y eso
+      // descarta formularios a medio editar. Así, la versión nueva se activa al cerrar las pestañas.
+      registerType: 'prompt',
       includeAssets: ['favicon.svg'],
       manifest: {
         name: 'TrekSafe',
@@ -45,7 +47,14 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api/],
+        clientsClaim: true,
         runtimeCaching: [
+          {
+            // El plan fija la versionEsperada de la edición: nunca debe leerse de la caché.
+            urlPattern: ({ url }) =>
+              /^\/api\/expediciones\/[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(url.pathname),
+            handler: 'NetworkOnly',
+          },
           {
             urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
             handler: 'NetworkFirst',
