@@ -50,6 +50,10 @@ export default defineConfig({
         clientsClaim: true,
         runtimeCaching: [
           {
+            urlPattern: ({ url }) => /^\/api\/usuario\/listas-equipo(?:\/|$)/.test(url.pathname),
+            handler: 'NetworkOnly',
+          },
+          {
             // El plan fija la versionEsperada de la edición: nunca debe leerse de la caché.
             urlPattern: ({ url }) =>
               /^\/api\/expediciones\/[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(url.pathname),
