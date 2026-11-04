@@ -30,8 +30,20 @@ export class ServicioNotificacionRetornoSeguro {
     confirmadoEnIso: string,
     fueAlertaPrevia = false,
   ): Promise<ResultadoNotificacionRetorno> {
+    console.log(`[RetornoSeguro] Iniciando notificación para expedición ${expedicionId}...`);
     const contexto = await this.repoAlerta.buscarContextoAlerta(expedicionId);
-    if (!contexto || contexto.contactos.length === 0) {
+    if (!contexto) {
+      console.warn(`[RetornoSeguro] No se encontró contexto o datos de expedición ${expedicionId}`);
+      return {
+        expedicionId,
+        contactosNotificados: 0,
+        mensajesOutboxCreados: 0,
+        omitidosPorDuplicado: 0,
+      };
+    }
+
+    if (contexto.contactos.length === 0) {
+      console.warn(`[RetornoSeguro] La expedición ${expedicionId} no tiene contactos de emergencia vinculados.`);
       return {
         expedicionId,
         contactosNotificados: 0,
@@ -73,7 +85,7 @@ export class ServicioNotificacionRetornoSeguro {
       });
 
       // Crear entrada outbox garantizando trazabilidad y reintentos futuros
-      await this.repoOutbox.guardar({
+      const guardado = await this.repoOutbox.guardar({
         tipoEvento: 'RETORNO_SEGURO_CONTACTO',
         destinatario: email,
         asunto: subject,
@@ -86,6 +98,10 @@ export class ServicioNotificacionRetornoSeguro {
           horaConfirmacion: confirmadoEnIso,
         },
       });
+
+      console.log(
+        `[RetornoSeguro] Notificación de retorno encolada en Outbox [${guardado.id}] para ${email} (${contacto.nombreCompleto})`,
+      );
 
       creados++;
     }
