@@ -14,6 +14,10 @@ import { crearRutasListasEquipo } from './routes/rutasListasEquipo.js';
 import { ServicioListasEquipo } from '../../application/services/servicioListasEquipo.js';
 import { RepositorioListasEquipoSupabase } from '../../infrastructure/repositories/RepositorioListasEquipoSupabase.js';
 import { getSupabaseAdmin } from '../../infrastructure/database/supabase.js';
+import { CreadorDesdeHistorial } from '../../application/creacion-plan/CreadorDesdeHistorial.js';
+import { DAOContactosVigentesSupabase } from '../../infrastructure/repositories/DAOContactosVigentesSupabase.js';
+import { HistorialExpedicionesDAOSupabase } from '../../infrastructure/repositories/HistorialExpedicionesDAOSupabase.js';
+import { crearRutasRepetirExpedicion } from './routes/rutasRepetirExpedicion.js';
 
 export function createApp() {
   const env = loadEnv();
@@ -48,6 +52,11 @@ export function createApp() {
   const servicioEquipo = new ServicioListasEquipo(new RepositorioListasEquipoSupabase(getSupabaseAdmin()));
   app.use(`${env.apiPrefix}/usuario/listas-equipo`, crearRutasListasEquipo(servicioEquipo));
   app.use(`${env.apiPrefix}/usuario`, crearRutasUsuario());
+  const creadorDesdeHistorial = new CreadorDesdeHistorial(
+    new DAOContactosVigentesSupabase(getSupabaseAdmin()),
+    new HistorialExpedicionesDAOSupabase(getSupabaseAdmin()),
+  );
+  app.use(`${env.apiPrefix}/expediciones`, crearRutasRepetirExpedicion(creadorDesdeHistorial));
   app.use(`${env.apiPrefix}/expediciones`, crearRutasExpedicion());
   app.use(`${env.apiPrefix}/rescate`, crearRutasRescate());
 
