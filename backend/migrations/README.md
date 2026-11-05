@@ -177,7 +177,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File backend/scripts/test-hu3
 
 El script reutiliza el entorno local desechable de HU-30 y añade HU-31 mediante
 `-IncluirPreparacion`. Crea una instancia temporal en loopback, ejecuta migraciones,
-`tests/hu31_preparacion.test.sql`, backend y regresión frontend de HU-30; verifica
+`tests/hu31_preparacion.test.sql`, backend e integraciones frontend de HU-30 y HU-31; verifica
 la limpieza y apaga la instancia en `finally`. Las pruebas condicionadas usan
 `HU31_TEST_DATABASE_URL` y aceptan solo la base local `treksafe_hu30_test`.
 La ejecución no toma `DATABASE_URL` ni se conecta a Supabase.

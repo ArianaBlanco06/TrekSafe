@@ -26,6 +26,7 @@ export async function contextoPostgresPreparacionPruebas(pool: pg.Pool, t: TestC
   const listaVaciaA = await base.dao.crear(base.senderistaA, { nombre: 'Vacía', items: [] });
   return {
     dao: new RepositorioPreparacionExpedicionSupabase(clienteSupabasePostgresPruebas(pool)),
+    listasDAO: base.dao,
     senderistaA: base.senderistaA, senderistaB: base.senderistaB,
     expedicionA, otraExpedicionA, expedicionB, listaA, listaB, listaVaciaA,
     async cambiarEstado(expedicionId: string, estado: string): Promise<void> {

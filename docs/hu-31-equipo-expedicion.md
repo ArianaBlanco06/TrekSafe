@@ -2,10 +2,10 @@
 
 ## Estado y alcance
 
-Fases 1, 2 y 3 completadas el 5 de noviembre de 2026: alcance, dominio, servicio,
-DAO en memoria, migraciones, adaptador Supabase y API con pruebas locales de
-PostgreSQL. La pantalla, la aplicación de migraciones en DEV y la validación
-funcional en ese entorno siguen pendientes.
+Fases 1 a 4 completadas localmente el 5 de noviembre de 2026: alcance, dominio,
+servicio, persistencia, API y pantalla con pruebas de PostgreSQL y navegador.
+La aplicación de migraciones y la validación funcional en Supabase DEV siguen
+pendientes, junto con la entrega y aceptación del equipo.
 
 Fuente funcional: `TrekSafe_Product_Backlog_ISW2.xlsx`, hoja de backlog, fila 42.
 Historia asignada a Jhon, Sprint 1, 3 SP. Depende de HU-07 y HU-30; no requiere
@@ -71,8 +71,9 @@ equipo no condiciona ni retrasa el flujo de retorno seguro.
 
 ## Diseño SOLID
 
-Las entidades, el puerto, el servicio, los dos adaptadores y HTTP de la tabla
-siguiente están implementados. El frontend corresponde a la siguiente fase.
+Las entidades, el puerto, el servicio, los dos adaptadores, HTTP y frontend de
+la tabla siguiente están implementados. La validación de DEV corresponde a la
+siguiente fase.
 
 | Componente | Responsabilidad y colaboradores |
 | --- | --- |
@@ -159,7 +160,7 @@ para `service_role`. Como este rol evita RLS, cada operación SQL debe comprobar
 explícitamente propietario y pertenencia; una comprobación previa en el servicio
 no autoriza por sí sola la escritura.
 
-## API y pantalla propuestas
+## API y pantalla
 
 Rutas nuevas bajo el prefijo configurado de la API:
 
@@ -175,11 +176,11 @@ reglas de estado y segunda asociación producen 409 cuando el recurso es propio;
 se comprueba primero la propiedad. Un fallo interno devuelve un error genérico,
 sin datos de otras cuentas ni detalles de SQL.
 
-La interfaz prevista es `/senderista/expedicion/:id/equipo`, accesible desde el
-listado de expediciones y la vista activa, con consulta desde el historial cuando
-corresponda. Mostrará selección inicial, lista vacía, casillas, contador, estados
-de carga/error y reintento. Durante el guardado se evita el doble envío y no se
-permite otra asociación. Los avisos siguen el estilo de la PWA.
+La interfaz es `/senderista/expedicion/:id/equipo`, accesible desde el listado de
+expediciones, la vista activa y el historial. Muestra selección inicial, lista
+vacía, casillas, contador, estados de carga/error y reintento. Durante el guardado
+se evita el doble envío y no se permite otra asociación. La primera asociación
+requiere una confirmación mediante `DialogoConfirmacion`, con el estilo de la PWA.
 
 Las nuevas operaciones requieren conexión. No se añade una cola offline ni
 almacenamiento de equipo en Web Storage. Se mantienen `Cache-Control: no-store`,
@@ -213,7 +214,7 @@ qué se omitió y qué sigue pendiente.
 | 1 Alcance y diseño | Este documento y las dos decisiones confirmadas por Jhon. Completada a nivel de planificación. |
 | 2 Dominio y casos de uso | Completada: entidades, puerto, servicio y DAO en memoria; 46 pruebas nuevas aprobadas, tipos y compilación correctos. |
 | 3 Persistencia y API | Completada localmente: dos migraciones, tres RPC, adaptador y rutas; 229 pruebas backend y 24 frontend de HU-30 aprobadas con PostgreSQL real. DEV pendiente. |
-| 4 Interfaz | Selección y revisión de equipo por expedición, marcas y contador, pruebas de componentes y regresión del retorno. |
+| 4 Interfaz | Completada localmente: pantalla, accesos, confirmación y marcas; 43 pruebas frontend con PostgreSQL y 14 de navegador aprobadas. DEV pendiente. |
 | 5 DEV y entrega | Coordinar migraciones con Sebastian, probar con dos cuentas ficticias, reunir capturas y resultados, limpiar datos de prueba y preparar el PR para revisión. |
 
 Jhon realiza los cambios de Git, commits, push y publicación del PR. La aplicación
@@ -309,3 +310,51 @@ en la base local desechable. Sebastian debe confirmar numeración y orden antes
 de DEV. La prueba SQL de completar el estado con pendientes no sustituye todavía
 el recorrido de contraseña y retorno seguro desde la PWA, previsto en las fases
 de interfaz y validación funcional.
+
+## Implementación y comprobación de la fase 4
+
+`preparacionExpedicionApi` adapta las tres operaciones de equipo al cliente HTTP
+autenticado existente. `fuentesEquipoExpedicion` compone esas operaciones con la
+consulta existente del plan y el listado de HU-30; conserva únicamente id,
+destino y estado para los metadatos de pantalla. Los colaboradores se pueden
+sustituir mediante interfaces sin modificar la presentación.
+
+`usePreparacionExpedicion` coordina carga, errores, confirmación de escrituras y
+reintentos. Consulta listas base solo cuando no hay copia y el estado permite
+asociar. Revalida al volver al foco o reconectar y, ante 404/409 de escritura,
+relee el estado antes de habilitar otra operación. El contador y las marcas
+proceden de la respuesta confirmada: una casilla no anuncia éxito mientras el
+guardado está pendiente o si falla.
+
+`PaginaEquipoExpedicion` reinicia el contenido por usuario, ámbito de sesión e id
+de expedición. El hook descarta lecturas y escrituras tardías al salir o cambiar
+de sesión. Los datos quedan en memoria y las operaciones requieren conexión;
+no se añaden claves de equipo a Web Storage ni cola offline.
+
+`ListaPreparacionEquipo` presenta la copia, los indicadores obligatorio/opcional,
+las marcas y el contador, sin asumir persistencia. La vista distingue listas
+vacías, ausencia de listas, fallos al consultarlas y falta de preparación.
+Una lista origen eliminada conserva el nombre y contenido de la copia. En estados
+de consulta se deshabilitan todas las casillas.
+
+Los accesos añadidos a listado, historial y vista activa no cargan el equipo por
+su cuenta. La vista activa mantiene su botón de retorno independiente y la
+pantalla de equipo ofrece acceso a él incluso si su propia carga falla.
+
+Se aprobaron 17 pruebas de componentes con reglas reales del backend y transporte
+sustituido, una de serialización HTTP y una de React con API/JWT/SDK/PostgreSQL.
+Las pruebas de navegador verificaron el build a 390 px, el diálogo de asociación,
+casillas asíncronas, contador, recarga y retorno con equipo pendiente o no
+disponible. En esos dos casos de UI se sustituyen las respuestas y se bloquea el
+worker; las otras 12 pruebas de privacidad siguen usando el worker real.
+
+Para permitir las dos integraciones frontend en paralelo, se acotó la consulta
+final de la prueba antigua de HU-30 a sus propios usuarios ficticios. Así no cuenta
+las listas creadas por HU-31. La prueba de metadatos del plan usa una lectura SQL
+limitada al propietario; las rutas y RPC de equipo, el listado de HU-30 y las
+escrituras son reales en la prueba integrada local.
+
+La ejecución final pasó 229 pruebas backend, 43 frontend con ambas integraciones
+PostgreSQL y 14 de navegador. También pasaron los tipos y las compilaciones. Se
+revisaron las capturas móviles y se verificó la limpieza de la base temporal y su
+apagado. Los comandos y límites están en [hu-31-validacion.md](hu-31-validacion.md).

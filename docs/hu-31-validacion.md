@@ -1,10 +1,10 @@
 # Validación local de HU-31
 
-El 5 de noviembre de 2026 se comprobaron las fases 2 y 3 en Windows, con
-Node 22.23.4 y PostgreSQL 18.1. La historia está implementada hasta la API.
-La interfaz y el recorrido completo en Supabase DEV siguen pendientes.
+El 5 de noviembre de 2026 se comprobaron las fases 2 a 4 en Windows, con
+Node 22.23.4 y PostgreSQL 18.1. La historia incluye API y pantalla. El recorrido
+completo y las migraciones en Supabase DEV siguen pendientes.
 
-## Resultados ejecutados
+## Resultados de la fase 3
 
 | Comprobación | Resultado |
 | --- | --- |
@@ -68,19 +68,79 @@ La ejecución local registrada utilizó
 con código 0. Ningún comando requiere una clave de Supabase ni toma
 `DATABASE_URL` como destino de migración.
 
+## Fase 4: interfaz y regresiones
+
+La última ejecución local aprobó:
+
+| Comprobación | Resultado |
+| --- | --- |
+| Tipos y compilación backend | Aprobados. |
+| Tipos y build frontend/PWA | Aprobados. |
+| Tipos de pruebas Playwright | Aprobados. |
+| Backend con PostgreSQL desechable | 229 aprobadas. |
+| Frontend con ambas integraciones PostgreSQL activadas | 43 aprobadas, ninguna omitida. |
+| Navegador Edge | 14 aprobadas: 12 de privacidad/regresión y 2 de UI de HU-31. |
+| Limpieza | Dos usuarios semilla, cero listas, ítems o preparaciones de prueba; instancia apagada. |
+
+HU-31 añade 17 pruebas de componentes, una de cliente HTTP y una integrada de
+React, JWT, HTTP, SDK y PostgreSQL. La integración utiliza las rutas reales de
+equipo y HU-30; los metadatos del plan se sirven mediante una lectura SQL de
+prueba con filtro de propietario, sin sustituir las escrituras de preparación.
+
+La ejecución final empleó la instancia temporal
+`treksafe-hu30-a5327a18a8174f58b69193ca9baac3b1`, con código de salida 0.
+Se acotó la comprobación final de HU-30 a sus usuarios ficticios para que no
+confunda los datos de la prueba paralela de HU-31 con datos sobrantes propios.
+
+Las pruebas de pantalla cubren carga y reintento, asociación con confirmación
+PWA, listas vacías, independencia del origen, errores de guardado sin falso éxito,
+doble envío, conflictos, consulta por estado, reconexión y respuestas tardías
+de cuentas anteriores. La prueba integrada verifica marcas y contador después
+de remontar la pantalla, eliminación de la lista origen y aislamiento entre A/B.
+
+En navegador se revisó la presentación a 390 px, sin desbordamiento horizontal,
+con capturas generadas en `frontend/test-results/privacidad`. Los dos casos de
+HU-31 usan respuestas ficticias y deshabilitan el service worker: comprueban la
+interfaz, no PostgREST. Las otras 12 regresiones sí ejercitan el worker real.
+
+El caso de retorno de navegador abre el diálogo existente, envía su contraseña
+ficticia y navega a la confirmación aun con obligatorios pendientes y la API de
+equipo simulada como no disponible. Comprueba la independencia de la UI y el
+payload enviado, pero sustituye la respuesta del endpoint de retorno; la
+verificación real de contraseña y persistencia del retorno queda para DEV.
+
+Para reproducir navegador, establecer la URL relativa en el proceso tanto del
+build como del ejecutor: el servidor de pruebas también construye su módulo
+`probe` y debe apuntar a la API ficticia, no al destino del `.env` local.
+
+```powershell
+$hu31ApiAnterior = $env:VITE_API_URL
+try {
+    $env:VITE_API_URL = '/api'
+    npm.cmd run build --prefix frontend
+    if ($LASTEXITCODE -ne 0) { throw 'Falló el build de pruebas.' }
+    npm.cmd run test:pwa:privacidad --prefix frontend
+    if ($LASTEXITCODE -ne 0) { throw 'Fallaron las pruebas de navegador.' }
+} finally {
+    $env:VITE_API_URL = $hu31ApiAnterior
+}
+```
+
+No se editan los `.env`. Se usa Edge con perfil temporal de pruebas.
+
 ## Alcance pendiente
 
 El SDK serializa las RPC y un puente de pruebas las ejecuta en PostgreSQL real
 como `service_role`. Se sustituye su transporte; **no se ha probado PostgREST
 ni Supabase DEV para HU-31**.
 
-El caso de retorno de esta fase verifica que el esquema permite completar el
-estado con equipo pendiente. El testigo HTTP verifica que el router nuevo no
+El caso SQL de retorno de la fase 3 verifica que el esquema permite completar el
+estado con equipo pendiente. El testigo HTTP de esa fase verifica que el router nuevo no
 intercepta la ruta existente; no ejecuta su controlador de contraseña. La prueba
 funcional completa del retorno desde la PWA corresponde a las fases siguientes.
 
-Quedan pendientes la pantalla, las migraciones de HU-31 en DEV coordinadas con
-Sebastian, la prueba visual y funcional con dos cuentas, la evidencia del PR y la
+Quedan pendientes las migraciones de HU-31 en DEV coordinadas con
+Sebastian, la prueba funcional real con dos cuentas, la evidencia del PR y la
 revisión y aceptación del equipo. La numeración de `004` y `005` debe confirmarse
 con Sebastian antes de aplicarlas en la base compartida. HU-31 todavía no está
 lista para declararse terminada.

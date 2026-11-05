@@ -103,6 +103,9 @@ export function PaginaHistorialExpediciones() {
                   Retorno confirmado: {formatDt(exp.actualizadoEn)}
                 </p>
               )}
+              <Link to={`/senderista/expedicion/${encodeURIComponent(exp.id)}/equipo`}
+                aria-label={`Consultar equipo de la expedición a ${exp.lugarFin}`}
+                className="inline-flex items-center min-h-12 mt-2 text-sm font-semibold text-primary">Consultar equipo</Link>
             </div>
           ))}
         </div>

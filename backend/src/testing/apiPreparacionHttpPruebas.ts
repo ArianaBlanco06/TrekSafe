@@ -8,6 +8,12 @@ import type { IPreparacionExpedicionDAO } from '../domain/repositories/IPreparac
 import { crearRutasPreparacionExpedicion } from '../presentation/http/routes/rutasPreparacionExpedicion.js';
 import { errorHandler, notFoundHandler } from '../shared/errors/errorHandler.js';
 import type { respuestaPreparacion } from '../presentation/http/dto/preparacionExpedicion.dto.js';
+import type { IListasEquipoDAO } from '../domain/repositories/IListasEquipoDAO.js';
+import { ServicioListasEquipo } from '../application/services/servicioListasEquipo.js';
+import { crearRutasListasEquipo } from '../presentation/http/routes/rutasListasEquipo.js';
+import { middlewareAutenticacion, requerirRol, type SolicitudAutenticada } from '../presentation/http/middleware/middlewareAutenticacion.js';
+import { asyncHandler } from '../presentation/http/middleware/asyncHandler.js';
+import { ErrorAplicacion } from '../shared/errors/ErrorAplicacion.js';
 
 const secreto = 'secreto-ficticio-exclusivo-http-hu31-000000';
 Object.assign(process.env, {
@@ -23,7 +29,10 @@ type CuerpoPreparacion = {
 };
 
 /** HTTP y JWT reales contra el DAO recibido; no inicia main, cron ni correo. */
-export async function iniciarApiPreparacionHttpPruebas(t: TestContext, dao: IPreparacionExpedicionDAO) {
+export async function iniciarApiPreparacionHttpPruebas(t: TestContext, dao: IPreparacionExpedicionDAO, lecturas?: {
+  listasDAO: IListasEquipoDAO;
+  obtenerExpedicion(actor: string, id: string): Promise<{ id: string; lugarFin: string; estado: string } | null>;
+}) {
   const app = express();
   app.use((_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
   app.use(express.json({ limit: '100kb' }));
@@ -31,6 +40,14 @@ export async function iniciarApiPreparacionHttpPruebas(t: TestContext, dao: IPre
   // Testigos: el router nuevo debe dejar pasar las rutas de otras historias.
   app.get('/api/expediciones/activa', (_req, res) => res.json({ testigo: 'activa' }));
   app.post('/api/expediciones/:id/confirmar-retorno', (_req, res) => res.json({ testigo: 'retorno' }));
+  if (lecturas) {
+    app.use('/api/usuario/listas-equipo', crearRutasListasEquipo(new ServicioListasEquipo(lecturas.listasDAO)));
+    app.get('/api/expediciones/:id', middlewareAutenticacion, requerirRol('senderista'), asyncHandler(async (req, res) => {
+      const expedicion = await lecturas.obtenerExpedicion((req as SolicitudAutenticada).user.id, String(req.params.id));
+      if (!expedicion) throw new ErrorAplicacion(404, 'Expedición no encontrada.', 'EXPEDICION_NO_ENCONTRADA');
+      res.json({ expedicion });
+    }));
+  }
   app.use(notFoundHandler);
   app.use(errorHandler);
   const servidor = app.listen(0, '127.0.0.1');

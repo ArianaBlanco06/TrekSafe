@@ -261,6 +261,11 @@ export function PaginaExpedicionActiva() {
         {enLinea ? 'Registrar retorno seguro' : 'Sin red — no se puede confirmar'}
       </button>
 
+      <Link to={`/senderista/expedicion/${encodeURIComponent(expedicion.id)}/equipo`}
+        className="flex justify-center items-center min-h-12 mt-3 text-sm font-semibold text-primary">
+        Revisar equipo de esta expedición
+      </Link>
+
       {!enLinea && (
         <p className="text-xs text-center text-muted-foreground mt-2">
           El check-in de retorno necesita conexión para avisar a contactos y rescatistas.
