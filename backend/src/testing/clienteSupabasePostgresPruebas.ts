@@ -2,6 +2,9 @@ import { createClient } from '@supabase/supabase-js';
 import type pg from 'pg';
 
 const operaciones: Record<string, { sql: string; parametros: readonly string[] }> = {
+  treksafe_obtener_preparacion: { sql: 'SELECT public.treksafe_obtener_preparacion($1,$2) AS resultado', parametros: ['p_senderista_id', 'p_expedicion_id'] },
+  treksafe_asociar_lista_expedicion: { sql: 'SELECT public.treksafe_asociar_lista_expedicion($1,$2,$3) AS resultado', parametros: ['p_senderista_id', 'p_expedicion_id', 'p_lista_id'] },
+  treksafe_establecer_item_preparado: { sql: 'SELECT public.treksafe_establecer_item_preparado($1,$2,$3,$4) AS resultado', parametros: ['p_senderista_id', 'p_expedicion_id', 'p_item_id', 'p_preparado'] },
   treksafe_listar_listas_equipo: { sql: 'SELECT public.treksafe_listar_listas_equipo($1) AS resultado', parametros: ['p_senderista_id'] },
   treksafe_obtener_lista_equipo: { sql: 'SELECT public.treksafe_obtener_lista_equipo($1,$2) AS resultado', parametros: ['p_senderista_id', 'p_lista_id'] },
   treksafe_crear_lista_equipo: { sql: 'SELECT public.treksafe_crear_lista_equipo($1,$2) AS resultado', parametros: ['p_senderista_id', 'p_datos'] },

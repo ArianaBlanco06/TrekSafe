@@ -24,6 +24,8 @@ Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos
 | `003_hu26_rpc_editar_expedicion.sql` | Función `treksafe_editar_expedicion` | `002` |
 | `20261101_hu30_listas_equipo.sql` | Tablas de listas personales e ítems, relaciones y permisos | Esquema inicial |
 | `20261101_hu30_operaciones_equipo.sql` | Posición de ítems y RPC de listas de equipo | `20261101_hu30_listas_equipo.sql` |
+| `004_hu31_preparacion_expedicion.sql` | Copia de equipo por expedición, ítems, restricciones y permisos | Las dos migraciones de HU-30 |
+| `005_hu31_operaciones_preparacion.sql` | RPC de consulta, asociación atómica y marcas de preparación | `004_hu31_preparacion_expedicion.sql` |
 
 Las migraciones `002` y `003` son re-ejecutables. No dependen de
 `000_registro_migraciones.sql`: si la tabla `treksafe_migraciones` existe, registran
@@ -136,3 +138,48 @@ Después del `ROLLBACK` quedaron las dos cuentas semilla originales, cero listas
 y cero ítems. La instancia se apagó al terminar.
 
 Esta ejecución no se conectó a Supabase ni acredita una aplicación en DEV.
+
+## HU-31: preparación de equipo por expedición
+
+Los archivos `004_hu31_preparacion_expedicion.sql` y
+`005_hu31_operaciones_preparacion.sql` se prepararon y comprobaron localmente el
+5 de noviembre de 2026. **Su aplicación en DEV sigue pendiente.** Sebastian debe
+confirmar la numeración y el orden con las migraciones de otras ramas antes de
+registrar y ejecutar esta entrega. Se aplican una sola vez; no son re-ejecutables.
+
+Se requieren las dos migraciones de HU-30, incluyendo la posición de sus ítems.
+El orden es el de dependencias de esta tabla, no el orden alfabético de archivos.
+No hay que volver a ejecutar las migraciones de HU-30 ya aplicadas en DEV.
+
+`preparaciones_expedicion` admite una sola copia por expedición y conserva el
+nombre de la lista. `items_preparacion_expedicion` guarda nombres, obligatoriedad,
+orden y marcas con identidades propias. La eliminación de la lista origen deja
+su referencia nula, conservando contenido y marcas. Eliminar una expedición
+elimina cabecera e ítems por cascada. El contador se calcula en el dominio.
+
+Las RPC son `treksafe_obtener_preparacion`,
+`treksafe_asociar_lista_expedicion` y `treksafe_establecer_item_preparado`. Exigen
+propiedad y vuelven a comprobar estado dentro de la escritura. La asociación
+bloquea expedición y lista base; las marcas bloquean expedición y preparación.
+Solo `programada` y `en_progreso` admiten escrituras. Una asociación existente
+no se reemplaza y un reintento de marca no invierte su valor.
+
+Las tablas activan RLS y deniegan acceso directo a los roles del cliente. Solo
+el backend puede ejecutar las funciones, con `SECURITY INVOKER` y `search_path`
+vacío. Se conceden lectura y actualización de `expediciones` a `service_role`
+para la consulta y los bloqueos; la RPC de equipo no cambia los datos del plan.
+
+Para reproducir las pruebas con Node 22 y PostgreSQL instalados:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File backend/scripts/test-hu31-postgres.ps1 -PostgresBin "C:\Program Files\PostgreSQL\18\bin"
+```
+
+El script reutiliza el entorno local desechable de HU-30 y añade HU-31 mediante
+`-IncluirPreparacion`. Crea una instancia temporal en loopback, ejecuta migraciones,
+`tests/hu31_preparacion.test.sql`, backend y regresión frontend de HU-30; verifica
+la limpieza y apaga la instancia en `finally`. Las pruebas condicionadas usan
+`HU31_TEST_DATABASE_URL` y aceptan solo la base local `treksafe_hu30_test`.
+La ejecución no toma `DATABASE_URL` ni se conecta a Supabase.
+
+Resultados y límites: [validación local de HU-31](../../docs/hu-31-validacion.md).

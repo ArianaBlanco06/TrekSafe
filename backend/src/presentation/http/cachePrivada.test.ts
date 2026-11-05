@@ -31,6 +31,7 @@ describe('Politica HTTP de privacidad', () => {
     '/usuario/ficha-medica', '/usuario/contactos', '/expediciones', '/rescate/alertas',
     // HU-30 (listas de equipo) y HU-26 (plan a editar) tambien son datos privados.
     '/usuario/listas-equipo', '/expediciones/00000000-0000-4000-8000-000000000000',
+    '/expediciones/00000000-0000-4000-8000-000000000000/equipo',
   ]) {
     it(`${endpoint}: el rechazo sin autenticacion tampoco se almacena`, async () => {
       const response = await fetch(`${base}/api${endpoint}`);

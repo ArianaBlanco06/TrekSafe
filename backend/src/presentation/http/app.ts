@@ -14,6 +14,9 @@ import { crearRutasListasEquipo } from './routes/rutasListasEquipo.js';
 import { ServicioListasEquipo } from '../../application/services/servicioListasEquipo.js';
 import { RepositorioListasEquipoSupabase } from '../../infrastructure/repositories/RepositorioListasEquipoSupabase.js';
 import { getSupabaseAdmin } from '../../infrastructure/database/supabase.js';
+import { ServicioPreparacionExpedicion } from '../../application/services/servicioPreparacionExpedicion.js';
+import { RepositorioPreparacionExpedicionSupabase } from '../../infrastructure/repositories/RepositorioPreparacionExpedicionSupabase.js';
+import { crearRutasPreparacionExpedicion } from './routes/rutasPreparacionExpedicion.js';
 
 export function createApp() {
   const env = loadEnv();
@@ -48,6 +51,8 @@ export function createApp() {
   const servicioEquipo = new ServicioListasEquipo(new RepositorioListasEquipoSupabase(getSupabaseAdmin()));
   app.use(`${env.apiPrefix}/usuario/listas-equipo`, crearRutasListasEquipo(servicioEquipo));
   app.use(`${env.apiPrefix}/usuario`, crearRutasUsuario());
+  const servicioPreparacion = new ServicioPreparacionExpedicion(new RepositorioPreparacionExpedicionSupabase(getSupabaseAdmin()));
+  app.use(`${env.apiPrefix}/expediciones`, crearRutasPreparacionExpedicion(servicioPreparacion));
   app.use(`${env.apiPrefix}/expediciones`, crearRutasExpedicion());
   app.use(`${env.apiPrefix}/rescate`, crearRutasRescate());
 
