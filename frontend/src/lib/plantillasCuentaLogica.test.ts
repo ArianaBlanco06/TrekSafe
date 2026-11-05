@@ -4,7 +4,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  claveCachePlantillas,
+  CLAVE_CACHE_PLANTILLAS,
   construirBorradorDesdeCache,
   crearSobreCache,
   mensajeAplicacionBorrador,
@@ -30,9 +30,8 @@ const plantilla = (id: string, extra: Partial<PlantillaCuenta> = {}): PlantillaC
 });
 
 describe('caché de plantillas por usuario', () => {
-  it('la clave incluye versión de esquema y usuario', () => {
-    assert.equal(claveCachePlantillas('u1'), 'plantillas-cuenta:v1:u1');
-    assert.notEqual(claveCachePlantillas('u1'), claveCachePlantillas('u2'));
+  it('usa la clave fija permitida por offlineStorage (sin usuario ni prefijos dinámicos)', () => {
+    assert.equal(CLAVE_CACHE_PLANTILLAS, 'account-templates');
   });
 
   it('un sobre del mismo usuario y esquema se lee', () => {

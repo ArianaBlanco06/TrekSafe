@@ -42,9 +42,11 @@ export type BorradorDesdePlantilla = {
   requiereFechasNuevas: true;
 };
 
-export function claveCachePlantillas(usuarioId: string): string {
-  return `plantillas-cuenta:v${ESQUEMA_CACHE_PLANTILLAS}:${usuarioId}`;
-}
+/**
+ * Clave fija de la caché offline. El aislamiento por cuenta y por sesión lo da el ámbito
+ * de `offlineStorage` (usuarioId + nonce de sesión); no se admiten claves dinámicas.
+ */
+export const CLAVE_CACHE_PLANTILLAS = 'account-templates' as const;
 
 export function crearSobreCache(
   usuarioId: string,

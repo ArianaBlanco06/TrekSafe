@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Save } from 'lucide-react';
 import { FieldLabel } from '@/components/Layout';
+import { getSessionScope } from '@/lib/sesion';
+import { ErrorClienteApi } from '@/services/clienteApi';
 import { guardarPlantillaCuenta, type DatosGuardarPlantilla } from '@/services/plantillas';
 
 type Props = {
@@ -15,20 +17,25 @@ export function GuardarComoPlantilla({ enLinea, datos, onGuardada }: Props) {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
   const [aviso, setAviso] = useState('');
+  const [scope] = useState(getSessionScope);
+  const sesionVigente = () => scope !== null && scope === getSessionScope();
 
   const datosValidos = datos.lugarInicio.trim().length >= 3 && datos.lugarFin.trim().length >= 3;
   const puedeGuardar = enLinea && datosValidos && nombre.trim().length > 0 && !guardando;
 
   const guardar = async () => {
+    if (!sesionVigente()) return;
     setError('');
     setAviso('');
     setGuardando(true);
     try {
       const { plantilla } = await guardarPlantillaCuenta({ ...datos, nombre: nombre.trim() });
+      if (!sesionVigente()) return;
       setNombre('');
       setAviso(`Plantilla «${plantilla.nombre}» guardada en tu cuenta.`);
       onGuardada();
     } catch (err) {
+      if (!sesionVigente() || (err instanceof ErrorClienteApi && err.codigo === 'SESSION_CHANGED')) return;
       setError(err instanceof Error ? err.message : 'No se pudo guardar la plantilla');
     } finally {
       setGuardando(false);

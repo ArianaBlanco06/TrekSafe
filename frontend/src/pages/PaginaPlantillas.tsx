@@ -5,6 +5,7 @@ import { useAutenticacion } from '@/context/ContextoAutenticacion';
 import { useEstadoEnLinea } from '@/hooks/useEstadoEnLinea';
 import { leerCachePlantillas, reemplazarCachePlantillas } from '@/lib/cachePlantillasCuenta';
 import type { PlantillaCuenta } from '@/lib/plantillasCuentaLogica';
+import { getSessionScope } from '@/lib/sesion';
 import { ErrorClienteApi } from '@/services/clienteApi';
 import {
   eliminarPlantillaCuenta,
@@ -24,24 +25,34 @@ export function PaginaPlantillas() {
   const [ocupadoId, setOcupadoId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
+  // Ámbito de sesión fijado al montar, como en PaginaCrearExpedicion: si la sesión cambia
+  // (logout u otra cuenta) se ignoran las respuestas y no se escribe en la caché.
+  const [scope] = useState(getSessionScope);
+  const sesionVigente = useCallback(() => scope !== null && scope === getSessionScope(), [scope]);
+  const esCambioDeSesion = (err: unknown) =>
+    !sesionVigente() || (err instanceof ErrorClienteApi && err.codigo === 'SESSION_CHANGED');
 
   const cargar = useCallback(async () => {
-    if (!usuarioId) return;
-    setPlantillas(await leerCachePlantillas(usuarioId));
+    if (!usuarioId || !sesionVigente()) return;
+    const cacheadas = await leerCachePlantillas(usuarioId, scope);
+    if (!sesionVigente()) return;
+    setPlantillas(cacheadas);
     if (!enLinea) {
       setCargando(false);
       return;
     }
     try {
       const r = await listarPlantillasCuenta();
+      if (!sesionVigente()) return;
       setPlantillas(r.plantillas);
-      await reemplazarCachePlantillas(usuarioId, r.plantillas);
+      await reemplazarCachePlantillas(usuarioId, r.plantillas, scope);
     } catch (err) {
+      if (esCambioDeSesion(err)) return;
       setError(err instanceof Error ? err.message : 'No se pudieron cargar las plantillas');
     } finally {
-      setCargando(false);
+      if (sesionVigente()) setCargando(false);
     }
-  }, [usuarioId, enLinea]);
+  }, [usuarioId, enLinea, scope, sesionVigente]);
 
   useEffect(() => {
     void cargar();
@@ -63,12 +74,14 @@ export function PaginaPlantillas() {
     setOcupadoId(p.id);
     try {
       const { plantilla } = await renombrarPlantillaCuenta(p.id, nombre, p.version);
+      if (!sesionVigente()) return;
       const actualizadas = plantillas.map((x) => (x.id === p.id ? plantilla : x));
       setPlantillas(actualizadas);
-      await reemplazarCachePlantillas(usuarioId, actualizadas);
+      await reemplazarCachePlantillas(usuarioId, actualizadas, scope);
       setEditandoId(null);
       setInfo('Plantilla renombrada.');
     } catch (err) {
+      if (esCambioDeSesion(err)) return;
       if (err instanceof ErrorClienteApi && err.codigo === 'VERSION_OBSOLETA') {
         setEditandoId(null);
         await cargar();
@@ -91,12 +104,14 @@ export function PaginaPlantillas() {
     setOcupadoId(p.id);
     try {
       await eliminarPlantillaCuenta(p.id);
+      if (!sesionVigente()) return;
       const restantes = plantillas.filter((x) => x.id !== p.id);
       setPlantillas(restantes);
-      await reemplazarCachePlantillas(usuarioId, restantes);
+      await reemplazarCachePlantillas(usuarioId, restantes, scope);
       setConfirmandoId(null);
       setInfo('Plantilla eliminada. Tus expediciones no se modificaron.');
     } catch (err) {
+      if (esCambioDeSesion(err)) return;
       if (err instanceof ErrorClienteApi && err.codigo === 'PLANTILLA_NO_ENCONTRADA') {
         setConfirmandoId(null);
         await cargar();

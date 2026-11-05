@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FieldLabel } from '@/components/Layout';
 import { leerCachePlantillas, reemplazarCachePlantillas } from '@/lib/cachePlantillasCuenta';
+import { getSessionScope } from '@/lib/sesion';
 import {
   construirBorradorDesdeCache,
   type BorradorDesdePlantilla,
@@ -23,25 +24,30 @@ export function SelectorPlantillasCuenta({ usuarioId, enLinea, contactos, versio
   const [plantillas, setPlantillas] = useState<PlantillaCuenta[]>([]);
   const [aplicandoId, setAplicandoId] = useState<string | null>(null);
   const [error, setError] = useState('');
+  // Ámbito de sesión fijado al montar: si cambia (logout u otra cuenta), se descartan respuestas.
+  const [scope] = useState(getSessionScope);
+  const sesionVigente = () => scope !== null && scope === getSessionScope();
 
   useEffect(() => {
     let activo = true;
-    void leerCachePlantillas(usuarioId).then((cacheadas) => {
-      if (activo) setPlantillas(cacheadas);
+    const vigente = () => activo && scope !== null && scope === getSessionScope();
+    void leerCachePlantillas(usuarioId, scope).then((cacheadas) => {
+      if (vigente()) setPlantillas(cacheadas);
     });
 
     if (enLinea) {
       listarPlantillasCuenta()
         .then(async (r) => {
-          await reemplazarCachePlantillas(usuarioId, r.plantillas);
-          if (activo) setPlantillas(r.plantillas);
+          if (!vigente()) return;
+          await reemplazarCachePlantillas(usuarioId, r.plantillas, scope);
+          if (vigente()) setPlantillas(r.plantillas);
         })
         .catch(() => undefined);
     }
     return () => {
       activo = false;
     };
-  }, [usuarioId, enLinea, versionLista]);
+  }, [usuarioId, enLinea, versionLista, scope]);
 
   const borradorDesdeCache = (plantilla: PlantillaCuenta) =>
     construirBorradorDesdeCache(
@@ -50,6 +56,7 @@ export function SelectorPlantillasCuenta({ usuarioId, enLinea, contactos, versio
     );
 
   const aplicar = async (plantilla: PlantillaCuenta) => {
+    if (!sesionVigente()) return;
     setError('');
     setAplicandoId(plantilla.id);
     try {
@@ -59,12 +66,15 @@ export function SelectorPlantillasCuenta({ usuarioId, enLinea, contactos, versio
       }
       try {
         const { borrador } = await obtenerBorradorDesdePlantilla(plantilla.id);
-        onAplicar(borrador);
+        if (sesionVigente()) onAplicar(borrador);
       } catch (err) {
+        if (!sesionVigente() || (err instanceof ErrorClienteApi && err.codigo === 'SESSION_CHANGED')) {
+          return;
+        }
         if (err instanceof ErrorClienteApi && err.status === 404) {
           const restantes = plantillas.filter((p) => p.id !== plantilla.id);
           setPlantillas(restantes);
-          await reemplazarCachePlantillas(usuarioId, restantes);
+          await reemplazarCachePlantillas(usuarioId, restantes, scope);
           setError('Esa plantilla ya no existe. Se actualizó tu lista.');
         } else if (err instanceof ErrorClienteApi && err.status === 0) {
           onAplicar(borradorDesdeCache(plantilla));
