@@ -2,7 +2,19 @@
 
 Fecha: 5 de noviembre de 2026. Responsable: Andriy Hitoshi Enciso Rojas (@Hitoshi).
 
-Estado: cambios de revisión implementados y validación local aprobada. El merge de develop iniciado por Andriy (`MERGE_HEAD e61a1d7`) sigue pendiente de que marque la resolución y lo registre en Git. El asistente no ejecutó fetch, cambios de rama, add, commit, push ni acciones en GitHub.
+## Estado actual — 6 de noviembre de 2026
+
+La implementación de HU-32 está completada.
+
+- CI de GitHub Actions: satisfactorio.
+- Revisión técnica: aprobada.
+- Validación funcional: aprobada por el Product Owner.
+- Migración 010: aplicada y registrada en Supabase DEV.
+- Estructura, RPC, RLS y permisos: verificados.
+- Rama `feat/hu-32-puntos`: actualizada con develop.
+- Conflictos de merge: ninguno.
+
+El único paso pendiente es integrar el PR #63 mediante merge hacia `develop`.
 
 ## Cambios realizados
 
