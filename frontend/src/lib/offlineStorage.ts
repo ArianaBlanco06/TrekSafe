@@ -12,7 +12,7 @@ export async function readOfflineJson<T>(
   if (!scope || scope !== getSessionScope() || !clavesPermitidas.has(key)) return fallback;
   try {
     if (typeof caches !== 'undefined') {
-      const hit = await (await caches.open(cacheName(scope))).match(dataUrl(key));
+      const hit = await caches.match(dataUrl(key), { cacheName: cacheName(scope) });
       if (hit) {
         const value = await hit.json() as T;
         return scope === getSessionScope() ? value : fallback;
