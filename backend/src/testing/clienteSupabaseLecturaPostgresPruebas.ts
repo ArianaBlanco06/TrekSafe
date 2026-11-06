@@ -38,6 +38,9 @@ export function clienteSupabaseLecturaPostgresPruebas(pool: pg.Pool) {
     const seleccion = url.searchParams.get('select');
 
     if (url.pathname === '/rest/v1/eventos_plan') {
+      // Solo protege la forma de la consulta (que el DAO pida COLUMNAS_EVENTO_PLAN). La lista
+      // real de columnas la verifica EventosPlanDAOSupabase.test.ts; el SQL de abajo las
+      // enumera a mano, así que una columna nueva debe añadirse también aquí.
       if (seleccion !== COLUMNAS_EVENTO_PLAN.replace(/\s/g, '')) throw new Error('select inesperado en eventos_plan');
       if (url.searchParams.get('order') !== 'ocurrido_en.asc,id.asc') throw new Error('order inesperado en eventos_plan');
       const filas = await consultar(`

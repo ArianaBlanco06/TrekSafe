@@ -99,6 +99,10 @@ BEGIN
     IF TG_OP = 'DELETE' THEN
         -- En la cascada la expedición ya no es visible; en DELETE directo sí.
         -- (Cascada de fk_eventos_plan_expedicion: borrado de expedición o de cuenta.)
+        -- Supuesto: la función es SECURITY INVOKER. Si algún día un rol con DELETE sobre
+        -- eventos_plan no pudiera ver la expedición por RLS, este EXISTS daría falso y el
+        -- borrado pasaría. Hoy no ocurre: solo el dueño de la tabla tiene DELETE y
+        -- service_role tiene BYPASSRLS.
         IF EXISTS (SELECT 1 FROM public.expediciones WHERE id = OLD.expedicion_id) THEN
             RAISE EXCEPTION 'EVENTO_PLAN_INMUTABLE';
         END IF;
