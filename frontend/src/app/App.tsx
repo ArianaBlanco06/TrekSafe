@@ -26,6 +26,7 @@ import { PaginaEditarExpedicion } from '@/pages/PaginaEditarExpedicion';
 import { PaginaExpedicionActiva } from '@/pages/PaginaExpedicionActiva';
 import { PaginaRetornoConfirmado } from '@/pages/PaginaRetornoConfirmado';
 import { PaginaEquipoExpedicion } from '@/pages/PaginaEquipoExpedicion';
+import { PaginaHistorialCambiosPlan } from '@/pages/PaginaHistorialCambiosPlan';
 
 function RedireccionRaiz() {
   const { estaAutenticado, usuario } = useAutenticacion();
@@ -76,6 +77,7 @@ export function App() {
               <Route path="expedicion/confirmada" element={<PaginaRetornoConfirmado />} />
               <Route path="expedicion/nueva" element={<PaginaCrearExpedicion />} />
               <Route path="expedicion/:id/equipo" element={<PaginaEquipoExpedicion />} />
+              <Route path="expedicion/:id/cambios" element={<PaginaHistorialCambiosPlan />} />
             </Route>
 
             <Route
