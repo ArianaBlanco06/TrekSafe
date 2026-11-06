@@ -20,6 +20,8 @@ import { CreadorDesdeHistorial } from '../../application/creacion-plan/CreadorDe
 import { DAOContactosVigentesSupabase } from '../../infrastructure/repositories/DAOContactosVigentesSupabase.js';
 import { HistorialExpedicionesDAOSupabase } from '../../infrastructure/repositories/HistorialExpedicionesDAOSupabase.js';
 import { crearRutasRepetirExpedicion } from './routes/rutasRepetirExpedicion.js';
+import { crearRutasPuntosRuta } from './routes/rutasPuntosRuta.js';
+import { crearServicioPuntosRuta } from '../../infrastructure/composition/puntosRuta.js';
 
 export function createApp() {
   const env = loadEnv();
@@ -59,6 +61,7 @@ export function createApp() {
     new HistorialExpedicionesDAOSupabase(getSupabaseAdmin()),
   );
   app.use(`${env.apiPrefix}/expediciones`, crearRutasRepetirExpedicion(creadorDesdeHistorial));
+  app.use(`${env.apiPrefix}/expediciones`, crearRutasPuntosRuta(crearServicioPuntosRuta()));
   app.use(`${env.apiPrefix}/expediciones`, crearRutasExpedicion());
   app.use(`${env.apiPrefix}/plantillas`, crearRutasPlantillas(ensamblarModuloPlantillas()));
   app.use(`${env.apiPrefix}/rescate`, crearRutasRescate());

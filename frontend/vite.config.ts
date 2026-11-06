@@ -51,6 +51,11 @@ export default defineConfig({
         clientsClaim: true,
         runtimeCaching: [
           {
+            // Conservar tambien la exclusion explicita de puntos de HU-32.
+            urlPattern: ({ url }) => /\/expediciones\/[^/]+\/puntos\/?$/.test(url.pathname),
+            handler: 'NetworkOnly',
+          },
+          {
             urlPattern: ({ url }) => /^\/api\/usuario\/listas-equipo(?:\/|$)/.test(url.pathname),
             handler: 'NetworkOnly',
           },
