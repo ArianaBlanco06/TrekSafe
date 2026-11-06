@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
-import { CAMPOS_EVENTO_PLAN, sanearCambios } from './camposEventoPlan.js';
+import { CAMPOS_EVENTO_PLAN, esEventoAnonimizado, sanearCambios } from './camposEventoPlan.js';
 
 describe('HU-36 CA-03: lista blanca de cambios del plan', () => {
   it('conserva solo los campos conocidos con forma antes/después', () => {
@@ -46,6 +46,13 @@ describe('HU-36 CA-03: lista blanca de cambios del plan', () => {
     const saneados = sanearCambios(crudo);
     crudo.idsContactos.antes.push('c3');
     assert.deepEqual(saneados.idsContactos?.antes, ['c1']);
+  });
+
+  it('anonimizado solo con cambios crudos vacíos y sin motivo', () => {
+    assert.equal(esEventoAnonimizado({}, null), true);
+    assert.equal(esEventoAnonimizado({}, 'Mal clima'), false);
+    assert.equal(esEventoAnonimizado({ lugarFin: { antes: true, despues: {} } }, null), false);
+    for (const crudo of [null, undefined, 'texto', 0, [], [{}]]) assert.equal(esEventoAnonimizado(crudo, null), false);
   });
 
   it('coincide con la lista blanca de la migración 010', () => {

@@ -94,6 +94,8 @@ function EntradaHistorial({ entrada }: { entrada: EntradaPresentada }) {
       <p className="text-xs text-muted-foreground">Por {entrada.autor} · versión {entrada.version}</p>
       {entrada.anonimizado ? (
         <p className="text-sm text-muted-foreground">Detalle eliminado por privacidad.</p>
+      ) : entrada.sinDetalle ? (
+        <p className="text-sm text-muted-foreground">Sin detalle disponible.</p>
       ) : (
         <>
           {entrada.detalleAmpliacion && <p className="text-sm font-medium">{entrada.detalleAmpliacion}</p>}

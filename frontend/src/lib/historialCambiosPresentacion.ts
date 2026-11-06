@@ -94,12 +94,15 @@ export type EntradaPresentada = {
   version: number;
   motivo: string | null;
   anonimizado: boolean;
+  /** No anonimizado, pero sin filas, motivo ni ampliación que mostrar. */
+  sinDetalle: boolean;
   detalleAmpliacion: string | null;
   filas: FilaCambioPresentada[];
 };
 
 export function presentarEntrada(entrada: EntradaHistorialCambios): EntradaPresentada {
   const minutos = minutosAmpliados(entrada);
+  const detalleAmpliacion = minutos === null ? null : `+${plural(minutos, 'minuto', 'minutos')}`;
   return {
     id: entrada.id,
     titulo: etiquetaTipo(entrada.tipo),
@@ -108,7 +111,8 @@ export function presentarEntrada(entrada: EntradaHistorialCambios): EntradaPrese
     version: entrada.version,
     motivo: entrada.motivo,
     anonimizado: entrada.anonimizado,
-    detalleAmpliacion: minutos === null ? null : `+${plural(minutos, 'minuto', 'minutos')}`,
+    sinDetalle: !entrada.anonimizado && entrada.cambios.length === 0 && !entrada.motivo && detalleAmpliacion === null,
+    detalleAmpliacion,
     filas: entrada.cambios.map((cambio) => ({
       campo: cambio.campo,
       etiqueta: etiquetaCampo(cambio.campo),

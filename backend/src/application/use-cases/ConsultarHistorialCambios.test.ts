@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import type { ILectorEventosPlan, NuevoEventoPlan } from '../../domain/repositories/IEventosPlanDAO.js';
 import type { IPropiedadExpedicion } from '../../domain/repositories/IPropiedadExpedicion.js';
 import { EventosPlanDAOMemoria } from '../../infrastructure/repositories/memoria/EventosPlanDAOMemoria.js';
+import { aEntradaHistorialCambios } from '../dto/historialCambios.dto.js';
 import { ConsultarHistorialCambios } from './ConsultarHistorialCambios.js';
 
 const actorA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -98,6 +99,23 @@ describe('HU-36: consultar historial de cambios del plan', () => {
     assert.equal(entrada.anonimizado, true);
     assert.deepEqual(entrada.cambios, []);
     assert.deepEqual(entrada.autor, { esPropietario: false });
+  });
+
+  it('el DTO copia anonimizado del evento sin recalcularlo', () => {
+    const base = {
+      id: 'e1', expedicionId: expedicionA, senderistaId: actorA, tipo: 'EDITADA' as const, actorId: actorA,
+      ocurridoEn: '2026-11-01T09:00:00.000Z', versionResultante: 2, cambios: {}, motivo: null, operacionId: 'op',
+    };
+    assert.equal(aEntradaHistorialCambios({ ...base, anonimizado: false }, actorA).anonimizado, false);
+    assert.equal(aEntradaHistorialCambios({ ...base, anonimizado: true }, actorA).anonimizado, true);
+  });
+
+  it('un evento cuyos campos descarta el saneamiento no figura como anonimizado', async () => {
+    const e = preparar();
+    await e.registrar('2026-11-01T09:00:00.000Z', { cambios: { ...({ fichaMedica: { antes: 'a', despues: 'b' } } as object) } });
+    const [entrada] = (await e.caso.ejecutar(actorA, expedicionA)).cambios;
+    assert.deepEqual(entrada.cambios, []);
+    assert.equal(entrada.anonimizado, false);
   });
 
   it('CA-03: orden cronológico y respuesta sin datos sensibles ni identificadores internos', async () => {

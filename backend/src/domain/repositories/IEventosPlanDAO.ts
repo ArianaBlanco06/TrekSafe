@@ -15,10 +15,12 @@ export type EventoPlan = {
   readonly cambios: CambiosEventoPlan;
   readonly motivo: string | null;
   readonly operacionId: string;
+  /** Calculado desde la fila cruda con `esEventoAnonimizado`, antes de sanear. */
+  readonly anonimizado: boolean;
 };
 
-/** `id` y `ocurridoEn` los asigna la persistencia, nunca quien registra. */
-export type NuevoEventoPlan = Omit<EventoPlan, 'id' | 'ocurridoEn'>;
+/** `id`, `ocurridoEn` y `anonimizado` los asigna la persistencia, nunca quien registra. */
+export type NuevoEventoPlan = Omit<EventoPlan, 'id' | 'ocurridoEn' | 'anonimizado'>;
 
 /** Lectura del historial (HU-36). Las implementaciones filtran siempre por propietario. */
 export interface ILectorEventosPlan {

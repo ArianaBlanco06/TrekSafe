@@ -39,6 +39,7 @@ describe('Eventos del plan en Supabase (HU-36): SDK con transporte sustituido', 
       id: '11111111-1111-4111-8111-111111111111', expedicionId, senderistaId: actor, tipo: 'EDITADA',
       actorId: actor, ocurridoEn: '2026-11-01T10:00:00.000Z', versionResultante: 2,
       cambios: { lugarFin: { antes: 'Laguna 69', despues: 'Nevado Ishinca' } }, motivo: null, operacionId,
+      anonimizado: false,
     }]);
     assert.equal(solicitudes.length, 1);
     const { url, metodo } = solicitudes[0];
@@ -62,6 +63,15 @@ describe('Eventos del plan en Supabase (HU-36): SDK con transporte sustituido', 
     const eventos = await new EventosPlanDAOSupabase(cliente).listarPorExpedicion(actor, expedicionId);
     assert.deepEqual(eventos.map((evento) => evento.cambios), [{ lugarFin: { antes: 'A', despues: 'B' } }, {}]);
     assert.doesNotMatch(JSON.stringify(eventos), /contrasena|extra|DESCONOCIDO/);
+  });
+
+  it('calcula anonimizado desde la fila cruda, antes de sanear', async () => {
+    const { cliente } = clienteConRespuesta([
+      fila({ cambios: { contrasena: { antes: 'a', despues: 'b' } }, motivo: null }),
+      fila({ id: '44444444-4444-4444-8444-444444444444', cambios: {}, motivo: null }),
+    ]);
+    const eventos = await new EventosPlanDAOSupabase(cliente).listarPorExpedicion(actor, expedicionId);
+    assert.deepEqual(eventos.map((evento) => [evento.cambios, evento.anonimizado]), [[{}, false], [{}, true]]);
   });
 
   it('devuelve una lista vacía si no hay eventos', async () => {

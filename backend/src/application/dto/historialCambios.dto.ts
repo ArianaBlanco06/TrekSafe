@@ -39,7 +39,7 @@ export function aEntradaHistorialCambios(evento: EventoPlan, solicitanteId: stri
     version: evento.versionResultante,
     autor: { esPropietario: evento.actorId === solicitanteId },
     motivo: evento.motivo,
-    anonimizado: cambios.length === 0 && evento.motivo === null,
+    anonimizado: evento.anonimizado,
     cambios,
   };
 }

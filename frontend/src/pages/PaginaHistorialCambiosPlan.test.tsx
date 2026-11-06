@@ -104,6 +104,15 @@ describe('Pantalla HU-36: historial de cambios del plan', () => {
     assert.equal(v.arbol.root.findAllByType('dl').length, 0);
   });
 
+  it('muestra "Sin detalle disponible." si no hay datos y no está anonimizado', async (t) => {
+    const v = await preparar(t, { async obtener(id) {
+      return { expedicionId: id, cambios: [{ id: 'e1', tipo: 'CANCELADA', ocurridoEn: '2026-11-01T09:00:00Z', version: 2,
+        autor: { esPropietario: true }, motivo: null, anonimizado: false, cambios: [] }] };
+    } });
+    assert.match(v.texto(), /Sin detalle disponible/);
+    assert.doesNotMatch(v.texto(), /Detalle eliminado por privacidad/);
+  });
+
   it('responde igual a una expedición ajena o inexistente', async (t) => {
     const v = await preparar(t, { async obtener() { throw new ErrorClienteApi('Expedición no encontrada', 404, 'EXPEDICION_NO_ENCONTRADA'); } });
     assert.match(v.texto(), /No encontramos esta expedición entre las tuyas/);

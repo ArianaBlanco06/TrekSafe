@@ -64,6 +64,14 @@ describe('HU-36: presentación del historial de cambios', () => {
     ] }).detalleAmpliacion, '+1 minuto');
   });
 
+  it('distingue sin detalle de anonimizado', () => {
+    const vacia = { ...ampliacion, tipo: 'EDITADA' as const, motivo: null, cambios: [] };
+    assert.equal(presentarEntrada({ ...vacia, anonimizado: false }).sinDetalle, true);
+    assert.equal(presentarEntrada({ ...vacia, anonimizado: true }).sinDetalle, false);
+    assert.equal(presentarEntrada({ ...vacia, motivo: 'Mal clima' }).sinDetalle, false);
+    assert.equal(presentarEntrada(ampliacion).sinDetalle, false);
+  });
+
   it('presenta una entrada completa en el orden recibido', () => {
     const presentada = presentarEntrada(ampliacion);
     assert.equal(presentada.titulo, 'Ampliación de retorno');

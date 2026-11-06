@@ -60,3 +60,12 @@ export function sanearCambios(crudo: unknown): CambiosEventoPlan {
   }
   return saneados;
 }
+
+/**
+ * Un evento está anonimizado (ARCO) solo si su `cambios` crudo, antes de sanear, es un
+ * objeto vacío y no tiene motivo. Se calcula sobre la fila cruda para no confundirlo con
+ * un evento cuyos campos descartó el saneamiento.
+ */
+export function esEventoAnonimizado(cambiosCrudos: unknown, motivo: string | null): boolean {
+  return esObjetoPlano(cambiosCrudos) && Object.keys(cambiosCrudos).length === 0 && motivo === null;
+}

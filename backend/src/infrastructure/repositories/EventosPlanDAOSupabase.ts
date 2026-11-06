@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { EventoPlan, ILectorEventosPlan } from '../../domain/repositories/IEventosPlanDAO.js';
-import { sanearCambios } from '../../domain/value-objects/camposEventoPlan.js';
+import { esEventoAnonimizado, sanearCambios } from '../../domain/value-objects/camposEventoPlan.js';
 import { esTipoEventoPlan, type TipoEventoPlan } from '../../domain/value-objects/tiposEventoPlan.js';
 import { errorHistorialCambiosNoDisponible } from '../../shared/errors/erroresHistorialCambios.js';
 
@@ -47,6 +47,7 @@ function aEvento(fila: FilaEventoPlanValida): EventoPlan {
     cambios: sanearCambios(fila.cambios),
     motivo: fila.motivo,
     operacionId: fila.operacion_id,
+    anonimizado: esEventoAnonimizado(fila.cambios, fila.motivo),
   };
 }
 

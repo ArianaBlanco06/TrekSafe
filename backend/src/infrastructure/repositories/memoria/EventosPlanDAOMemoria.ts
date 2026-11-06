@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { EventoPlan, IEventosPlanDAO, NuevoEventoPlan } from '../../../domain/repositories/IEventosPlanDAO.js';
 import type { IReloj } from '../../../domain/services/IReloj.js';
-import { sanearCambios } from '../../../domain/value-objects/camposEventoPlan.js';
+import { esEventoAnonimizado, sanearCambios } from '../../../domain/value-objects/camposEventoPlan.js';
 import { errorOperacionYaRegistrada } from '../../../shared/errors/erroresHistorialCambios.js';
 import { RelojSistema } from '../../services/RelojSistema.js';
 
@@ -36,6 +36,8 @@ export class EventosPlanDAOMemoria implements IEventosPlanDAO {
       cambios: sanearCambios(evento.cambios),
       motivo: evento.motivo,
       operacionId: evento.operacionId,
+      // Antes de sanear: un evento cuyos campos se descartan no queda como anonimizado.
+      anonimizado: esEventoAnonimizado(evento.cambios, evento.motivo),
     };
     this.eventos.push(registrado);
     return copiar(registrado);
