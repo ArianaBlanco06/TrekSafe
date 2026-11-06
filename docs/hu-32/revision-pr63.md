@@ -39,8 +39,10 @@ La migración `010_hu32_puntos_ruta.sql` ya fue aplicada y su asiento administra
 - Ejecutor: Ariana.
 - Resultado: OK.
 
-**No volver a ejecutar `010_hu32_puntos_ruta.sql` completo en DEV.**
-La estructura y el registro administrativo ya están completados.
+**No volver a ejecutar `010_hu32_puntos_ruta.sql` completo en DEV.** La estructura y el registro administrativo ya están completados.
+
+SECURITY DEFINER es deliberado: el backend conserva únicamente ejecución de las dos RPC, sin acceso directo a puntos_ruta; las funciones comprueban propiedad y realizan las operaciones con privilegios del propietario confiable y search_path fijo. No se modificó este diseño verificado por Ariana.
+
 
 ## Validación local posterior
 
@@ -73,9 +75,9 @@ Los procesos de prueba usan configuración local y datos ficticios. No se modifi
 
 ## Entrega pendiente
 
-- Andriy debe marcar el conflicto resuelto y registrar también la eliminación del nombre antiguo y la incorporación del nuevo archivo `010` mediante Git; después finaliza el merge y sube la misma rama para actualizar PR #63.
-- Las comprobaciones locales no certifican GitHub Actions: verificar CI después de ese push. El workflow conserva tipos/UI HU-32, equipo y privacidad separados.
-- Ariana registra únicamente `010` en DEV y completa sus metadatos reales; después coordina revisión y merge. No se registra una ejecución administrativa ficticia desde esta tarea.
-- No se implementa HU-34 en esta rama. El trabajo de sus fases permanece separado.
+- Integrar el PR #63 mediante merge hacia `develop`.
+
+Nota de alcance: HU-34 no se implementa en esta rama.
+Sus fases permanecen separadas.
 
 Documentos de entrada: [índice HU-32](README.md), [borrador del PR](borrador-pr.md) y [guía de migraciones](../../backend/migrations/README.md).
