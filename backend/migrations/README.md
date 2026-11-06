@@ -35,6 +35,7 @@ Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos
 | `008_hu31_preparacion_expedicion.sql` | Copia de equipo por expedición, ítems, restricciones y permisos | Las dos migraciones de HU-30; integrar después de HU-27 |
 | `009_hu31_operaciones_preparacion.sql` | RPC de consulta, asociación atómica y marcas de preparación | `008_hu31_preparacion_expedicion.sql` |
 | `010_hu32_puntos_ruta.sql` | Tabla puntos_ruta y RPC de consulta/guardado atómico | `002` |
+| `011_hu29_endurecer_permisos.sql` | Endurece permisos de las tablas y funciones de HU-29 | `000` y `001` |
 
 Las migraciones `002` a `007` son re-ejecutables. No dependen de
 `000_registro_migraciones.sql`: si la tabla `treksafe_migraciones` existe, registran
@@ -179,8 +180,7 @@ Esta ejecución no se conectó a Supabase ni acredita una aplicación en DEV.
 Los archivos `008_hu31_preparacion_expedicion.sql` y
 `009_hu31_operaciones_preparacion.sql` sustituyen los nombres iniciales de HU-31
 para evitar el choque de numeración con HU-27 (PR #65), que se integra antes.
-**Su aplicación en DEV sigue pendiente.** Se aplican una sola vez; no son
-re-ejecutables.
+Las migraciones 008 y 009 fueron aplicadas y registradas correctamente en Supabase DEV el 6 de noviembre de 2026.
 
 Antes de `COMMIT`, cada archivo registra su versión (`008` o `009`), nombre y
 `HU-31` en `public.treksafe_migraciones` solo si esa tabla existe. El bloque usa
