@@ -30,11 +30,17 @@ Se comparó el SQL renombrado con la versión anterior de la rama, retirando ún
 
 ## Estado de Supabase DEV
 
-La confirmación proviene del mensaje de Ariana aportado por Andriy: HU-26 y la estructura final HU-32 ya están aplicadas y coinciden con INTEGER y `hu32_chk_version_segura`; también verificó los permisos cerrados de las RPC.
+HU-26 y la estructura final de HU-32 están aplicadas y verificadas en Supabase DEV. Se confirmó la compatibilidad con `expediciones.version INTEGER`, la restricción `hu32_chk_version_segura` y los permisos cerrados de las RPC.
 
-**No volver a ejecutar `010_hu32_puntos_ruta.sql` completo en DEV.** Ariana añadirá únicamente el asiento `010` cuando CI esté verde y después hará el merge del PR #63. El registro y sus metadatos siguen pendientes; la documentación distingue estructura aplicada de asiento administrativo registrado. El asistente no accedió ni ejecutó SQL en Supabase.
+La migración `010_hu32_puntos_ruta.sql` ya fue aplicada y su asiento administrativo quedó registrado correctamente en `public.treksafe_migraciones` el 2026-11-06 a las 05:23 UTC.
 
-`SECURITY DEFINER` es deliberado: el backend conserva únicamente ejecución de las dos RPC, sin acceso directo a `puntos_ruta`; las funciones comprueban propiedad y realizan las operaciones con privilegios del propietario confiable y `search_path` fijo. No se modificó este diseño verificado por Ariana.
+- Entorno: DEV.
+- Commit: `594b23f`.
+- Ejecutor: Ariana.
+- Resultado: OK.
+
+**No volver a ejecutar `010_hu32_puntos_ruta.sql` completo en DEV.**
+La estructura y el registro administrativo ya están completados.
 
 ## Validación local posterior
 
