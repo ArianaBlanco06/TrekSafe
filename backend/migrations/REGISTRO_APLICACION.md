@@ -12,4 +12,5 @@ Solo se anotan aplicaciones reales sobre un entorno (DEV, producción u otro). L
 | `004_hu27_estado_cancelada.sql` | 004 | 2026-11-06 03:41 UTC | DEV | 2fee4ea | Ariana | OK |
 | `005_hu27_rpc_cancelar_expedicion.sql` | 005 | 2026-11-06 03:41 UTC | DEV | 2fee4ea | Ariana | OK |
 | `006_hu27_permiso_anonimizar_eventos.sql` | 006 | 2026-11-06 03:41 UTC | DEV | 2fee4ea | Ariana | OK |
+| `007_hu35_rpc_ampliar_retorno.sql` | 007 | 2026-11-06 03:56 UTC | DEV | 780413c | Ariana | OK |
 
