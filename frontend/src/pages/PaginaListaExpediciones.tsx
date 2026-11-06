@@ -113,12 +113,13 @@ export function PaginaListaExpediciones() {
               </div>
             );
 
-            return estaActiva ? (
-              <Link key={exp.id} to="/senderista/expedicion/activa" className="block">
-                {tarjeta}
-              </Link>
-            ) : (
-              <div key={exp.id}>{tarjeta}</div>
+            return (
+              <div key={exp.id}>
+                {estaActiva ? <Link to="/senderista/expedicion/activa" className="block">{tarjeta}</Link> : tarjeta}
+                <Link to={`/senderista/expedicion/${encodeURIComponent(exp.id)}/equipo`}
+                  aria-label={`Revisar equipo de la expedición a ${exp.lugarFin}`}
+                  className="inline-flex items-center min-h-12 text-sm font-semibold text-primary">Revisar equipo</Link>
+              </div>
             );
           })}
           {expediciones.length === 0 && (
