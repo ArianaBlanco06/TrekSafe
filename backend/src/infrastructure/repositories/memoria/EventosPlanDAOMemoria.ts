@@ -1,0 +1,50 @@
+import { randomUUID } from 'node:crypto';
+import type { EventoPlan, IEventosPlanDAO, NuevoEventoPlan } from '../../../domain/repositories/IEventosPlanDAO.js';
+import type { IReloj } from '../../../domain/services/IReloj.js';
+import { sanearCambios } from '../../../domain/value-objects/camposEventoPlan.js';
+import { ErrorAplicacion } from '../../../shared/errors/ErrorAplicacion.js';
+import { RelojSistema } from '../../services/RelojSistema.js';
+
+function copiar(evento: EventoPlan): EventoPlan {
+  return { ...evento, cambios: sanearCambios(evento.cambios) };
+}
+
+/**
+ * Sustituto con la semántica de `eventos_plan` tras la migración 010: solo anexa,
+ * sanea `cambios`, fija `ocurridoEn` con su reloj y rechaza `operacionId` repetidos.
+ */
+export class EventosPlanDAOMemoria implements IEventosPlanDAO {
+  private readonly eventos: EventoPlan[] = [];
+
+  constructor(
+    private readonly reloj: IReloj = new RelojSistema(),
+    private readonly generarId: () => string = randomUUID,
+  ) {}
+
+  async registrar(evento: NuevoEventoPlan): Promise<EventoPlan> {
+    if (this.eventos.some((existente) => existente.operacionId === evento.operacionId)) {
+      throw new ErrorAplicacion(409, 'La operación ya fue registrada.', 'OPERACION_YA_REGISTRADA');
+    }
+    const registrado: EventoPlan = {
+      id: this.generarId(),
+      expedicionId: evento.expedicionId,
+      senderistaId: evento.senderistaId,
+      tipo: evento.tipo,
+      actorId: evento.actorId,
+      ocurridoEn: this.reloj.ahora().toISOString(),
+      versionResultante: evento.versionResultante,
+      cambios: sanearCambios(evento.cambios),
+      motivo: evento.motivo,
+      operacionId: evento.operacionId,
+    };
+    this.eventos.push(registrado);
+    return copiar(registrado);
+  }
+
+  async listarPorExpedicion(expedicionId: string, senderistaId: string): Promise<EventoPlan[]> {
+    return this.eventos
+      .filter((evento) => evento.expedicionId === expedicionId && evento.senderistaId === senderistaId)
+      .sort((a, b) => a.ocurridoEn.localeCompare(b.ocurridoEn) || a.id.localeCompare(b.id))
+      .map(copiar);
+  }
+}
