@@ -82,6 +82,10 @@ async function llenar(page: Page, nombre = 'Mirador', indice = 0) {
 test('acceso desde el listado y extremos de solo lectura', async ({ page }) => {
   await preparar(page);
   await page.goto('/senderista/expedicion');
+  await expect(page.getByRole('link', { name: 'Editar', exact: true }))
+    .toHaveAttribute('href', `/expediciones/${planId}/editar`);
+  await expect(page.getByRole('link', { name: /Revisar equipo de la expedición/ }))
+    .toHaveAttribute('href', `/senderista/expedicion/${planId}/equipo`);
   await page.getByRole('link', { name: 'Gestionar puntos' }).click();
   await expect(page).toHaveURL(path);
   await expect(page.getByRole('heading', { name: 'Puntos de la ruta' })).toBeVisible();

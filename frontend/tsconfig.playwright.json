@@ -10,5 +10,10 @@
     "noUnusedParameters": true,
     "types": ["node"]
   },
-  "include": ["playwright.config.ts", "playwright.integration.config.ts", "tests/**/*.ts"]
+  "include": [
+    "playwright.config.ts",
+    "playwright.integration.config.ts",
+    "tests/hu32/**/*.ts",
+    "tests/hu32-integration/**/*.ts"
+  ]
 }

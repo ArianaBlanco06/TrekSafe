@@ -28,7 +28,7 @@ jobs:
 
       - name: Instalar dependencias
         run: npm ci --prefix backend
-
+      
       - name: Verificar TypeScript
         run: npm run typecheck --prefix backend
 
@@ -52,15 +52,44 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-
+      
       - name: Instalar dependencias
         run: npm ci --prefix frontend
+
+      - name: Instalar dependencias del backend para pruebas integradas
+        run: npm ci --prefix backend
 
       - name: Verificar TypeScript
         run: npm run typecheck --prefix frontend
 
-      - name: Ejecutar pruebas de equipo si existen
-        run: npm run test:equipo --if-present --prefix frontend
+      - name: Verificar tipos de pruebas
+        run: npm run typecheck:tests --prefix frontend
+
+      - name: Verificar tipos de pruebas de puntos (HU-32)
+        run: npm run typecheck:ui --prefix frontend
+
+      - name: Ejecutar pruebas de equipo (HU-30)
+        run: npm run test:equipo --prefix frontend
 
       - name: Compilar frontend
         run: npm run build --prefix frontend
+        env:
+          VITE_API_URL: /api
+
+      - name: Instalar Chromium para pruebas PWA
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Probar interfaz de puntos (HU-32)
+        run: npm run test:ui --prefix frontend
+
+      - name: Probar privacidad con Service Worker activo
+        run: npm run test:pwa:privacidad --prefix frontend
+
+      - name: Adjuntar evidencia PWA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencia-privacidad-pwa
+          path: frontend/test-results/
+          if-no-files-found: ignore

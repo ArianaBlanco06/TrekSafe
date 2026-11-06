@@ -26,7 +26,9 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'autoUpdate' recarga todas las ventanas abiertas al activarse un Service Worker nuevo, y eso
+      // descarta formularios a medio editar. Así, la versión nueva se activa al cerrar las pestañas.
+      registerType: 'prompt',
       includeAssets: ['favicon.svg'],
       manifest: {
         name: 'TrekSafe',
@@ -42,9 +44,11 @@ export default defineConfig({
         ],
       },
       workbox: {
+        importScripts: ['sw-privacy.js'],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api/],
+        navigateFallbackDenylist: [/^\/(?:api|rest\/v1)(?:\/|$)/],
+        clientsClaim: true,
         runtimeCaching: [
           {
             // El editor necesita una version vigente y aislada de la cache API.
@@ -52,13 +56,21 @@ export default defineConfig({
             handler: 'NetworkOnly',
           },
           {
-            urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'treksafe-api',
-              networkTimeoutSeconds: 8,
-              cacheableResponse: { statuses: [0, 200] },
-            },
+            urlPattern: ({ url }) => /^\/api\/usuario\/listas-equipo(?:\/|$)/.test(url.pathname),
+            handler: 'NetworkOnly',
+          },
+          {
+            // El plan fija la versionEsperada de la edición: nunca debe leerse de la caché.
+            urlPattern: ({ url }) =>
+              /^\/api\/expediciones\/[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(url.pathname),
+            handler: 'NetworkOnly',
+          },
+          {
+            // No hay respuestas API autorizadas para almacenamiento offline.
+            // Authorization cubre tambien APIs configuradas en otro origen.
+            urlPattern: ({ request, url }) => request.headers.has('authorization')
+              || /^\/(?:api|rest\/v1)(?:\/|$)/.test(url.pathname),
+            handler: 'NetworkOnly',
           },
         ],
       },

@@ -1,7 +1,41 @@
 import { z } from 'zod';
+import {
+  camposExpedicionSchema,
+  errorRetornoPosteriorASalida,
+  retornoPosteriorASalida,
+} from './usuario.dto.js';
 
 export const confirmarRetornoSchema = z.object({
   contrasena: z.string().min(1, 'Contraseña requerida'),
 });
 
+const camposCrear = camposExpedicionSchema.shape;
+
+/**
+ * Reutiliza los validadores de crear. Cambios propios de la edición:
+ * - La tolerancia es obligatoria: con su valor por defecto, omitirla reiniciaría el plan a 30 minutos.
+ * - Las horas deben ser ISO 8601 con zona horaria, para que no dependan de la zona del servidor.
+ * - Las longitudes respetan las columnas, para responder 400 en lugar de un error de base.
+ */
+export const editarExpedicionSchema = camposExpedicionSchema
+  .extend({
+    lugarInicio: camposCrear.lugarInicio.max(500, 'Ubicación inicial demasiado larga'),
+    lugarFin: camposCrear.lugarFin.max(500, 'Destino demasiado largo'),
+    horaInicio: camposCrear.horaInicio.datetime({ offset: true, message: 'Hora de salida inválida' }),
+    horaRetornoEstimada: camposCrear.horaRetornoEstimada.datetime({
+      offset: true,
+      message: 'Hora de retorno inválida',
+    }),
+    minutosTolerancia: camposCrear.minutosTolerancia.removeDefault(),
+    nombresAcompanantes: z
+      .array(z.string().trim().min(2).max(200))
+      .min(1, 'Agrega al menos un acompañante'),
+    versionEsperada: z.number().int().min(1),
+    operacionId: z.string().uuid(),
+  })
+  .refine(retornoPosteriorASalida, errorRetornoPosteriorASalida);
+
+export const idExpedicionSchema = z.string().uuid('Identificador de expedición inválido');
+
 export type EntradaConfirmarRetorno = z.infer<typeof confirmarRetornoSchema>;
+export type EntradaEditarExpedicion = z.infer<typeof editarExpedicionSchema>;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, Plus } from 'lucide-react';
+import { ChevronRight, Pencil, Plus } from 'lucide-react';
 import { obtenerExpediciones, type Expedicion } from '@/services/expedicion';
 
 const ETIQUETA_ESTADO: Record<string, string> = {
@@ -103,20 +103,29 @@ export function PaginaListaExpediciones() {
                   </p>
                 )}
                 {exp.estado === 'programada' && (
-                  <Link to={`/senderista/expedicion/${exp.id}/puntos`}
-                    className="mt-3 flex min-h-11 items-center gap-1 text-sm font-semibold text-primary">
-                    Gestionar puntos <ChevronRight size={16} aria-hidden="true" />
-                  </Link>
+                  <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+                    <Link
+                      to={`/expediciones/${exp.id}/editar`}
+                      className="text-sm font-semibold inline-flex items-center gap-1 text-primary min-h-12"
+                    >
+                      <Pencil size={14} /> Editar
+                    </Link>
+                    <Link to={`/senderista/expedicion/${exp.id}/puntos`}
+                      className="flex min-h-11 items-center gap-1 text-sm font-semibold text-primary">
+                      Gestionar puntos <ChevronRight size={16} aria-hidden="true" />
+                    </Link>
+                  </div>
                 )}
               </div>
             );
 
-            return estaActiva ? (
-              <Link key={exp.id} to="/senderista/expedicion/activa" className="block">
-                {tarjeta}
-              </Link>
-            ) : (
-              <div key={exp.id}>{tarjeta}</div>
+            return (
+              <div key={exp.id}>
+                {estaActiva ? <Link to="/senderista/expedicion/activa" className="block">{tarjeta}</Link> : tarjeta}
+                <Link to={`/senderista/expedicion/${encodeURIComponent(exp.id)}/equipo`}
+                  aria-label={`Revisar equipo de la expedición a ${exp.lugarFin}`}
+                  className="inline-flex items-center min-h-12 text-sm font-semibold text-primary">Revisar equipo</Link>
+              </div>
             );
           })}
           {expediciones.length === 0 && (

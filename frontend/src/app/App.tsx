@@ -15,14 +15,18 @@ import { PaginaInicioSenderista } from '@/pages/PaginaInicioSenderista';
 import { PaginaPerfilSenderista } from '@/pages/PaginaPerfilSenderista';
 import { PaginaFichaMedica } from '@/pages/PaginaFichaMedica';
 import { PaginaContactos } from '@/pages/PaginaContactos';
+import { PaginaListasEquipo } from '@/pages/PaginaListasEquipo';
 import { PaginaHistorialExpediciones } from '@/pages/PaginaHistorialExpediciones';
+import { PaginaPlantillas } from '@/pages/PaginaPlantillas';
 import { PaginaPrivacidad } from '@/pages/PaginaPrivacidad';
 import { PaginaRevocacionDatos } from '@/pages/PaginaRevocacionDatos';
 import { PaginaListaExpediciones } from '@/pages/PaginaListaExpediciones';
 import { PaginaCrearExpedicion } from '@/pages/PaginaCrearExpedicion';
+import { PaginaEditarExpedicion } from '@/pages/PaginaEditarExpedicion';
 import { PaginaExpedicionActiva } from '@/pages/PaginaExpedicionActiva';
 import { PaginaRetornoConfirmado } from '@/pages/PaginaRetornoConfirmado';
 import { PaginaPuntosRuta } from '@/pages/PaginaPuntosRuta';
+import { PaginaEquipoExpedicion } from '@/pages/PaginaEquipoExpedicion';
 
 function RedireccionRaiz() {
   const { estaAutenticado, usuario } = useAutenticacion();
@@ -63,7 +67,9 @@ export function App() {
               <Route path="perfil" element={<PaginaPerfilSenderista />} />
               <Route path="perfil/medica" element={<PaginaFichaMedica />} />
               <Route path="perfil/contactos" element={<PaginaContactos />} />
+              <Route path="perfil/equipo" element={<PaginaListasEquipo />} />
               <Route path="perfil/historial" element={<PaginaHistorialExpediciones />} />
+              <Route path="perfil/plantillas" element={<PaginaPlantillas />} />
               <Route path="perfil/privacidad" element={<PaginaPrivacidad />} />
               <Route path="perfil/privacidad/solicitud" element={<PaginaRevocacionDatos />} />
               <Route path="expedicion" element={<PaginaListaExpediciones />} />
@@ -71,6 +77,18 @@ export function App() {
               <Route path="expedicion/confirmada" element={<PaginaRetornoConfirmado />} />
               <Route path="expedicion/nueva" element={<PaginaCrearExpedicion />} />
               <Route path="expedicion/:id/puntos" element={<PaginaPuntosRuta />} />
+              <Route path="expedicion/:id/equipo" element={<PaginaEquipoExpedicion />} />
+            </Route>
+
+            <Route
+              path="/expediciones/:id/editar"
+              element={
+                <RutaProtegida rol="senderista">
+                  <SenderistaLayout />
+                </RutaProtegida>
+              }
+            >
+              <Route index element={<PaginaEditarExpedicion />} />
             </Route>
 
             <Route

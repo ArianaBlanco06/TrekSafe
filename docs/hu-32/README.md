@@ -2,6 +2,8 @@
 
 Responsable: **Andriy Hitoshi Enciso Rojas (@Hitoshi)**. Release 2, sprint 1, **5 SP**.
 
+Actualización del 5 de noviembre de 2026: contenido de los conflictos con `develop` combinado y validado en `feat/hu-32-puntos`. Pasaron 305 pruebas backend, 64 frontend, 12 UI HU-32, 39 comprobaciones SQL, 28 pruebas de contrato, 9 escenarios integrados reales y 14 escenarios PWA/compatibilidad, además de tipos y builds. Los grupos se solapan y algunas integraciones SQL de otras historias se omiten sin conexión configurada. Andriy debe marcar la resolución y finalizar el merge en Git; CI remoto, revisión y aplicación en DEV siguen pendientes. Véase [integración con develop](integracion-develop.md) y [plantilla del PR](borrador-pr.md).
+
 Estado al 1 de noviembre de 2026: implementación local y validación integrada completadas; paquete preparado para revisión del equipo. La aceptación del PO y la integración en DEV están pendientes. Este documento no cambia el estado del tablero o del backlog.
 
 Actualización del 3 de noviembre de 2026: el equipo indicó `expediciones.version INTEGER` conforme a HU-26. HU-32 se adapta a ese contrato para el PR #63, comunicado por Andriy; véase [ajuste INTEGER](ajuste-integer.md). El commit y push permanecen a cargo de Andriy.
