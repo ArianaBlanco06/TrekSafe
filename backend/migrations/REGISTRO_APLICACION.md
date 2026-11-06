@@ -4,6 +4,5 @@ Solo se anotan aplicaciones reales sobre un entorno (DEV, producción u otro). L
 
 | Archivo | Versión | Fecha | Entorno | Commit | Ejecutor | Resultado |
 |---------|---------|-------|---------|--------|----------|-----------|
-| _(sin aplicaciones registradas)_ | | | | | | |
-
-Pendiente: aplicar `000` y `001` en Supabase DEV en una ventana coordinada con Marko y Ariana, y registrar aquí fecha, commit y ejecutor.
+| `000_registro_migraciones.sql` | 000 | 2026-11-06 01:27 UTC | DEV | 55f5551 | Ariana | OK |
+| `001_hu29_plantillas_ruta.sql` | 001 | 2026-11-06 01:27 UTC | DEV | 55f5551 | Ariana | OK |
