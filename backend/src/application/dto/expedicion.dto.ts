@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MAX_MOTIVO_CANCELACION } from '../../domain/value-objects/cancelacionPlan.js';
 import {
   camposExpedicionSchema,
   errorRetornoPosteriorASalida,
@@ -37,5 +38,16 @@ export const editarExpedicionSchema = camposExpedicionSchema
 
 export const idExpedicionSchema = z.string().uuid('Identificador de expedición inválido');
 
+/** HU-27. Sin `versionEsperada`: la cancelación es idempotente por `operacionId` y por estado. */
+export const cancelarExpedicionSchema = z.object({
+  operacionId: z.string().uuid('Identificador de operación inválido'),
+  motivo: z
+    .string()
+    .trim()
+    .max(MAX_MOTIVO_CANCELACION, `El motivo admite como máximo ${MAX_MOTIVO_CANCELACION} caracteres`)
+    .nullish(),
+});
+
 export type EntradaConfirmarRetorno = z.infer<typeof confirmarRetornoSchema>;
 export type EntradaEditarExpedicion = z.infer<typeof editarExpedicionSchema>;
+export type EntradaCancelarExpedicion = z.infer<typeof cancelarExpedicionSchema>;

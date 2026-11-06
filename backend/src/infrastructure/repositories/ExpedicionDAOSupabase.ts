@@ -1,5 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
+  ErrorCancelacionPlan,
+  type CodigoErrorCancelacionPlan,
+} from '../../domain/errors/ErrorCancelacionPlan.js';
+import {
   ErrorEdicionPlan,
   type CodigoErrorEdicionPlan,
 } from '../../domain/errors/ErrorEdicionPlan.js';
@@ -7,7 +11,9 @@ import type {
   ComandoEditarPlan,
   IExpedicionDAO,
   PlanExpedicion,
+  ResultadoCancelacionPlan,
   ResultadoEdicionPlan,
+  SolicitudCancelacionPlan,
 } from '../../domain/repositories/IExpedicionDAO.js';
 import { ErrorAplicacion } from '../../shared/errors/ErrorAplicacion.js';
 
@@ -20,6 +26,12 @@ const CODIGOS_RPC = new Set<string>([
   'RETORNO_INVALIDO',
   'TOLERANCIA_INVALIDA',
   'CONTACTOS_INVALIDOS',
+  'DATOS_INVALIDOS',
+]);
+
+const CODIGOS_RPC_CANCELAR = new Set<string>([
+  'EXPEDICION_NO_ENCONTRADA',
+  'PLAN_NO_CANCELABLE',
   'DATOS_INVALIDOS',
 ]);
 
@@ -130,5 +142,23 @@ export class ExpedicionDAOSupabase implements IExpedicionDAO {
     }
 
     return data as ResultadoEdicionPlan;
+  }
+
+  async cancelarPlan(solicitud: SolicitudCancelacionPlan): Promise<ResultadoCancelacionPlan> {
+    const { data, error } = await this.cliente.rpc('treksafe_cancelar_expedicion', {
+      p_expedicion_id: solicitud.expedicionId,
+      p_senderista_id: solicitud.senderistaId,
+      p_motivo: solicitud.motivo,
+      p_operacion_id: solicitud.operacionId,
+    });
+
+    if (error) {
+      if (CODIGOS_RPC_CANCELAR.has(error.message)) {
+        throw new ErrorCancelacionPlan(error.message as CodigoErrorCancelacionPlan);
+      }
+      throw errorInterno('cancelarPlan', error);
+    }
+
+    return data as ResultadoCancelacionPlan;
   }
 }

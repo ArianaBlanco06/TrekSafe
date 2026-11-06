@@ -201,7 +201,7 @@ Artefactos: [`backend/fly.toml`](backend/fly.toml) · [`backend/Dockerfile`](bac
 <details>
 <summary>Base de datos</summary>
 
-Estados de expedición: `programada` → `en_progreso` → `completada` | `alerta`.
+Estados de expedición: `programada` → `en_progreso` → `completada` | `alerta`. Una `programada` puede pasar a `cancelada` (HU-27), que es final: el cron no la activa ni la alerta.
 
 Entidades: `usuarios`, `perfiles_senderista`, `perfiles_rescatista`, `expediciones`, `contactos_emergencia`, `fichas_medicas`, `bitacoras_rescate`, `despachos_correo`, `auditoria_acceso_medico`, …
 
@@ -218,7 +218,7 @@ Prefijo `/api` · `Authorization: Bearer <JWT>` · JSON `camelCase`
 | Salud | `GET /salud` |
 | Auth | `POST /auth/registrar-senderista` · `registrar-rescatista` · `iniciar-sesion` |
 | Usuario | `/usuario/ficha-medica` · `/contactos` · `/privacidad/revocar` |
-| Expediciones | `POST /` · `GET /` · `GET /activa` · `GET /historial` · `GET /:id` · `PUT /:id` · `POST /:id/confirmar-retorno` |
+| Expediciones | `POST /` · `GET /` · `GET /activa` · `GET /historial` · `GET /:id` · `PUT /:id` · `POST /:id/cancelar` · `POST /:id/confirmar-retorno` |
 | Rescate | `/expediciones` · `/historial` · `/alertas` · confirmar · bitácora |
 
 ## Seguridad

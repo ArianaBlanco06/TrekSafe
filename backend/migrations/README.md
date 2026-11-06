@@ -24,12 +24,15 @@ Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos
 | `001_hu29_plantillas_ruta.sql` | Tabla `plantillas_ruta` de HU-29. Reversión: `001_hu29_plantillas_ruta.down.sql` (solo base desechable) | `000` |
 | `002_hu26_version_y_eventos_plan.sql` | Columna `expediciones.version` y tabla `eventos_plan` | Esquema inicial |
 | `003_hu26_rpc_editar_expedicion.sql` | Función `treksafe_editar_expedicion` | `002` |
+| `004_hu27_estado_cancelada.sql` | Valor `cancelada` en `estado_expedicion_enum` | Esquema inicial |
+| `005_hu27_rpc_cancelar_expedicion.sql` | Función `treksafe_cancelar_expedicion` | `002` y `004` confirmada |
+| `006_hu27_permiso_anonimizar_eventos.sql` | `UPDATE (cambios, motivo)` sobre `eventos_plan` para `service_role` (anonimización ARCO) | `002` |
 | `20261101_hu30_listas_equipo.sql` | Tablas de listas personales e ítems, relaciones y permisos | Esquema inicial |
 | `20261101_hu30_operaciones_equipo.sql` | Posición de ítems y RPC de listas de equipo | `20261101_hu30_listas_equipo.sql` |
 | `008_hu31_preparacion_expedicion.sql` | Copia de equipo por expedición, ítems, restricciones y permisos | Las dos migraciones de HU-30; integrar después de HU-27 |
 | `009_hu31_operaciones_preparacion.sql` | RPC de consulta, asociación atómica y marcas de preparación | `008_hu31_preparacion_expedicion.sql` |
 
-Las migraciones `002` y `003` son re-ejecutables. No dependen de
+Las migraciones `002` a `006` son re-ejecutables. No dependen de
 `000_registro_migraciones.sql`: si la tabla `treksafe_migraciones` existe, registran
 su aplicación, y si no existe, continúan.
 
@@ -60,6 +63,10 @@ TREKSAFE_PG_TEST_URL=postgres://postgres@127.0.0.1:55432/treksafe_desechable npm
 La prueba se niega a ejecutar SQL si el host no es `127.0.0.1`/`localhost` o si el
 nombre de la base no contiene `desechable`, y recrea el esquema `public` de esa base.
 Sin `TREKSAFE_PG_TEST_URL` la suite se omite y `npm test` sigue funcionando.
+
+`004` debe ejecutarse **sola y confirmada** antes de `005`: Postgres no permite usar
+un valor de enum nuevo en la misma transacción que lo agrega. Un valor de enum no se
+puede quitar; revertir `004` exige recrear el tipo.
 
 ## HU-30: listas personales de equipo
 
