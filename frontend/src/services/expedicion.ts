@@ -36,7 +36,7 @@ export function obtenerExpedicionActiva() {
   return api.get<{ expedicion: ExpedicionActiva | null }>('/expediciones/activa', true);
 }
 
-export function crearExpedicion(datos: {
+export type DatosCrearExpedicion = {
   lugarInicio: string;
   lugarFin: string;
   coordenadasInicio?: string;
@@ -46,7 +46,9 @@ export function crearExpedicion(datos: {
   minutosTolerancia: number;
   idsContactos: string[];
   nombresAcompanantes: string[];
-}) {
+};
+
+export function crearExpedicion(datos: DatosCrearExpedicion) {
   return api.post<{ expedicion: Expedicion }>('/expediciones', datos, true);
 }
 
@@ -139,6 +141,31 @@ export type ExpedicionCompletada = Expedicion & {
 export function obtenerHistorialExpediciones() {
   return api.get<{ expediciones: ExpedicionCompletada[]; estadisticas: EstadisticasHistorial }>(
     '/expediciones/historial',
+    true,
+  );
+}
+
+export type BorradorDesdeHistorial = {
+  origen: 'historial';
+  origenId: string;
+  descripcionOrigen: string;
+  lugarInicio: string;
+  lugarFin: string;
+  coordenadasInicio: string | null;
+  coordenadasFin: string | null;
+  minutosTolerancia: number;
+  idsContactos: string[];
+  cantidadContactosNoVigentes: number;
+  nombresAcompanantes: string[];
+  horaInicio: null;
+  horaRetornoEstimada: null;
+  requiereFechasNuevas: true;
+};
+
+export function obtenerBorradorDesdeHistorial(id: string) {
+  return peticionApi<{ borrador: BorradorDesdeHistorial }>(
+    `/expediciones/${encodeURIComponent(id)}/borrador`,
+    { method: 'GET', cache: 'no-store' },
     true,
   );
 }

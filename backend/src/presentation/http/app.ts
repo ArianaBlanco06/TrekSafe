@@ -8,12 +8,21 @@ import { errorHandler, notFoundHandler } from '../../shared/errors/errorHandler.
 import { createRateLimiter } from './middleware/rateLimitMiddleware.js';
 import { crearRutasAutenticacion } from './routes/rutasAutenticacion.js';
 import { crearRutasExpedicion } from './routes/rutasExpedicion.js';
+import { ensamblarModuloPlantillas } from '../../infrastructure/composicion/moduloPlantillas.js';
+import { crearRutasPlantillas } from './routes/rutasPlantillas.js';
 import { crearRutasRescate } from './routes/rutasRescate.js';
 import { crearRutasUsuario } from './routes/rutasUsuario.js';
 import { crearRutasListasEquipo } from './routes/rutasListasEquipo.js';
 import { ServicioListasEquipo } from '../../application/services/servicioListasEquipo.js';
 import { RepositorioListasEquipoSupabase } from '../../infrastructure/repositories/RepositorioListasEquipoSupabase.js';
 import { getSupabaseAdmin } from '../../infrastructure/database/supabase.js';
+import { ServicioPreparacionExpedicion } from '../../application/services/servicioPreparacionExpedicion.js';
+import { RepositorioPreparacionExpedicionSupabase } from '../../infrastructure/repositories/RepositorioPreparacionExpedicionSupabase.js';
+import { crearRutasPreparacionExpedicion } from './routes/rutasPreparacionExpedicion.js';
+import { CreadorDesdeHistorial } from '../../application/creacion-plan/CreadorDesdeHistorial.js';
+import { DAOContactosVigentesSupabase } from '../../infrastructure/repositories/DAOContactosVigentesSupabase.js';
+import { HistorialExpedicionesDAOSupabase } from '../../infrastructure/repositories/HistorialExpedicionesDAOSupabase.js';
+import { crearRutasRepetirExpedicion } from './routes/rutasRepetirExpedicion.js';
 
 export function createApp() {
   const env = loadEnv();
@@ -48,7 +57,15 @@ export function createApp() {
   const servicioEquipo = new ServicioListasEquipo(new RepositorioListasEquipoSupabase(getSupabaseAdmin()));
   app.use(`${env.apiPrefix}/usuario/listas-equipo`, crearRutasListasEquipo(servicioEquipo));
   app.use(`${env.apiPrefix}/usuario`, crearRutasUsuario());
+  const servicioPreparacion = new ServicioPreparacionExpedicion(new RepositorioPreparacionExpedicionSupabase(getSupabaseAdmin()));
+  app.use(`${env.apiPrefix}/expediciones`, crearRutasPreparacionExpedicion(servicioPreparacion));
+  const creadorDesdeHistorial = new CreadorDesdeHistorial(
+    new DAOContactosVigentesSupabase(getSupabaseAdmin()),
+    new HistorialExpedicionesDAOSupabase(getSupabaseAdmin()),
+  );
+  app.use(`${env.apiPrefix}/expediciones`, crearRutasRepetirExpedicion(creadorDesdeHistorial));
   app.use(`${env.apiPrefix}/expediciones`, crearRutasExpedicion());
+  app.use(`${env.apiPrefix}/plantillas`, crearRutasPlantillas(ensamblarModuloPlantillas()));
   app.use(`${env.apiPrefix}/rescate`, crearRutasRescate());
 
   app.use(notFoundHandler);
