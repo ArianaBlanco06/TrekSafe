@@ -240,7 +240,7 @@ Esta sección conserva la documentación y las garantías de HU-32. La aplicaci�
 2. Contar con `002_hu26_version_y_eventos_plan.sql`, que aporta la versión INTEGER compartida con HU-26.
 3. Para instalaciones nuevas, revisar y aplicar `010_hu32_puntos_ruta.sql` una sola vez.
 
-**Estado de DEV comunicado por Ariana:** HU-26 y la estructura de HU-32 ya están aplicadas y verificadas, incluida la versión INTEGER y `hu32_chk_version_segura`. No volver a ejecutar el archivo completo en DEV. Tras aprobar CI, Ariana añadirá únicamente el registro de versión `010`; ese asiento está pendiente, no se presenta como ya ejecutado.
+**Estado de DEV confirmado por Ariana:** HU-26 y la estructura de HU-32 están aplicadas y verificadas, incluida la versión INTEGER y `hu32_chk_version_segura`. El asiento administrativo `010` ya fue registrado correctamente en `public.treksafe_migraciones` el 2026-11-06 a las 05:23 UTC. No volver a ejecutar el archivo completo en DEV.
 
 El archivo se renombró desde `hu32_puntos_ruta.sql` para ajustarse a la numeración del equipo. Antes del `COMMIT` incorpora el registro condicional en `treksafe_migraciones`, con `ON CONFLICT (version) DO NOTHING`, como `008`/`009`. Esto permite instalarlo sin tabla de registro o conservar un asiento existente; no vuelve re-ejecutable el DDL ni modifica una instalación ya aplicada por renombrar el archivo.
 
@@ -326,4 +326,4 @@ Completar tras una aplicacion coordinada; ejecutar pruebas temporales no aplica 
 
 | Archivo | Entorno | Fecha | Commit | Responsable | Resultado |
 | --- | --- | --- | --- | --- | --- |
-| `010_hu32_puntos_ruta.sql` | DEV compartido | Fecha de aplicación por completar | Commit de aplicación por completar | Ariana confirma estructura y coordina registro | Aplicada en DEV antes del registro; asiento `010` pendiente a cargo de Ariana tras CI |
+| `010_hu32_puntos_ruta.sql` | DEV compartido | 2026-11-06 05:23 UTC | `594b23f` | Ariana | Aplicada y registrada correctamente (OK) |
