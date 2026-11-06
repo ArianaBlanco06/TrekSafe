@@ -1,10 +1,15 @@
-import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState, type ComponentType } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronDown, ChevronLeft, ChevronUp, Globe, Plus, WifiOff, X } from 'lucide-react';
 import { FieldError, FieldLabel } from '@/components/Layout';
 import { CoordinatePickerMapLazy } from '@/components/maps/CoordinatePickerMapLazy';
-import type { CoordinatePickerTarget } from '@/components/maps/CoordinatePickerMap';
+import { GuardarComoPlantilla } from '@/components/plantillas/GuardarComoPlantilla';
+import { SelectorPlantillasCuenta } from '@/components/plantillas/SelectorPlantillasCuenta';
+import type { CoordinatePickerMapProps, CoordinatePickerTarget } from '@/components/maps/CoordinatePickerMap';
+import { PrepararExpedicionDesdeHistorial } from '@/components/expedicion/PrepararExpedicionDesdeHistorial';
+import { useAutenticacion } from '@/context/ContextoAutenticacion';
 import { useEstadoEnLinea } from '@/hooks/useEstadoEnLinea';
+import { mensajeAplicacionBorrador, type BorradorDesdePlantilla } from '@/lib/plantillasCuentaLogica';
 import { validateCoordinateInput } from '@/lib/coordinates';
 import { getSessionScope } from '@/lib/sesion';
 import { cachearContactos, obtenerContactosCacheados } from '@/lib/offlineContacts';
@@ -17,31 +22,59 @@ import {
   type PlantillaRuta,
 } from '@/lib/offlineExpedicion';
 import { obtenerContactos, type ContactoEmergencia } from '@/services/usuario';
-import { crearExpedicion } from '@/services/expedicion';
+import { crearExpedicion, type BorradorDesdeHistorial } from '@/services/expedicion';
 
-export function PaginaCrearExpedicion() {
+export function PaginaCrearExpedicion({ Mapa }: Pick<PropsFormulario, 'Mapa'> = {}) {
+  const [parametros] = useSearchParams();
+  const { usuario } = useAutenticacion();
+  const claveSesion = `${usuario?.id}:${getSessionScope()}`;
+  const origenId = parametros.get('repetir');
+  if (origenId !== null) {
+    return (
+      <PrepararExpedicionDesdeHistorial key={`${claveSesion}:${origenId}`} origenId={origenId}>
+        {(borrador) => <FormularioCrearExpedicion borrador={borrador} Mapa={Mapa} />}
+      </PrepararExpedicionDesdeHistorial>
+    );
+  }
+  return <FormularioCrearExpedicion key={claveSesion} Mapa={Mapa} />;
+}
+
+type PropsFormulario = {
+  borrador?: BorradorDesdeHistorial;
+  Mapa?: ComponentType<CoordinatePickerMapProps>;
+};
+
+export function FormularioCrearExpedicion({ borrador, Mapa = CoordinatePickerMapLazy }: PropsFormulario) {
   const [scope] = useState(getSessionScope);
   const navigate = useNavigate();
   const enLinea = useEstadoEnLinea();
+  const { usuario } = useAutenticacion();
+  const [versionPlantillasCuenta, setVersionPlantillasCuenta] = useState(0);
   const [contactos, setContactos] = useState<ContactoEmergencia[]>([]);
   const [plantillas, setPlantillas] = useState<PlantillaRuta[]>([]);
   const [borradoresPendientes, setBorradoresPendientes] = useState(0);
-  const [lugarInicio, setLugarInicio] = useState('');
-  const [lugarFin, setLugarFin] = useState('');
-  const [coordenadasInicio, setCoordenadasInicio] = useState('');
-  const [coordenadasFin, setCoordenadasFin] = useState('');
+  const [lugarInicio, setLugarInicio] = useState(borrador?.lugarInicio ?? '');
+  const [lugarFin, setLugarFin] = useState(borrador?.lugarFin ?? '');
+  const [coordenadasInicio, setCoordenadasInicio] = useState(borrador?.coordenadasInicio ?? '');
+  const [coordenadasFin, setCoordenadasFin] = useState(borrador?.coordenadasFin ?? '');
   const [errorCoordInicio, setErrorCoordInicio] = useState('');
   const [errorCoordFin, setErrorCoordFin] = useState('');
   const [horaInicio, setHoraInicio] = useState('');
   const [horaRetornoEstimada, setHoraRetornoEstimada] = useState('');
-  const [minutosTolerancia, setMinutosTolerancia] = useState(30);
-  const [idsContactosSeleccionados, setIdsContactosSeleccionados] = useState<string[]>([]);
-  const [nombresAcompanantes, setNombresAcompanantes] = useState<string[]>(['']);
+  const [minutosTolerancia, setMinutosTolerancia] = useState(borrador?.minutosTolerancia ?? 30);
+  const [idsContactosSeleccionados, setIdsContactosSeleccionados] = useState<string[]>(() => [...(borrador?.idsContactos ?? [])]);
+  const [nombresAcompanantes, setNombresAcompanantes] = useState<string[]>(() =>
+    borrador?.nombresAcompanantes.length ? [...borrador.nombresAcompanantes] : ['']);
+  const [contactosRevisados, setContactosRevisados] = useState(false);
+  const [cargandoContactos, setCargandoContactos] = useState(true);
+  const [errorContactos, setErrorContactos] = useState('');
+  const [intentoContactos, setIntentoContactos] = useState(0);
   const [objetivoSelector, setObjetivoSelector] = useState<CoordinatePickerTarget>('start');
   const [coordsManualesAbiertas, setCoordsManualesAbiertas] = useState(false);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [cargando, setCargando] = useState(false);
+  const operacionEnCurso = useRef(false);
 
   useEffect(() => {
     if (!enLinea) setCoordsManualesAbiertas(true);
@@ -52,22 +85,40 @@ export function PaginaCrearExpedicion() {
   }, [errorCoordInicio, errorCoordFin]);
 
   useEffect(() => {
-    void listarPlantillasRuta(scope).then(setPlantillas);
-    void listarBorradoresExpedicion(scope).then((b) => setBorradoresPendientes(b.length));
+    let activo = true;
+    const vigente = () => activo && scope === getSessionScope();
+    void listarPlantillasRuta(scope).then((lista) => { if (vigente()) setPlantillas(lista); });
+    void listarBorradoresExpedicion(scope).then((lista) => { if (vigente()) setBorradoresPendientes(lista.length); });
 
-    if (enLinea) {
-      obtenerContactos()
-        .then((r) => {
-          setContactos(r.contactos);
-          void cachearContactos(r.contactos, scope);
-        })
-        .catch(() => {
-          void obtenerContactosCacheados().then(setContactos);
-        });
-    } else {
-      void obtenerContactosCacheados().then(setContactos);
+    function aplicarContactos(lista: ContactoEmergencia[]) {
+      if (!vigente()) return;
+      setContactos(lista);
+      if (borrador) {
+        const disponibles = new Set(lista.map((contacto) => contacto.id));
+        setIdsContactosSeleccionados((anteriores) => anteriores.filter((id) => disponibles.has(id)));
+        setContactosRevisados(false);
+      }
     }
-  }, [enLinea, scope]);
+    async function cargarContactos() {
+      setCargandoContactos(true);
+      setErrorContactos('');
+      try {
+        const lista = enLinea ? (await obtenerContactos()).contactos : await obtenerContactosCacheados();
+        aplicarContactos(lista);
+        if (vigente() && enLinea) await cachearContactos(lista, scope);
+      } catch {
+        const lista = await obtenerContactosCacheados();
+        aplicarContactos(lista);
+        if (vigente() && enLinea && lista.length === 0) {
+          setErrorContactos('No pudimos cargar tus contactos. Inténtalo de nuevo.');
+        }
+      } finally {
+        if (vigente()) setCargandoContactos(false);
+      }
+    }
+    void cargarContactos();
+    return () => { activo = false; };
+  }, [enLinea, scope, borrador, intentoContactos]);
 
   useEffect(() => {
     if (!enLinea) return;
@@ -107,6 +158,7 @@ export function PaginaCrearExpedicion() {
   }, [enLinea, scope]);
 
   const toggleContacto = (id: string) => {
+    setContactosRevisados(false);
     setIdsContactosSeleccionados((prev) =>
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
     );
@@ -128,6 +180,23 @@ export function PaginaCrearExpedicion() {
     setMinutosTolerancia(plantilla.minutosTolerancia);
     setErrorCoordInicio('');
     setErrorCoordFin('');
+  };
+
+  const aplicarBorradorPlantilla = (desdePlantilla: BorradorDesdePlantilla) => {
+    setLugarInicio(desdePlantilla.lugarInicio);
+    setLugarFin(desdePlantilla.lugarFin);
+    setCoordenadasInicio(desdePlantilla.coordenadasInicio ?? '');
+    setCoordenadasFin(desdePlantilla.coordenadasFin ?? '');
+    setMinutosTolerancia(desdePlantilla.minutosTolerancia);
+    setIdsContactosSeleccionados(desdePlantilla.idsContactos);
+    setContactosRevisados(false);
+    setNombresAcompanantes(desdePlantilla.nombresAcompanantes.length > 0 ? desdePlantilla.nombresAcompanantes : ['']);
+    setHoraInicio('');
+    setHoraRetornoEstimada('');
+    setErrorCoordInicio('');
+    setErrorCoordFin('');
+    setError('');
+    setInfo(mensajeAplicacionBorrador(desdePlantilla));
   };
 
   const validarCoordenadas = (): boolean => {
@@ -164,12 +233,20 @@ export function PaginaCrearExpedicion() {
     horaRetornoEstimada &&
     idsContactosSeleccionados.length > 0 &&
     acompanantesValidos.length > 0 &&
+    (!borrador || (contactosRevisados && !cargandoContactos &&
+      idsContactosSeleccionados.every((id) => contactos.some((contacto) => contacto.id === id)))) &&
     !errorCoordInicio &&
     !errorCoordFin;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!puedeEnviar || !validarCoordenadas() || scope !== getSessionScope()) return;
+    if (operacionEnCurso.current || !puedeEnviar || !validarCoordenadas() || scope !== getSessionScope()) return;
+    const inicioMs = new Date(horaInicio).getTime();
+    const retornoMs = new Date(horaRetornoEstimada).getTime();
+    if (!Number.isFinite(inicioMs) || !Number.isFinite(retornoMs) || inicioMs <= Date.now() || retornoMs <= inicioMs) {
+      setError('Elige una salida futura y un retorno posterior a la salida.');
+      return;
+    }
 
     const payload = {
       lugarInicio: lugarInicio.trim(),
@@ -186,30 +263,32 @@ export function PaginaCrearExpedicion() {
     setError('');
     setInfo('');
     setCargando(true);
-
-    if (!enLinea) {
-      await guardarBorradorExpedicion({
-        ...payload,
-        coordenadasInicio: coordenadasInicio.trim(),
-        coordenadasFin: coordenadasFin.trim(),
-      }, scope);
-      await guardarPlantillaRuta({
-        lugarInicio: payload.lugarInicio,
-        lugarFin: payload.lugarFin,
-        coordenadasInicio: payload.coordenadasInicio,
-        coordenadasFin: payload.coordenadasFin,
-        minutosTolerancia: payload.minutosTolerancia,
-      }, scope);
-      const restantes = await listarBorradoresExpedicion(scope);
-      setBorradoresPendientes(restantes.length);
-      setPlantillas(await listarPlantillasRuta(scope));
-      setInfo('Borrador guardado para sincronizar cuando vuelva la conexión. Se eliminará si cierras sesión.');
-      setCargando(false);
-      return;
-    }
+    operacionEnCurso.current = true;
 
     try {
+      if (!enLinea) {
+        await guardarBorradorExpedicion({
+          ...payload,
+          coordenadasInicio: coordenadasInicio.trim(),
+          coordenadasFin: coordenadasFin.trim(),
+        }, scope);
+        await guardarPlantillaRuta({
+          lugarInicio: payload.lugarInicio,
+          lugarFin: payload.lugarFin,
+          coordenadasInicio: payload.coordenadasInicio,
+          coordenadasFin: payload.coordenadasFin,
+          minutosTolerancia: payload.minutosTolerancia,
+        }, scope);
+        const restantes = await listarBorradoresExpedicion(scope);
+        const rutas = await listarPlantillasRuta(scope);
+        if (scope !== getSessionScope()) return;
+        setBorradoresPendientes(restantes.length);
+        setPlantillas(rutas);
+        setInfo('Borrador guardado para sincronizar cuando vuelva la conexión. Se eliminará si cierras sesión.');
+        return;
+      }
       const { expedicion } = await crearExpedicion(payload);
+      if (scope !== getSessionScope()) return;
       await guardarPlantillaRuta({
         lugarInicio: payload.lugarInicio,
         lugarFin: payload.lugarFin,
@@ -217,26 +296,38 @@ export function PaginaCrearExpedicion() {
         coordenadasFin: payload.coordenadasFin,
         minutosTolerancia: payload.minutosTolerancia,
       }, scope);
+      if (scope !== getSessionScope()) return;
       navigate(
         expedicion.estado === 'en_progreso'
           ? '/senderista/expedicion/activa'
           : '/senderista/expedicion',
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al registrar expedición');
+      if (scope === getSessionScope()) setError(err instanceof Error ? err.message : 'Error al registrar expedición');
     } finally {
-      setCargando(false);
+      operacionEnCurso.current = false;
+      if (scope === getSessionScope()) setCargando(false);
     }
   };
 
   return (
     <div className="px-6 py-6">
-      <Link to="/senderista/expedicion" className="flex items-center gap-1 text-xs text-muted-foreground mb-4">
-        <ChevronLeft size={16} /> Expediciones
+      <Link to={borrador ? '/senderista/perfil/historial' : '/senderista/expedicion'} className="flex items-center gap-1 text-xs text-muted-foreground mb-4">
+        <ChevronLeft size={16} /> {borrador ? 'Historial' : 'Expediciones'}
       </Link>
 
       <h2 className="text-xl font-bold mb-1">Nueva expedición</h2>
       <p className="text-sm text-muted-foreground mb-4">Registra tu itinerario y contactos de alerta.</p>
+
+      {borrador && (
+        <div role="status" className="mb-4 space-y-2 rounded-xl border border-primary/30 bg-primary/10 p-3 text-sm">
+          <p className="font-semibold">Ruta cargada desde tu historial</p>
+          <p>{borrador.descripcionOrigen}. Completa fechas nuevas y revisa los contactos para esta salida.</p>
+          {borrador.cantidadContactosNoVigentes > 0 && (
+            <p>{borrador.cantidadContactosNoVigentes} contacto(s) anterior(es) ya no están disponibles.</p>
+          )}
+        </div>
+      )}
 
       {!enLinea && (
         <div className="mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-100 text-sm flex items-center gap-2">
@@ -251,7 +342,17 @@ export function PaginaCrearExpedicion() {
       )}
 
       {info && <div className="mb-4 p-3 rounded-xl bg-primary/10 text-primary text-sm">{info}</div>}
-      {error && <div className="error-banner mb-4">{error}</div>}
+      {error && <div role="alert" className="error-banner mb-4">{error}</div>}
+
+      {usuario && !borrador && (
+        <SelectorPlantillasCuenta
+          usuarioId={usuario.id}
+          enLinea={enLinea}
+          contactos={contactos}
+          versionLista={versionPlantillasCuenta}
+          onAplicar={aplicarBorradorPlantilla}
+        />
+      )}
 
       {plantillas.length > 0 && (
         <div className="mb-6">
@@ -271,7 +372,15 @@ export function PaginaCrearExpedicion() {
         </div>
       )}
 
-      {contactos.length === 0 && (
+      {cargandoContactos && <p role="status" className="mb-4 text-sm text-muted-foreground">Cargando contactos…</p>}
+      {errorContactos && (
+        <div role="alert" className="error-banner mb-4">
+          <p>{errorContactos}</p>
+          <button type="button" disabled={cargandoContactos || !enLinea} onClick={() => setIntentoContactos((actual) => actual + 1)}
+            className="min-h-12 font-semibold disabled:opacity-50">Reintentar contactos</button>
+        </div>
+      )}
+      {!cargandoContactos && !errorContactos && contactos.length === 0 && (
         <div className="error-banner mb-4">
           {enLinea ? (
             <>
@@ -287,6 +396,7 @@ export function PaginaCrearExpedicion() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        <fieldset disabled={cargando} className="min-w-0 space-y-4">
         <div>
           <FieldLabel htmlFor="exp-lugar-inicio">Ubicación inicial</FieldLabel>
           <input
@@ -316,7 +426,7 @@ export function PaginaCrearExpedicion() {
             <p className="text-xs text-muted-foreground mb-2">
               Marca salida y destino en el mapa. Las coordenadas se completan solas.
             </p>
-            <CoordinatePickerMapLazy
+            <Mapa
               className="mt-2"
               activeTarget={objetivoSelector}
               onActiveTargetChange={setObjetivoSelector}
@@ -461,6 +571,16 @@ export function PaginaCrearExpedicion() {
           )}
         </fieldset>
 
+        {borrador && (
+          <label className="flex min-h-12 items-start gap-3 rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">
+            <input id="exp-contactos-revisados" type="checkbox" checked={contactosRevisados}
+              disabled={cargandoContactos || contactos.length === 0}
+              onChange={(evento) => setContactosRevisados(evento.target.checked)}
+              className="mt-0.5 h-5 w-5 shrink-0 accent-primary" />
+            He revisado los contactos de alerta para esta nueva expedición.
+          </label>
+        )}
+
         <div>
           <FieldLabel>Acompañantes de la cordada</FieldLabel>
           <div className="space-y-2 mt-2">
@@ -489,6 +609,21 @@ export function PaginaCrearExpedicion() {
           </button>
         </div>
 
+        <GuardarComoPlantilla
+          enLinea={enLinea}
+          datos={{
+            lugarInicio: lugarInicio.trim(),
+            lugarFin: lugarFin.trim(),
+            coordenadasInicio: coordenadasInicio.trim() || undefined,
+            coordenadasFin: coordenadasFin.trim() || undefined,
+            minutosTolerancia,
+            idsContactos: idsContactosSeleccionados,
+            nombresAcompanantes: acompanantesValidos,
+          }}
+          onGuardada={() => setVersionPlantillasCuenta((v) => v + 1)}
+        />
+
+        </fieldset>
         <button type="submit" className="btn-primary" disabled={!puedeEnviar || cargando}>
           {cargando
             ? 'Registrando…'

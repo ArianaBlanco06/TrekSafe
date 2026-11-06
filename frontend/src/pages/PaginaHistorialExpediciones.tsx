@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, MapPin, Mountain } from 'lucide-react';
+import { ChevronLeft, MapPin, Mountain, RotateCcw } from 'lucide-react';
+import { useEstadoEnLinea } from '@/hooks/useEstadoEnLinea';
 import {
   obtenerHistorialExpediciones,
   type ExpedicionCompletada,
@@ -18,19 +19,23 @@ function formatDt(iso: string): string {
 }
 
 export function PaginaHistorialExpediciones() {
+  const enLinea = useEstadoEnLinea();
   const [expediciones, setExpediciones] = useState<ExpedicionCompletada[]>([]);
   const [estadisticas, setEstadisticas] = useState<EstadisticasHistorial | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    let activo = true;
     obtenerHistorialExpediciones()
       .then((r) => {
+        if (!activo) return;
         setExpediciones(r.expediciones);
         setEstadisticas(r.estadisticas);
       })
-      .catch((e) => setError(e instanceof Error ? e.message : 'Error al cargar historial'))
-      .finally(() => setCargando(false));
+      .catch((e) => { if (activo) setError(e instanceof Error ? e.message : 'Error al cargar historial'); })
+      .finally(() => { if (activo) setCargando(false); });
+    return () => { activo = false; };
   }, []);
 
   return (
@@ -47,7 +52,7 @@ export function PaginaHistorialExpediciones() {
         Expediciones finalizadas con retorno confirmado.
       </p>
 
-      {error && <div className="error-banner mb-4">{error}</div>}
+      {error && <div role="alert" className="error-banner mb-4">{error}</div>}
 
       {estadisticas && (
         <div className="grid grid-cols-2 gap-3 mb-6">
@@ -106,6 +111,13 @@ export function PaginaHistorialExpediciones() {
               <Link to={`/senderista/expedicion/${encodeURIComponent(exp.id)}/equipo`}
                 aria-label={`Consultar equipo de la expedición a ${exp.lugarFin}`}
                 className="inline-flex items-center min-h-12 mt-2 text-sm font-semibold text-primary">Consultar equipo</Link>
+              {enLinea ? (
+                <Link to={`/senderista/expedicion/nueva?repetir=${encodeURIComponent(exp.id)}`}
+                  aria-label={`Repetir expedición a ${exp.lugarFin}`}
+                  className="mt-3 inline-flex min-h-12 items-center gap-2 text-sm font-semibold text-primary">
+                  <RotateCcw size={16} aria-hidden="true" /> Repetir expedición
+                </Link>
+              ) : <p className="mt-3 text-xs text-muted-foreground">Conéctate para repetir esta expedición.</p>}
             </div>
           ))}
         </div>

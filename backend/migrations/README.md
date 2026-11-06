@@ -20,6 +20,8 @@ Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos
 
 | Archivo | Contenido | Requiere |
 |---|---|---|
+| `000_registro_migraciones.sql` | Tabla `treksafe_migraciones` (registro transversal). Idempotente | Esquema inicial |
+| `001_hu29_plantillas_ruta.sql` | Tabla `plantillas_ruta` de HU-29. Reversión: `001_hu29_plantillas_ruta.down.sql` (solo base desechable) | `000` |
 | `002_hu26_version_y_eventos_plan.sql` | Columna `expediciones.version` y tabla `eventos_plan` | Esquema inicial |
 | `003_hu26_rpc_editar_expedicion.sql` | Función `treksafe_editar_expedicion` | `002` |
 | `20261101_hu30_listas_equipo.sql` | Tablas de listas personales e ítems, relaciones y permisos | Esquema inicial |
@@ -41,6 +43,23 @@ el registro de aplicación por entorno con archivo, fecha y commit.
 Aplica las migraciones **antes** de desplegar el backend. El código de HU-26
 selecciona `expediciones.version`, por lo que sin `002` también fallarían los
 listados y `GET /api/expediciones/activa`. La API de HU-30 requiere sus tablas y RPC.
+La API `/api/plantillas` de HU-29 requiere `000` y `001`.
+
+## HU-29: plantillas personales de ruta
+
+`001` no es re-ejecutable: falla de forma explícita si su versión ya está registrada
+en `treksafe_migraciones`. Solo se anotan en `REGISTRO_APLICACION.md` las
+aplicaciones realmente ejecutadas.
+
+La suite de integración de `000`/`001` corre solo contra una base local desechable:
+
+```bash
+TREKSAFE_PG_TEST_URL=postgres://postgres@127.0.0.1:55432/treksafe_desechable npm run test:migraciones --prefix backend
+```
+
+La prueba se niega a ejecutar SQL si el host no es `127.0.0.1`/`localhost` o si el
+nombre de la base no contiene `desechable`, y recrea el esquema `public` de esa base.
+Sin `TREKSAFE_PG_TEST_URL` la suite se omite y `npm test` sigue funcionando.
 
 ## HU-30: listas personales de equipo
 
