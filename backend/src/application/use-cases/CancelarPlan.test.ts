@@ -101,6 +101,14 @@ class ExpedicionDAOEnMemoria implements IExpedicionDAO {
     });
     return { id: this.plan.id, version: this.plan.version, estado: 'cancelada' };
   }
+
+  async contarAmpliaciones(): Promise<never> {
+    throw new Error('HU-35: estas pruebas no amplían el retorno (ver AmpliarRetorno.test.ts)');
+  }
+
+  async ampliarRetorno(): Promise<never> {
+    throw new Error('HU-35: estas pruebas no amplían el retorno (ver AmpliarRetorno.test.ts)');
+  }
 }
 
 function planInicial(cambios: Partial<PlanExpedicion> = {}): PlanExpedicion {

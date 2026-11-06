@@ -160,6 +160,8 @@ Para HU-36 y HU-37 (lectura), y HU-27 y HU-35 (escritura). Se crea en `backend/m
 }
 ```
 
+**`RETORNO_AMPLIADO` (HU-35):** solo `{"horaRetornoEstimada": {"antes": ..., "despues": ...}}`. Los minutos ampliados se derivan de `despues - antes`; no se guardan aparte (ver `docs/hu-35/diseno.md`).
+
 **Campos de una edición:** `lugarInicio`, `lugarFin`, `coordenadasInicio`, `coordenadasFin`, `horaInicio`, `horaRetornoEstimada`, `minutosTolerancia`, `idsContactos` y `nombresAcompanantes`. Las horas son cadenas ISO 8601; las dos últimas claves son listas ordenadas.
 
 **Reglas para quien escriba o lea:**

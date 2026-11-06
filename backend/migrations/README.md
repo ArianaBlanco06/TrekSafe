@@ -27,14 +27,19 @@ Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos
 | `004_hu27_estado_cancelada.sql` | Valor `cancelada` en `estado_expedicion_enum` | Esquema inicial |
 | `005_hu27_rpc_cancelar_expedicion.sql` | Función `treksafe_cancelar_expedicion` | `002` y `004` confirmada |
 | `006_hu27_permiso_anonimizar_eventos.sql` | `UPDATE (cambios, motivo)` sobre `eventos_plan` para `service_role` (anonimización ARCO) | `002` |
+| `007_hu35_rpc_ampliar_retorno.sql` | Funciones `treksafe_fecha_limite` y `treksafe_ampliar_retorno` | `002` |
 | `20261101_hu30_listas_equipo.sql` | Tablas de listas personales e ítems, relaciones y permisos | Esquema inicial |
 | `20261101_hu30_operaciones_equipo.sql` | Posición de ítems y RPC de listas de equipo | `20261101_hu30_listas_equipo.sql` |
 | `008_hu31_preparacion_expedicion.sql` | Copia de equipo por expedición, ítems, restricciones y permisos | Las dos migraciones de HU-30; integrar después de HU-27 |
 | `009_hu31_operaciones_preparacion.sql` | RPC de consulta, asociación atómica y marcas de preparación | `008_hu31_preparacion_expedicion.sql` |
 
-Las migraciones `002` a `006` son re-ejecutables. No dependen de
+Las migraciones `002` a `007` son re-ejecutables. No dependen de
 `000_registro_migraciones.sql`: si la tabla `treksafe_migraciones` existe, registran
 su aplicación, y si no existe, continúan.
+
+`007` define `treksafe_fecha_limite(hora, tolerancia)`, que calcula el límite de retorno
+igual que la función del cron de `init_schema.sql` y que `calcularFechaLimite` en
+TypeScript. No modifica la función del cron.
 
 HU-30 conserva los nombres con fecha con los que se preparó y aplicó en DEV,
 según lo confirmado por Jhon. Sus dos archivos se ejecutan una sola vez y en el

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { AmpliarRetorno } from '../../../application/use-cases/AmpliarRetorno.js';
 import { CancelarPlan } from '../../../application/use-cases/CancelarPlan.js';
 import { EditarPlan } from '../../../application/use-cases/EditarPlan.js';
 import { ObtenerPlan } from '../../../application/use-cases/ObtenerPlan.js';
@@ -24,6 +25,7 @@ export function crearRutasExpedicion(): Router {
     new ObtenerPlan(dao),
     new EditarPlan(dao, reloj),
     new CancelarPlan(dao, reloj),
+    new AmpliarRetorno(dao, reloj),
   );
 
   router.use(middlewareAutenticacion, requerirRol('senderista'));
@@ -33,6 +35,7 @@ export function crearRutasExpedicion(): Router {
   router.get('/:id', asyncHandler(planes.obtener));
   router.put('/:id', asyncHandler(planes.editar));
   router.post('/:id/cancelar', asyncHandler(planes.cancelar));
+  router.post('/:id/ampliar-retorno', asyncHandler(planes.ampliarRetorno));
   router.post('/:id/confirmar-retorno', asyncHandler(confirmarRetorno));
   router.post('/', asyncHandler(crearExpedicion));
   router.get('/', asyncHandler(listarExpediciones));
