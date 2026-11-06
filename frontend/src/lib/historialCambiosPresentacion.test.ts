@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { isoADatetimeLocal } from './fechaLocal';
 import {
   SIN_VALOR,
   etiquetaAutor,
@@ -30,12 +29,18 @@ describe('HU-36: presentación del historial de cambios', () => {
     assert.equal(etiquetaAutor({ esPropietario: false }), 'Otro usuario');
   });
 
-  it('formatea fechas en hora local con la misma conversión que los formularios', () => {
+  it('formatea fechas con es-PE en la zona horaria indicada', () => {
     const iso = '2026-11-15T18:00:00Z';
-    assert.equal(formatearFecha(iso), isoADatetimeLocal(iso).replace('T', ' '));
-    assert.match(formatearFecha(iso), /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/);
-    assert.equal(formatearFecha('no-es-fecha'), SIN_VALOR);
-    assert.equal(formatearValor('horaInicio', iso), formatearFecha(iso));
+    const lima = formatearFecha(iso, 'America/Lima');
+    // es-PE usa reloj de 12 horas: las 13:00 de Lima se muestran como 01:00 p. m.
+    assert.match(lima, /15/);
+    assert.match(lima, /2026/);
+    assert.match(lima, /01:00/);
+    assert.match(lima, /p\.\s?m\./);
+    assert.match(formatearFecha(iso, 'UTC'), /06:00/);
+    assert.equal(formatearFecha('no-es-fecha', 'America/Lima'), SIN_VALOR);
+    assert.equal(formatearValor('horaInicio', iso, 'America/Lima'), lima);
+    assert.equal(presentarEntrada({ ...ampliacion, ocurridoEn: iso }, 'America/Lima').fecha, lima);
   });
 
   it('muestra contactos solo como cantidad, nunca sus identificadores', () => {

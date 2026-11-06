@@ -32,7 +32,7 @@ export function HistorialCambiosPlan({ expedicionId, fuentes }: { expedicionId: 
     try {
       const historial = await fuentes.obtener(expedicionId);
       if (actual !== solicitud.current) return;
-      setEstado({ tipo: 'listo', entradas: historial.cambios.map(presentarEntrada) });
+      setEstado({ tipo: 'listo', entradas: historial.cambios.map((entrada) => presentarEntrada(entrada)) });
     } catch (error) {
       if (actual !== solicitud.current) return;
       if (error instanceof ErrorClienteApi && (error.status === 404 || error.status === 400)) {

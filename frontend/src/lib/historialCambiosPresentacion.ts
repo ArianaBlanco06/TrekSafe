@@ -1,4 +1,3 @@
-import { isoADatetimeLocal } from './fechaLocal';
 import type {
   CampoCambioPlan,
   EntradaHistorialCambios,
@@ -49,10 +48,22 @@ export function etiquetaAutor(autor: { esPropietario: boolean }): string {
   return autor.esPropietario ? 'Tú' : 'Otro usuario';
 }
 
-/** Fecha y hora local `AAAA-MM-DD HH:mm`, con la misma conversión que los formularios. */
-export function formatearFecha(iso: string): string {
-  const local = isoADatetimeLocal(iso);
-  return local ? local.replace('T', ' ') : SIN_VALOR;
+/**
+ * Fecha y hora con el mismo formato que el historial de montaña (`es-PE`).
+ * `zonaHoraria` permite fijarla en pruebas; por defecto, la del navegador.
+ * Deuda: compartir un formateador de fechas común con PaginaHistorialExpediciones.
+ */
+export function formatearFecha(iso: string, zonaHoraria?: string): string {
+  const fecha = new Date(iso);
+  if (Number.isNaN(fecha.getTime())) return SIN_VALOR;
+  return fecha.toLocaleString('es-PE', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: zonaHoraria,
+  });
 }
 
 function plural(cantidad: number, singular: string, pluralTexto: string): string {
@@ -60,7 +71,7 @@ function plural(cantidad: number, singular: string, pluralTexto: string): string
 }
 
 /** Texto de un valor antes o después. Los contactos se muestran solo como cantidad. */
-export function formatearValor(campo: CampoCambioPlan, valor: ValorCambioPlan): string {
+export function formatearValor(campo: CampoCambioPlan, valor: ValorCambioPlan, zonaHoraria?: string): string {
   if (campo === 'idsContactos') {
     const cantidad = Array.isArray(valor) ? valor.length : 0;
     return plural(cantidad, 'contacto', 'contactos');
@@ -68,7 +79,7 @@ export function formatearValor(campo: CampoCambioPlan, valor: ValorCambioPlan): 
   if (valor === null || valor === '') return SIN_VALOR;
   if (Array.isArray(valor)) return valor.length ? valor.join(', ') : 'Ninguno';
   if (campo === 'horaInicio' || campo === 'horaRetornoEstimada') {
-    return typeof valor === 'string' ? formatearFecha(valor) : SIN_VALOR;
+    return typeof valor === 'string' ? formatearFecha(valor, zonaHoraria) : SIN_VALOR;
   }
   if (campo === 'minutosTolerancia') return `${valor} min`;
   if (campo === 'estado') return ETIQUETAS_ESTADO[String(valor)] ?? String(valor);
@@ -100,13 +111,13 @@ export type EntradaPresentada = {
   filas: FilaCambioPresentada[];
 };
 
-export function presentarEntrada(entrada: EntradaHistorialCambios): EntradaPresentada {
+export function presentarEntrada(entrada: EntradaHistorialCambios, zonaHoraria?: string): EntradaPresentada {
   const minutos = minutosAmpliados(entrada);
   const detalleAmpliacion = minutos === null ? null : `+${plural(minutos, 'minuto', 'minutos')}`;
   return {
     id: entrada.id,
     titulo: etiquetaTipo(entrada.tipo),
-    fecha: formatearFecha(entrada.ocurridoEn),
+    fecha: formatearFecha(entrada.ocurridoEn, zonaHoraria),
     autor: etiquetaAutor(entrada.autor),
     version: entrada.version,
     motivo: entrada.motivo,
@@ -116,8 +127,8 @@ export function presentarEntrada(entrada: EntradaHistorialCambios): EntradaPrese
     filas: entrada.cambios.map((cambio) => ({
       campo: cambio.campo,
       etiqueta: etiquetaCampo(cambio.campo),
-      antes: formatearValor(cambio.campo, cambio.antes),
-      despues: formatearValor(cambio.campo, cambio.despues),
+      antes: formatearValor(cambio.campo, cambio.antes, zonaHoraria),
+      despues: formatearValor(cambio.campo, cambio.despues, zonaHoraria),
     })),
   };
 }
