@@ -214,28 +214,68 @@ END;
 $$;
 RESET ROLE;
 
--- 6) La cascada desde expediciones y desde la cuenta sigue funcionando.
+-- 6) Regresión: un DELETE de un evento desde otro trigger (pg_trigger_depth() = 2)
+--    sigue rechazado porque su expedición existe.
+CREATE TEMP TABLE hu36_borrador_indirecto (evento UUID NOT NULL) ON COMMIT DROP;
+CREATE FUNCTION pg_temp.hu36_borrar_evento() RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    DELETE FROM public.eventos_plan WHERE id = NEW.evento;
+    RETURN NEW;
+END;
+$$;
+CREATE TRIGGER hu36_borrar_evento AFTER INSERT ON hu36_borrador_indirecto
+    FOR EACH ROW EXECUTE FUNCTION pg_temp.hu36_borrar_evento();
+DO $$
+DECLARE
+    v_evento UUID := (SELECT valor FROM hu36_ids WHERE clave = 'evento');
+    v_bloqueado BOOLEAN := FALSE;
+BEGIN
+    BEGIN
+        INSERT INTO hu36_borrador_indirecto VALUES (v_evento);
+    EXCEPTION WHEN OTHERS THEN
+        IF SQLERRM <> 'EVENTO_PLAN_INMUTABLE' THEN RAISE; END IF;
+        v_bloqueado := TRUE;
+    END;
+    IF NOT v_bloqueado OR NOT EXISTS (SELECT 1 FROM public.eventos_plan WHERE id = v_evento) THEN
+        RAISE EXCEPTION 'Un DELETE indirecto desde otro trigger debe rechazarse';
+    END IF;
+END;
+$$;
+
+-- 7) La cascada desde expediciones y desde la cuenta sigue funcionando para service_role.
+DO $$
+DECLARE
+    v_actor UUID := (SELECT valor FROM hu36_ids WHERE clave = 'actor');
+    v_otra UUID := gen_random_uuid();
+BEGIN
+    INSERT INTO hu36_ids VALUES ('otra', v_otra);
+    INSERT INTO public.expediciones(id, senderista_id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada)
+    VALUES (v_otra, v_actor, 'Inicio', 'Fin', NOW() + INTERVAL '1 day', NOW() + INTERVAL '2 days');
+    INSERT INTO public.eventos_plan(expedicion_id, senderista_id, tipo, actor_id, version_resultante, cambios, operacion_id)
+    VALUES (v_otra, v_actor, 'EDITADA', v_actor, 2, '{}'::jsonb, gen_random_uuid());
+END;
+$$;
+-- Emula privilegios por defecto de Supabase (service_role tiene CRUD sobre estas tablas);
+-- se revierte con el ROLLBACK final.
+GRANT SELECT, DELETE ON public.expediciones, public.usuarios TO service_role;
+SET LOCAL ROLE service_role;
 DO $$
 DECLARE
     v_actor UUID := (SELECT valor FROM hu36_ids WHERE clave = 'actor');
     v_expedicion UUID := (SELECT valor FROM hu36_ids WHERE clave = 'expedicion');
-    v_otra UUID := gen_random_uuid();
+    v_otra UUID := (SELECT valor FROM hu36_ids WHERE clave = 'otra');
 BEGIN
     DELETE FROM public.expediciones WHERE id = v_expedicion;
     IF EXISTS (SELECT 1 FROM public.eventos_plan WHERE expedicion_id = v_expedicion) THEN
         RAISE EXCEPTION 'Eliminar la expedición debe eliminar sus eventos por cascada';
     END IF;
-
-    INSERT INTO public.expediciones(id, senderista_id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada)
-    VALUES (v_otra, v_actor, 'Inicio', 'Fin', NOW() + INTERVAL '1 day', NOW() + INTERVAL '2 days');
-    INSERT INTO public.eventos_plan(expedicion_id, senderista_id, tipo, actor_id, version_resultante, cambios, operacion_id)
-    VALUES (v_otra, v_actor, 'EDITADA', v_actor, 2, '{}'::jsonb, gen_random_uuid());
     DELETE FROM public.usuarios WHERE id = v_actor;
     IF EXISTS (SELECT 1 FROM public.eventos_plan WHERE expedicion_id = v_otra) THEN
         RAISE EXCEPTION 'Eliminar la cuenta debe eliminar sus eventos por cascada';
     END IF;
-    RAISE NOTICE 'HU-36: lista blanca, reloj, inmutabilidad, permisos, ARCO y cascadas comprobados';
+    RAISE NOTICE 'HU-36: lista blanca, reloj, inmutabilidad, permisos, ARCO, borrado indirecto y cascadas comprobados';
 END;
 $$;
+RESET ROLE;
 
 ROLLBACK;

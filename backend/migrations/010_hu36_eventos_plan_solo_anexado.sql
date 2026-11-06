@@ -14,7 +14,9 @@
 --    RepositorioUsuario.anonimizarHistorialRutas (cambios = '{}' y motivo NULL,
 --    sin tocar ninguna otra columna). Cualquier otro cambio: EVENTO_PLAN_INMUTABLE.
 -- 4) BEFORE DELETE: solo deja pasar el borrado en cascada desde expediciones
---    (eliminación de cuenta o de expedición). BEFORE TRUNCATE: siempre rechaza.
+--    (eliminación de cuenta o de expedición). La cascada se reconoce porque la
+--    expedición del evento ya no existe; si existe, es un DELETE directo y se
+--    rechaza (también desde otros triggers o funciones). BEFORE TRUNCATE: siempre rechaza.
 -- 5) Permisos: service_role conserva SELECT, INSERT y UPDATE (cambios, motivo);
 --    se le retiran UPDATE de tabla, DELETE y TRUNCATE (en Supabase los recibía por
 --    los privilegios por defecto).
@@ -95,9 +97,9 @@ BEGIN
     END IF;
 
     IF TG_OP = 'DELETE' THEN
-        -- Profundidad 1: DELETE directo. Profundidad >= 2: cascada de la FK
-        -- fk_eventos_plan_expedicion (borrado de expedición o de cuenta).
-        IF pg_trigger_depth() < 2 THEN
+        -- En la cascada la expedición ya no es visible; en DELETE directo sí.
+        -- (Cascada de fk_eventos_plan_expedicion: borrado de expedición o de cuenta.)
+        IF EXISTS (SELECT 1 FROM public.expediciones WHERE id = OLD.expedicion_id) THEN
             RAISE EXCEPTION 'EVENTO_PLAN_INMUTABLE';
         END IF;
         RETURN OLD;
@@ -151,7 +153,7 @@ COMMENT ON TRIGGER trg_eventos_plan_antes_de_insertar ON public.eventos_plan IS
 COMMENT ON TRIGGER trg_eventos_plan_solo_anexado ON public.eventos_plan IS
     'HU-36: rechaza UPDATE salvo la anonimización ARCO (cambios = {} y motivo NULL).';
 COMMENT ON TRIGGER trg_eventos_plan_sin_borrado ON public.eventos_plan IS
-    'HU-36: rechaza DELETE directo; permite la cascada desde expediciones.';
+    'HU-36: rechaza DELETE mientras la expedición del evento exista; permite la cascada desde expediciones.';
 COMMENT ON TRIGGER trg_eventos_plan_sin_truncate ON public.eventos_plan IS
     'HU-36: rechaza TRUNCATE.';
 

@@ -28,7 +28,7 @@ Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos
 | `005_hu27_rpc_cancelar_expedicion.sql` | Función `treksafe_cancelar_expedicion` | `002` y `004` confirmada |
 | `006_hu27_permiso_anonimizar_eventos.sql` | `UPDATE (cambios, motivo)` sobre `eventos_plan` para `service_role` (anonimización ARCO) | `002` |
 | `007_hu35_rpc_ampliar_retorno.sql` | Funciones `treksafe_fecha_limite` y `treksafe_ampliar_retorno` | `002` |
-| `010_hu36_eventos_plan_solo_anexado.sql` | `eventos_plan` solo anexado: lista blanca de `cambios`, `ocurrido_en` del servidor, sin UPDATE salvo anonimización ARCO, sin DELETE salvo cascada, sin TRUNCATE | `002` y `006` |
+| `010_hu36_eventos_plan_solo_anexado.sql` | `eventos_plan` solo anexado: lista blanca de `cambios`, `ocurrido_en` del servidor, sin UPDATE salvo anonimización ARCO, sin DELETE salvo la cascada (detectada porque la expedición ya no existe), sin TRUNCATE | `002` y `006` |
 | `20261101_hu30_listas_equipo.sql` | Tablas de listas personales e ítems, relaciones y permisos | Esquema inicial |
 | `20261101_hu30_operaciones_equipo.sql` | Posición de ítems y RPC de listas de equipo | `20261101_hu30_listas_equipo.sql` |
 | `008_hu31_preparacion_expedicion.sql` | Copia de equipo por expedición, ítems, restricciones y permisos | Las dos migraciones de HU-30; integrar después de HU-27 |
@@ -234,7 +234,8 @@ HU-26, HU-27 y HU-35. Añade triggers sobre `eventos_plan`: al insertar sanea
 `cambios` con la misma lista blanca que `CAMPOS_EVENTO_PLAN` (TypeScript) y fija
 `ocurrido_en = now()`; rechaza con `EVENTO_PLAN_INMUTABLE` cualquier UPDATE que
 no sea la anonimización ARCO (`cambios = '{}'` y `motivo` nulo), el DELETE directo
-(la cascada desde `expediciones` sigue funcionando) y el TRUNCATE. Retira a
+(la cascada desde `expediciones` sigue funcionando: el trigger la reconoce porque la
+expedición del evento ya no existe) y el TRUNCATE. Retira a
 `service_role` los permisos de tabla UPDATE, DELETE y TRUNCATE y vuelve a conceder
 `UPDATE (cambios, motivo)`. **Su aplicación en DEV sigue pendiente.**
 
