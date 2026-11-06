@@ -3,6 +3,12 @@ import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import { CAMPOS_EVENTO_PLAN, esEventoAnonimizado, sanearCambios } from './camposEventoPlan.js';
 
+function constanteFrontend(nombre: string): string[] {
+  const fuente = readFileSync(new URL('../../../../frontend/src/services/historialCambios.ts', import.meta.url), 'utf8');
+  const bloque = new RegExp(`export const ${nombre} = \\[([^\\]]*)\\] as const`).exec(fuente)?.[1] ?? '';
+  return [...bloque.matchAll(/'([^']+)'/g)].map((coincidencia) => coincidencia[1]);
+}
+
 describe('HU-36 CA-03: lista blanca de cambios del plan', () => {
   it('conserva solo los campos conocidos con forma antes/después', () => {
     const saneados = sanearCambios({
@@ -53,6 +59,10 @@ describe('HU-36 CA-03: lista blanca de cambios del plan', () => {
     assert.equal(esEventoAnonimizado({}, 'Mal clima'), false);
     assert.equal(esEventoAnonimizado({ lugarFin: { antes: true, despues: {} } }, null), false);
     for (const crudo of [null, undefined, 'texto', 0, [], [{}]]) assert.equal(esEventoAnonimizado(crudo, null), false);
+  });
+
+  it('coincide con CAMPOS_CAMBIO_PLAN del frontend', () => {
+    assert.deepEqual(constanteFrontend('CAMPOS_CAMBIO_PLAN'), [...CAMPOS_EVENTO_PLAN]);
   });
 
   it('coincide con la lista blanca de la migración 010', () => {

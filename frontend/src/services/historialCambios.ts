@@ -1,18 +1,25 @@
 import { peticionApi } from './clienteApi';
 
-/** Espejo de `historialCambios.dto.ts` del backend (HU-36). */
-export type TipoCambioPlan = 'EDITADA' | 'CANCELADA' | 'RETORNO_AMPLIADO';
-export type CampoCambioPlan =
-  | 'lugarInicio'
-  | 'lugarFin'
-  | 'coordenadasInicio'
-  | 'coordenadasFin'
-  | 'horaInicio'
-  | 'horaRetornoEstimada'
-  | 'minutosTolerancia'
-  | 'idsContactos'
-  | 'nombresAcompanantes'
-  | 'estado';
+/**
+ * Espejo de `historialCambios.dto.ts` del backend (HU-36). Las dos listas deben coincidir
+ * con TIPOS_EVENTO_PLAN y CAMPOS_EVENTO_PLAN del backend; sus pruebas lo comprueban.
+ */
+export const TIPOS_CAMBIO_PLAN = ['EDITADA', 'CANCELADA', 'RETORNO_AMPLIADO'] as const;
+export const CAMPOS_CAMBIO_PLAN = [
+  'lugarInicio',
+  'lugarFin',
+  'coordenadasInicio',
+  'coordenadasFin',
+  'horaInicio',
+  'horaRetornoEstimada',
+  'minutosTolerancia',
+  'idsContactos',
+  'nombresAcompanantes',
+  'estado',
+] as const;
+
+export type TipoCambioPlan = (typeof TIPOS_CAMBIO_PLAN)[number];
+export type CampoCambioPlan = (typeof CAMPOS_CAMBIO_PLAN)[number];
 export type ValorCambioPlan = string | number | string[] | null;
 
 export type CambioCampoHistorial = { campo: CampoCambioPlan; antes: ValorCambioPlan; despues: ValorCambioPlan };
