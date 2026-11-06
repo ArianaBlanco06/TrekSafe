@@ -132,7 +132,7 @@ it('HU-30: React, HTTP y PostgreSQL conservan listas y aíslan dos usuarios', { 
   await pulsar('Eliminar lista');
   await hasta(() => raiz().findAllByProps({ 'aria-label': `Eliminar lista ${editada.nombre}` }).length === 0);
   assert.deepEqual(await listasEquipoApi.listar(), []);
-  const restantes = await pool.query('SELECT id,senderista_id FROM public.listas_equipo');
+  const restantes = await pool.query('SELECT id,senderista_id FROM public.listas_equipo WHERE senderista_id=ANY($1::uuid[])', [[senderistaA, senderistaB]]);
   assert.deepEqual(restantes.rows, [{ id: listaB.id, senderista_id: senderistaB }]);
   assert.equal((await pool.query('SELECT count(*)::int AS cantidad FROM public.items_lista_equipo WHERE lista_equipo_id=$1', [listaA.id])).rows[0].cantidad, 0);
 });

@@ -20,6 +20,8 @@ Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos
 
 | Archivo | Contenido | Requiere |
 |---|---|---|
+| `000_registro_migraciones.sql` | Tabla `treksafe_migraciones` (registro transversal). Idempotente | Esquema inicial |
+| `001_hu29_plantillas_ruta.sql` | Tabla `plantillas_ruta` de HU-29. Reversión: `001_hu29_plantillas_ruta.down.sql` (solo base desechable) | `000` |
 | `002_hu26_version_y_eventos_plan.sql` | Columna `expediciones.version` y tabla `eventos_plan` | Esquema inicial |
 | `003_hu26_rpc_editar_expedicion.sql` | Función `treksafe_editar_expedicion` | `002` |
 | `004_hu27_estado_cancelada.sql` | Valor `cancelada` en `estado_expedicion_enum` | Esquema inicial |
@@ -28,6 +30,8 @@ Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos
 | `007_hu35_rpc_ampliar_retorno.sql` | Funciones `treksafe_fecha_limite` y `treksafe_ampliar_retorno` | `002` |
 | `20261101_hu30_listas_equipo.sql` | Tablas de listas personales e ítems, relaciones y permisos | Esquema inicial |
 | `20261101_hu30_operaciones_equipo.sql` | Posición de ítems y RPC de listas de equipo | `20261101_hu30_listas_equipo.sql` |
+| `008_hu31_preparacion_expedicion.sql` | Copia de equipo por expedición, ítems, restricciones y permisos | Las dos migraciones de HU-30; integrar después de HU-27 |
+| `009_hu31_operaciones_preparacion.sql` | RPC de consulta, asociación atómica y marcas de preparación | `008_hu31_preparacion_expedicion.sql` |
 
 Las migraciones `002` a `007` son re-ejecutables. No dependen de
 `000_registro_migraciones.sql`: si la tabla `treksafe_migraciones` existe, registran
@@ -47,6 +51,23 @@ el registro de aplicación por entorno con archivo, fecha y commit.
 Aplica las migraciones **antes** de desplegar el backend. El código de HU-26
 selecciona `expediciones.version`, por lo que sin `002` también fallarían los
 listados y `GET /api/expediciones/activa`. La API de HU-30 requiere sus tablas y RPC.
+La API `/api/plantillas` de HU-29 requiere `000` y `001`.
+
+## HU-29: plantillas personales de ruta
+
+`001` no es re-ejecutable: falla de forma explícita si su versión ya está registrada
+en `treksafe_migraciones`. Solo se anotan en `REGISTRO_APLICACION.md` las
+aplicaciones realmente ejecutadas.
+
+La suite de integración de `000`/`001` corre solo contra una base local desechable:
+
+```bash
+TREKSAFE_PG_TEST_URL=postgres://postgres@127.0.0.1:55432/treksafe_desechable npm run test:migraciones --prefix backend
+```
+
+La prueba se niega a ejecutar SQL si el host no es `127.0.0.1`/`localhost` o si el
+nombre de la base no contiene `desechable`, y recrea el esquema `public` de esa base.
+Sin `TREKSAFE_PG_TEST_URL` la suite se omite y `npm test` sigue funcionando.
 
 `004` debe ejecutarse **sola y confirmada** antes de `005`: Postgres no permite usar
 un valor de enum nuevo en la misma transacción que lo agrega. Un valor de enum no se
@@ -148,3 +169,59 @@ Después del `ROLLBACK` quedaron las dos cuentas semilla originales, cero listas
 y cero ítems. La instancia se apagó al terminar.
 
 Esta ejecución no se conectó a Supabase ni acredita una aplicación en DEV.
+
+## HU-31: preparación de equipo por expedición
+
+Los archivos `008_hu31_preparacion_expedicion.sql` y
+`009_hu31_operaciones_preparacion.sql` sustituyen los nombres iniciales de HU-31
+para evitar el choque de numeración con HU-27 (PR #65), que se integra antes.
+**Su aplicación en DEV sigue pendiente.** Se aplican una sola vez; no son
+re-ejecutables.
+
+Antes de `COMMIT`, cada archivo registra su versión (`008` o `009`), nombre y
+`HU-31` en `public.treksafe_migraciones` solo si esa tabla existe. El bloque usa
+`ON CONFLICT (version) DO NOTHING`, igual que HU-27. Esto hace repetible el
+registro, no el DDL de tablas o funciones. No se crea ni modifica la tabla de
+registro y no se vuelven a ejecutar `000` o `001` en DEV.
+
+La suite local de HU-31 comprueba estos archivos completos sin registro, con
+registro vacío y con versiones existentes. Las versiones previas conservan su
+fecha y autor. Esas variantes usan bases temporales nuevas y las eliminan al
+terminar; no reejecutan el DDL sobre las tablas de preparación ya creadas.
+
+Se requieren las dos migraciones de HU-30, incluyendo la posición de sus ítems.
+El orden es el de dependencias de esta tabla, no el orden alfabético de archivos.
+No hay que volver a ejecutar las migraciones de HU-30 ya aplicadas en DEV.
+
+`preparaciones_expedicion` admite una sola copia por expedición y conserva el
+nombre de la lista. `items_preparacion_expedicion` guarda nombres, obligatoriedad,
+orden y marcas con identidades propias. La eliminación de la lista origen deja
+su referencia nula, conservando contenido y marcas. Eliminar una expedición
+elimina cabecera e ítems por cascada. El contador se calcula en el dominio.
+
+Las RPC son `treksafe_obtener_preparacion`,
+`treksafe_asociar_lista_expedicion` y `treksafe_establecer_item_preparado`. Exigen
+propiedad y vuelven a comprobar estado dentro de la escritura. La asociación
+bloquea expedición y lista base; las marcas bloquean expedición y preparación.
+Solo `programada` y `en_progreso` admiten escrituras. Una asociación existente
+no se reemplaza y un reintento de marca no invierte su valor.
+
+Las tablas activan RLS y deniegan acceso directo a los roles del cliente. Solo
+el backend puede ejecutar las funciones, con `SECURITY INVOKER` y `search_path`
+vacío. Se conceden lectura y actualización de `expediciones` a `service_role`
+para la consulta y los bloqueos; la RPC de equipo no cambia los datos del plan.
+
+Para reproducir las pruebas con Node 22 y PostgreSQL instalados:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File backend/scripts/test-hu31-postgres.ps1 -PostgresBin "C:\Program Files\PostgreSQL\18\bin"
+```
+
+El script reutiliza el entorno local desechable de HU-30 y añade HU-31 mediante
+`-IncluirPreparacion`. Crea una instancia temporal en loopback, ejecuta migraciones,
+`tests/hu31_preparacion.test.sql`, backend e integraciones frontend de HU-30 y HU-31; verifica
+la limpieza y apaga la instancia en `finally`. Las pruebas condicionadas usan
+`HU31_TEST_DATABASE_URL` y aceptan solo la base local `treksafe_hu30_test`.
+La ejecución no toma `DATABASE_URL` ni se conecta a Supabase.
+
+Resultados y límites: [validación local de HU-31](../../docs/hu-31-validacion.md).

@@ -1,7 +1,7 @@
 import { getSessionScope } from './sesion';
 
-type ClaveOffline = 'route-templates' | 'expedition-drafts';
-const clavesPermitidas = new Set<ClaveOffline>(['route-templates', 'expedition-drafts']);
+export type ClaveOffline = 'route-templates' | 'expedition-drafts' | 'account-templates';
+const clavesPermitidas = new Set<ClaveOffline>(['route-templates', 'expedition-drafts', 'account-templates']);
 const cacheName = (scope: string) => `treksafe-offline-v2-${scope}`;
 const lsKey = (scope: string, key: ClaveOffline) => `treksafe:offline-v2:${scope}:${key}`;
 const dataUrl = (key: ClaveOffline) => new URL(`/__treksafe_offline__/${key}`, location.origin).href;
@@ -12,7 +12,7 @@ export async function readOfflineJson<T>(
   if (!scope || scope !== getSessionScope() || !clavesPermitidas.has(key)) return fallback;
   try {
     if (typeof caches !== 'undefined') {
-      const hit = await (await caches.open(cacheName(scope))).match(dataUrl(key));
+      const hit = await caches.match(dataUrl(key), { cacheName: cacheName(scope) });
       if (hit) {
         const value = await hit.json() as T;
         return scope === getSessionScope() ? value : fallback;
