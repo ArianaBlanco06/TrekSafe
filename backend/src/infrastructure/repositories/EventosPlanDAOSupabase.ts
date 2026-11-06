@@ -3,10 +3,13 @@ import type {
   EventoPlan,
   IEventosPlanDAO,
   NuevoEventoPlan,
-  TipoEventoPlan,
 } from '../../domain/repositories/IEventosPlanDAO.js';
 import { sanearCambios } from '../../domain/value-objects/camposEventoPlan.js';
-import { ErrorAplicacion } from '../../shared/errors/ErrorAplicacion.js';
+import { esTipoEventoPlan, type TipoEventoPlan } from '../../domain/value-objects/tiposEventoPlan.js';
+import {
+  errorHistorialCambiosNoDisponible,
+  errorOperacionYaRegistrada,
+} from '../../shared/errors/erroresHistorialCambios.js';
 
 type FilaEventoPlan = {
   id: string;
@@ -21,20 +24,21 @@ type FilaEventoPlan = {
   operacion_id: string;
 };
 
+type FilaEventoPlanValida = FilaEventoPlan & { tipo: TipoEventoPlan };
+
 /** Columnas explícitas: nunca `*`. */
 const COLUMNAS = 'id, expedicion_id, senderista_id, tipo, actor_id, ocurrido_en, version_resultante, cambios, motivo, operacion_id';
-const TIPOS: readonly TipoEventoPlan[] = ['EDITADA', 'CANCELADA', 'RETORNO_AMPLIADO'];
 
-function noDisponible(): ErrorAplicacion {
-  return new ErrorAplicacion(500, 'No se pudo consultar el historial de cambios.', 'HISTORIAL_CAMBIOS_NO_DISPONIBLE');
+function tieneTipoConocido(fila: FilaEventoPlan): fila is FilaEventoPlanValida {
+  return esTipoEventoPlan(fila.tipo);
 }
 
-function aEvento(fila: FilaEventoPlan): EventoPlan {
+function aEvento(fila: FilaEventoPlanValida): EventoPlan {
   return {
     id: fila.id,
     expedicionId: fila.expedicion_id,
     senderistaId: fila.senderista_id,
-    tipo: fila.tipo as TipoEventoPlan,
+    tipo: fila.tipo,
     actorId: fila.actor_id,
     ocurridoEn: fila.ocurrido_en,
     versionResultante: fila.version_resultante,
@@ -60,9 +64,9 @@ export class EventosPlanDAOSupabase implements IEventosPlanDAO {
       .order('ocurrido_en', { ascending: true })
       .order('id', { ascending: true });
 
-    if (error) throw noDisponible();
+    if (error) throw errorHistorialCambiosNoDisponible();
     return ((data ?? []) as unknown as FilaEventoPlan[])
-      .filter((fila) => TIPOS.includes(fila.tipo as TipoEventoPlan))
+      .filter(tieneTipoConocido)
       .map(aEvento);
   }
 
@@ -82,11 +86,11 @@ export class EventosPlanDAOSupabase implements IEventosPlanDAO {
       .single();
 
     if (error) {
-      if (error.code === '23505') {
-        throw new ErrorAplicacion(409, 'La operación ya fue registrada.', 'OPERACION_YA_REGISTRADA');
-      }
-      throw new ErrorAplicacion(500, 'No se pudo registrar el cambio del plan.', 'HISTORIAL_CAMBIOS_NO_DISPONIBLE');
+      if (error.code === '23505') throw errorOperacionYaRegistrada();
+      throw errorHistorialCambiosNoDisponible();
     }
-    return aEvento(data as unknown as FilaEventoPlan);
+    const fila = data as unknown as FilaEventoPlan;
+    if (!tieneTipoConocido(fila)) throw errorHistorialCambiosNoDisponible();
+    return aEvento(fila);
   }
 }

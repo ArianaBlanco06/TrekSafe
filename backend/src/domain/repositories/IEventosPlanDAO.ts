@@ -1,6 +1,7 @@
 import type { CambiosEventoPlan } from '../value-objects/camposEventoPlan.js';
+import type { TipoEventoPlan } from '../value-objects/tiposEventoPlan.js';
 
-export type TipoEventoPlan = 'EDITADA' | 'CANCELADA' | 'RETORNO_AMPLIADO';
+export type { TipoEventoPlan };
 
 /** Fila de `eventos_plan` ya saneada. Nunca contiene contraseñas ni datos médicos. */
 export type EventoPlan = {

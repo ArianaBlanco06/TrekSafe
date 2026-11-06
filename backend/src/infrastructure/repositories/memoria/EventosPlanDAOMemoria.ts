@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { EventoPlan, IEventosPlanDAO, NuevoEventoPlan } from '../../../domain/repositories/IEventosPlanDAO.js';
 import type { IReloj } from '../../../domain/services/IReloj.js';
 import { sanearCambios } from '../../../domain/value-objects/camposEventoPlan.js';
-import { ErrorAplicacion } from '../../../shared/errors/ErrorAplicacion.js';
+import { errorOperacionYaRegistrada } from '../../../shared/errors/erroresHistorialCambios.js';
 import { RelojSistema } from '../../services/RelojSistema.js';
 
 function copiar(evento: EventoPlan): EventoPlan {
@@ -23,7 +23,7 @@ export class EventosPlanDAOMemoria implements IEventosPlanDAO {
 
   async registrar(evento: NuevoEventoPlan): Promise<EventoPlan> {
     if (this.eventos.some((existente) => existente.operacionId === evento.operacionId)) {
-      throw new ErrorAplicacion(409, 'La operación ya fue registrada.', 'OPERACION_YA_REGISTRADA');
+      throw errorOperacionYaRegistrada();
     }
     const registrado: EventoPlan = {
       id: this.generarId(),
