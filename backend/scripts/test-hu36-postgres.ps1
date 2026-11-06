@@ -11,10 +11,22 @@ $dataDir = Join-Path $testDir 'data'
 $listener = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
 try { $listener.Start(); $testPort = $listener.LocalEndpoint.Port } finally { $listener.Stop() }
 $previousHu36Url = $env:HU36_TEST_DATABASE_URL
-# Emula los privilegios por defecto de Supabase para service_role (CRUD en public y en
-# las tablas que se creen despues). init_schema.sql no concede nada a service_role; asi
-# la 010 debe retirar de verdad UPDATE, DELETE y TRUNCATE sobre eventos_plan.
-$privilegiosSupabase = 'GRANT USAGE ON SCHEMA public TO service_role; GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role; GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO service_role; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO service_role;'
+# HU-36-S2: emula los privilegios por defecto de Supabase para anon, authenticated y
+# service_role: ALL sobre tablas y secuencias de public, EXECUTE sobre funciones, tanto
+# para lo que ya existe como para lo que se cree despues (ALTER DEFAULT PRIVILEGES).
+# init_schema.sql no concede nada a estos roles; asi los asserts de "anon/authenticated
+# sin acceso" prueban de verdad los REVOKE de la 002 y la 010, y la 010 debe retirar de
+# verdad UPDATE, DELETE y TRUNCATE de service_role sobre eventos_plan.
+$rolesSupabase = 'anon, authenticated, service_role'
+$privilegiosSupabase = (@(
+    "GRANT USAGE ON SCHEMA public TO $rolesSupabase",
+    "GRANT ALL ON ALL TABLES IN SCHEMA public TO $rolesSupabase",
+    "GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO $rolesSupabase",
+    "GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO $rolesSupabase",
+    "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO $rolesSupabase",
+    "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO $rolesSupabase",
+    "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO $rolesSupabase"
+) -join '; ') + ';'
 Write-Output ('Pruebas locales HU-36: ' + $testDir)
 Push-Location $repoRoot
 try {

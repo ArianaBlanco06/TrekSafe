@@ -1,5 +1,7 @@
 -- Solo PostgreSQL local desechable; todos los datos de prueba se revierten.
--- Requiere: init_schema.sql y las migraciones 002 a 007 y 010 aplicadas.
+-- Requiere: init_schema.sql, los privilegios por defecto de Supabase para anon, authenticated
+-- y service_role, y las migraciones 002 a 007 y 010 aplicadas. Se ejecuta con
+-- backend/scripts/test-hu36-postgres.ps1, que emula esos privilegios (HU-36-S2).
 BEGIN;
 
 CREATE TEMP TABLE hu36_ids (clave TEXT PRIMARY KEY, valor UUID NOT NULL) ON COMMIT DROP;
@@ -255,9 +257,7 @@ BEGIN
     VALUES (v_otra, v_actor, 'EDITADA', v_actor, 2, '{}'::jsonb, gen_random_uuid());
 END;
 $$;
--- Emula privilegios por defecto de Supabase (service_role tiene CRUD sobre estas tablas);
--- se revierte con el ROLLBACK final.
-GRANT SELECT, DELETE ON public.expediciones, public.usuarios TO service_role;
+-- service_role borra con los privilegios por defecto de Supabase que emula el script (HU-36-S2).
 SET LOCAL ROLE service_role;
 DO $$
 DECLARE
