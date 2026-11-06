@@ -17,13 +17,13 @@ function preparar() {
   const dao = new EventosPlanDAOMemoria({ ahora: () => ahora }, () => `00000000-0000-4000-8000-${String(++id).padStart(12, '0')}`);
   const duenos = new Map([[expedicionA, actorA], [expedicionB, actorB]]);
   const propiedad: IPropiedadExpedicion = {
-    async esPropietario(expedicionId, senderistaId) { return duenos.get(expedicionId) === senderistaId; },
+    async esPropietario(senderistaId, expedicionId) { return duenos.get(expedicionId) === senderistaId; },
   };
   const lecturas: { expedicionId: string; senderistaId: string }[] = [];
   const lector: ILectorEventosPlan = {
-    async listarPorExpedicion(expedicionId, senderistaId) {
+    async listarPorExpedicion(senderistaId, expedicionId) {
       lecturas.push({ expedicionId, senderistaId });
-      return dao.listarPorExpedicion(expedicionId, senderistaId);
+      return dao.listarPorExpedicion(senderistaId, expedicionId);
     },
   };
   let operacion = 0;

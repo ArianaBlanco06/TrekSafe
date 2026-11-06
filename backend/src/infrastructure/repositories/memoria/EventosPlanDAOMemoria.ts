@@ -41,7 +41,7 @@ export class EventosPlanDAOMemoria implements IEventosPlanDAO {
     return copiar(registrado);
   }
 
-  async listarPorExpedicion(expedicionId: string, senderistaId: string): Promise<EventoPlan[]> {
+  async listarPorExpedicion(senderistaId: string, expedicionId: string): Promise<EventoPlan[]> {
     return this.eventos
       .filter((evento) => evento.expedicionId === expedicionId && evento.senderistaId === senderistaId)
       .sort((a, b) => a.ocurridoEn.localeCompare(b.ocurridoEn) || a.id.localeCompare(b.id))

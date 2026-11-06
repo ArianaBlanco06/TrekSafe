@@ -6,7 +6,7 @@ import { errorHistorialCambiosNoDisponible } from '../../shared/errors/erroresHi
 export class PropiedadExpedicionSupabase implements IPropiedadExpedicion {
   constructor(private readonly cliente: Pick<SupabaseClient, 'from'>) {}
 
-  async esPropietario(expedicionId: string, senderistaId: string): Promise<boolean> {
+  async esPropietario(senderistaId: string, expedicionId: string): Promise<boolean> {
     const { data, error } = await this.cliente.from('expediciones')
       .select('id')
       .eq('id', expedicionId)

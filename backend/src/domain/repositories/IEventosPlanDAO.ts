@@ -23,7 +23,7 @@ export type NuevoEventoPlan = Omit<EventoPlan, 'id' | 'ocurridoEn'>;
 /** Lectura del historial (HU-36). Las implementaciones filtran siempre por propietario. */
 export interface ILectorEventosPlan {
   /** Eventos propios en orden cronológico ascendente (`ocurridoEn`, `id`). */
-  listarPorExpedicion(expedicionId: string, senderistaId: string): Promise<EventoPlan[]>;
+  listarPorExpedicion(senderistaId: string, expedicionId: string): Promise<EventoPlan[]>;
 }
 
 /** Solo anexar: no existe actualización ni eliminación de eventos. */

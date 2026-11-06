@@ -22,7 +22,7 @@ function clienteConRespuesta(datos: unknown, estado = 200) {
 describe('Propiedad de expedición en Supabase (HU-36)', () => {
   it('consulta solo el id filtrando por expedición y propietario', async () => {
     const { cliente, solicitudes } = clienteConRespuesta([{ id: expedicionId }]);
-    assert.equal(await new PropiedadExpedicionSupabase(cliente).esPropietario(expedicionId, actor), true);
+    assert.equal(await new PropiedadExpedicionSupabase(cliente).esPropietario(actor, expedicionId), true);
     const { url, metodo } = solicitudes[0];
     assert.equal(metodo, 'GET');
     assert.equal(url.pathname, '/rest/v1/expediciones');
@@ -33,12 +33,12 @@ describe('Propiedad de expedición en Supabase (HU-36)', () => {
 
   it('devuelve false si la expedición no existe o es ajena', async () => {
     const { cliente } = clienteConRespuesta([]);
-    assert.equal(await new PropiedadExpedicionSupabase(cliente).esPropietario(expedicionId, actor), false);
+    assert.equal(await new PropiedadExpedicionSupabase(cliente).esPropietario(actor, expedicionId), false);
   });
 
   it('traduce un error sin exponer detalles', async () => {
     const { cliente } = clienteConRespuesta({ code: 'XX000', message: 'detalle-interno' }, 500);
-    await assert.rejects(new PropiedadExpedicionSupabase(cliente).esPropietario(expedicionId, actor), {
+    await assert.rejects(new PropiedadExpedicionSupabase(cliente).esPropietario(actor, expedicionId), {
       codigoEstado: 500, codigo: 'HISTORIAL_CAMBIOS_NO_DISPONIBLE',
     });
   });

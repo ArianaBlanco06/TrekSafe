@@ -56,7 +56,7 @@ function aEvento(fila: FilaEventoPlanValida): EventoPlan {
 export class EventosPlanDAOSupabase implements IEventosPlanDAO {
   constructor(private readonly cliente: Pick<SupabaseClient, 'from'>) {}
 
-  async listarPorExpedicion(expedicionId: string, senderistaId: string): Promise<EventoPlan[]> {
+  async listarPorExpedicion(senderistaId: string, expedicionId: string): Promise<EventoPlan[]> {
     const { data, error } = await this.cliente.from('eventos_plan')
       .select(COLUMNAS)
       .eq('expedicion_id', expedicionId)

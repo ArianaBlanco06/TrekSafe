@@ -12,10 +12,10 @@ export class ConsultarHistorialCambios {
 
   async ejecutar(senderistaId: string, expedicionId: string): Promise<HistorialCambiosPlan> {
     // Ajena e inexistente responden igual y no se consultan sus eventos.
-    if (!(await this.propiedad.esPropietario(expedicionId, senderistaId))) {
+    if (!(await this.propiedad.esPropietario(senderistaId, expedicionId))) {
       throw new ErrorAplicacion(404, 'Expedición no encontrada', 'EXPEDICION_NO_ENCONTRADA');
     }
-    const eventos = await this.eventos.listarPorExpedicion(expedicionId, senderistaId);
+    const eventos = await this.eventos.listarPorExpedicion(senderistaId, expedicionId);
     return {
       expedicionId,
       cambios: eventos.map((evento) => aEntradaHistorialCambios(evento, senderistaId)),

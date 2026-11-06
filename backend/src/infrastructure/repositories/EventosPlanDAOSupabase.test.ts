@@ -38,7 +38,7 @@ function fila(datos: Record<string, unknown> = {}) {
 describe('Eventos del plan en Supabase (HU-36): SDK con transporte sustituido', () => {
   it('filtra por expedición y propietario, ordena por fecha e id y selecciona columnas explícitas', async () => {
     const { cliente, solicitudes } = clienteConRespuesta([fila()]);
-    const eventos = await new EventosPlanDAOSupabase(cliente).listarPorExpedicion(expedicionId, actor);
+    const eventos = await new EventosPlanDAOSupabase(cliente).listarPorExpedicion(actor, expedicionId);
     assert.deepEqual(eventos, [{
       id: '11111111-1111-4111-8111-111111111111', expedicionId, senderistaId: actor, tipo: 'EDITADA',
       actorId: actor, ocurridoEn: '2026-11-01T10:00:00+00:00', versionResultante: 2,
@@ -63,19 +63,19 @@ describe('Eventos del plan en Supabase (HU-36): SDK con transporte sustituido', 
       fila({ id: '22222222-2222-4222-8222-222222222222', tipo: 'DESCONOCIDO' }),
       fila({ id: '33333333-3333-4333-8333-333333333333', cambios: 'no-es-objeto' }),
     ]);
-    const eventos = await new EventosPlanDAOSupabase(cliente).listarPorExpedicion(expedicionId, actor);
+    const eventos = await new EventosPlanDAOSupabase(cliente).listarPorExpedicion(actor, expedicionId);
     assert.deepEqual(eventos.map((evento) => evento.cambios), [{ lugarFin: { antes: 'A', despues: 'B' } }, {}]);
     assert.doesNotMatch(JSON.stringify(eventos), /contrasena|extra|DESCONOCIDO/);
   });
 
   it('devuelve una lista vacía si no hay eventos', async () => {
     const { cliente } = clienteConRespuesta([]);
-    assert.deepEqual(await new EventosPlanDAOSupabase(cliente).listarPorExpedicion(expedicionId, actor), []);
+    assert.deepEqual(await new EventosPlanDAOSupabase(cliente).listarPorExpedicion(actor, expedicionId), []);
   });
 
   it('traduce un error de consulta sin exponer los detalles internos', async () => {
     const { cliente } = clienteConRespuesta({ code: 'XX000', message: 'detalle-interno-de-la-base' }, 500);
-    await assert.rejects(new EventosPlanDAOSupabase(cliente).listarPorExpedicion(expedicionId, actor), {
+    await assert.rejects(new EventosPlanDAOSupabase(cliente).listarPorExpedicion(actor, expedicionId), {
       codigoEstado: 500, codigo: 'HISTORIAL_CAMBIOS_NO_DISPONIBLE',
       message: 'No se pudo consultar el historial de cambios.',
     });

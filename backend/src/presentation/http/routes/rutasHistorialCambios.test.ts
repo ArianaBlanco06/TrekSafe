@@ -42,15 +42,15 @@ async function preparar(t: TestContext) {
   const duenos = new Map([[expedicionA, actorA], [expedicionB, actorB], [expedicionSinCambios, actorA]]);
   const consultas: string[] = [];
   const propiedad: IPropiedadExpedicion = {
-    async esPropietario(expedicionId, senderistaId) {
+    async esPropietario(senderistaId, expedicionId) {
       consultas.push(`propiedad:${expedicionId}`);
       return duenos.get(expedicionId) === senderistaId;
     },
   };
   const lector: ILectorEventosPlan = {
-    async listarPorExpedicion(expedicionId, senderistaId) {
+    async listarPorExpedicion(senderistaId, expedicionId) {
       consultas.push(`eventos:${expedicionId}`);
-      return dao.listarPorExpedicion(expedicionId, senderistaId);
+      return dao.listarPorExpedicion(senderistaId, expedicionId);
     },
   };
   const app = express();

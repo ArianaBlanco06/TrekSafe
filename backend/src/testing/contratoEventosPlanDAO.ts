@@ -50,7 +50,7 @@ export function verificarContratoEventosPlanDAO(
       assert.ok(primero.id);
       assert.notEqual(primero.id, segundo.id);
       assert.equal(primero.ocurridoEn, '2026-11-01T10:00:00.000Z');
-      assert.deepEqual(await c.dao.listarPorExpedicion(c.expedicionA, c.senderistaA), [primero, segundo]);
+      assert.deepEqual(await c.dao.listarPorExpedicion(c.senderistaA, c.expedicionA), [primero, segundo]);
     });
 
     it('rechaza un operacionId repetido sin sobrescribir el evento original', async (t) => {
@@ -60,7 +60,7 @@ export function verificarContratoEventosPlanDAO(
         c.dao.registrar(nuevo(c, { operacionId: original.operacionId, tipo: 'CANCELADA', motivo: 'otro' })),
         { codigoEstado: 409, codigo: 'OPERACION_YA_REGISTRADA' },
       );
-      assert.deepEqual(await c.dao.listarPorExpedicion(c.expedicionA, c.senderistaA), [original]);
+      assert.deepEqual(await c.dao.listarPorExpedicion(c.senderistaA, c.expedicionA), [original]);
     });
 
     it('ordena por fecha ascendente y desempata por id de forma estable', async (t) => {
@@ -71,19 +71,19 @@ export function verificarContratoEventosPlanDAO(
       const empateA = await c.dao.registrar(nuevo(c));
       const empateB = await c.dao.registrar(nuevo(c));
       const empatados = [empateA, empateB].sort((a, b) => a.id.localeCompare(b.id));
-      const lista = await c.dao.listarPorExpedicion(c.expedicionA, c.senderistaA);
+      const lista = await c.dao.listarPorExpedicion(c.senderistaA, c.expedicionA);
       assert.deepEqual(lista.map((evento) => evento.id), [...empatados.map((evento) => evento.id), tardio.id]);
-      assert.deepEqual(await c.dao.listarPorExpedicion(c.expedicionA, c.senderistaA), lista);
+      assert.deepEqual(await c.dao.listarPorExpedicion(c.senderistaA, c.expedicionA), lista);
     });
 
     it('solo devuelve eventos de la expedición y del propietario indicados', async (t) => {
       const c = await crearContexto(t);
       const propio = await c.dao.registrar(nuevo(c));
       await c.dao.registrar(nuevo(c, { expedicionId: c.expedicionB, senderistaId: c.senderistaB, actorId: c.senderistaB }));
-      assert.deepEqual(await c.dao.listarPorExpedicion(c.expedicionA, c.senderistaA), [propio]);
-      assert.deepEqual(await c.dao.listarPorExpedicion(c.expedicionA, c.senderistaB), []);
-      assert.deepEqual(await c.dao.listarPorExpedicion(c.expedicionB, c.senderistaA), []);
-      assert.deepEqual(await c.dao.listarPorExpedicion('ffffffff-ffff-4fff-8fff-ffffffffffff', c.senderistaA), []);
+      assert.deepEqual(await c.dao.listarPorExpedicion(c.senderistaA, c.expedicionA), [propio]);
+      assert.deepEqual(await c.dao.listarPorExpedicion(c.senderistaB, c.expedicionA), []);
+      assert.deepEqual(await c.dao.listarPorExpedicion(c.senderistaA, c.expedicionB), []);
+      assert.deepEqual(await c.dao.listarPorExpedicion(c.senderistaA, 'ffffffff-ffff-4fff-8fff-ffffffffffff'), []);
     });
 
     it('sanea cambios al registrar y devuelve copias que no alteran lo guardado', async (t) => {
@@ -93,9 +93,9 @@ export function verificarContratoEventosPlanDAO(
         cambios: { idsContactos: { antes: ['c1'], despues: ['c1', 'c2'] }, ...inyectado },
       }));
       assert.deepEqual(registrado.cambios, { idsContactos: { antes: ['c1'], despues: ['c1', 'c2'] } });
-      const [leido] = await c.dao.listarPorExpedicion(c.expedicionA, c.senderistaA);
+      const [leido] = await c.dao.listarPorExpedicion(c.senderistaA, c.expedicionA);
       (leido.cambios.idsContactos?.despues as string[]).push('c3');
-      const [releido] = await c.dao.listarPorExpedicion(c.expedicionA, c.senderistaA);
+      const [releido] = await c.dao.listarPorExpedicion(c.senderistaA, c.expedicionA);
       assert.deepEqual(releido.cambios.idsContactos?.despues, ['c1', 'c2']);
     });
 
