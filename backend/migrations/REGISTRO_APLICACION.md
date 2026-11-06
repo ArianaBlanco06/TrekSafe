@@ -13,6 +13,8 @@ Solo se anotan aplicaciones reales sobre un entorno (DEV, producción u otro). L
 | `005_hu27_rpc_cancelar_expedicion.sql` | 005 | 2026-11-06 03:41 UTC | DEV | 2fee4ea | Ariana | OK |
 | `006_hu27_permiso_anonimizar_eventos.sql` | 006 | 2026-11-06 03:41 UTC | DEV | 2fee4ea | Ariana | OK |
 | `007_hu35_rpc_ampliar_retorno.sql` | 007 | 2026-11-06 03:56 UTC | DEV | 780413c | Ariana | OK |
+| `010_hu32_puntos_ruta.sql` | 010 | 2026-11-06 05:23 UTC | DEV | 594b23f | Ariana | OK |
 
-HU-32: Ariana confirmó en DEV la estructura final ya aplicada, incluyendo la versión INTEGER de HU-26 y `hu32_chk_version_segura`. El archivo se identifica ahora como `010_hu32_puntos_ruta.sql`. El asiento `010` y sus metadatos están pendientes de que Ariana los registre después de aprobar CI; no se añade una fila de ejecución ficticia ni se debe volver a ejecutar el DDL completo en DEV.
-
+HU-32: la estructura final está aplicada y verificada en Supabase DEV.
+El asiento administrativo 010 fue registrado correctamente en public.treksafe_migraciones el 2026-11-06 a las 05:23 UTC.
+No volver a ejecutar el DDL completo de HU-32 en DEV.
