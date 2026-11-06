@@ -24,8 +24,8 @@ Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos
 | `003_hu26_rpc_editar_expedicion.sql` | Función `treksafe_editar_expedicion` | `002` |
 | `20261101_hu30_listas_equipo.sql` | Tablas de listas personales e ítems, relaciones y permisos | Esquema inicial |
 | `20261101_hu30_operaciones_equipo.sql` | Posición de ítems y RPC de listas de equipo | `20261101_hu30_listas_equipo.sql` |
-| `004_hu31_preparacion_expedicion.sql` | Copia de equipo por expedición, ítems, restricciones y permisos | Las dos migraciones de HU-30 |
-| `005_hu31_operaciones_preparacion.sql` | RPC de consulta, asociación atómica y marcas de preparación | `004_hu31_preparacion_expedicion.sql` |
+| `008_hu31_preparacion_expedicion.sql` | Copia de equipo por expedición, ítems, restricciones y permisos | Las dos migraciones de HU-30; integrar después de HU-27 |
+| `009_hu31_operaciones_preparacion.sql` | RPC de consulta, asociación atómica y marcas de preparación | `008_hu31_preparacion_expedicion.sql` |
 
 Las migraciones `002` y `003` son re-ejecutables. No dependen de
 `000_registro_migraciones.sql`: si la tabla `treksafe_migraciones` existe, registran
@@ -141,11 +141,22 @@ Esta ejecución no se conectó a Supabase ni acredita una aplicación en DEV.
 
 ## HU-31: preparación de equipo por expedición
 
-Los archivos `004_hu31_preparacion_expedicion.sql` y
-`005_hu31_operaciones_preparacion.sql` se prepararon y comprobaron localmente el
-5 de noviembre de 2026. **Su aplicación en DEV sigue pendiente.** Sebastian debe
-confirmar la numeración y el orden con las migraciones de otras ramas antes de
-registrar y ejecutar esta entrega. Se aplican una sola vez; no son re-ejecutables.
+Los archivos `008_hu31_preparacion_expedicion.sql` y
+`009_hu31_operaciones_preparacion.sql` sustituyen los nombres iniciales de HU-31
+para evitar el choque de numeración con HU-27 (PR #65), que se integra antes.
+**Su aplicación en DEV sigue pendiente.** Se aplican una sola vez; no son
+re-ejecutables.
+
+Antes de `COMMIT`, cada archivo registra su versión (`008` o `009`), nombre y
+`HU-31` en `public.treksafe_migraciones` solo si esa tabla existe. El bloque usa
+`ON CONFLICT (version) DO NOTHING`, igual que HU-27. Esto hace repetible el
+registro, no el DDL de tablas o funciones. No se crea ni modifica la tabla de
+registro y no se vuelven a ejecutar `000` o `001` en DEV.
+
+La suite local de HU-31 comprueba estos archivos completos sin registro, con
+registro vacío y con versiones existentes. Las versiones previas conservan su
+fecha y autor. Esas variantes usan bases temporales nuevas y las eliminan al
+terminar; no reejecutan el DDL sobre las tablas de preparación ya creadas.
 
 Se requieren las dos migraciones de HU-30, incluyendo la posición de sus ítems.
 El orden es el de dependencias de esta tabla, no el orden alfabético de archivos.

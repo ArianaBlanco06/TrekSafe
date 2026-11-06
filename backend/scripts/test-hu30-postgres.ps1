@@ -33,8 +33,8 @@ try {
     )
     if ($IncluirPreparacion) {
         $files += @(
-            'backend/migrations/004_hu31_preparacion_expedicion.sql',
-            'backend/migrations/005_hu31_operaciones_preparacion.sql',
+            'backend/migrations/008_hu31_preparacion_expedicion.sql',
+            'backend/migrations/009_hu31_operaciones_preparacion.sql',
             'backend/migrations/tests/hu31_preparacion.test.sql'
         )
     }

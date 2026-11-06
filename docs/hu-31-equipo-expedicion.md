@@ -280,8 +280,8 @@ dentro de la transacción. Estos requisitos se verificaron en la entrega siguien
 
 ## Implementación y comprobación de la fase 3
 
-Se añadieron las migraciones `004_hu31_preparacion_expedicion.sql` y
-`005_hu31_operaciones_preparacion.sql`, el adaptador
+Se añadieron las migraciones `008_hu31_preparacion_expedicion.sql` y
+`009_hu31_operaciones_preparacion.sql`, el adaptador
 `RepositorioPreparacionExpedicionSupabase`, DTO, controlador y router propios.
 El ensamblaje inyecta el adaptador en el servicio sin cambiar los DAO de HU-30 o
 de edición del plan. El router protege solo sus tres rutas y no intercepta las
@@ -306,8 +306,9 @@ comprobó la consulta HTTP y persistencia de marcas con dos usuarios ficticios.
 
 Resultados reproducibles, comando local y límites en
 [hu-31-validacion.md](hu-31-validacion.md). Las migraciones se aplicaron únicamente
-en la base local desechable. Sebastian debe confirmar numeración y orden antes
-de DEV. La prueba SQL de completar el estado con pendientes no sustituye todavía
+en la base local desechable. Los nombres `008` y `009` evitan el choque con HU-27,
+que se integra antes, y registran su versión condicionalmente como esa historia.
+La prueba SQL de completar el estado con pendientes no sustituye todavía
 el recorrido de contraseña y retorno seguro desde la PWA, previsto en las fases
 de interfaz y validación funcional.
 
@@ -358,3 +359,17 @@ La ejecución final pasó 229 pruebas backend, 43 frontend con ambas integracion
 PostgreSQL y 14 de navegador. También pasaron los tipos y las compilaciones. Se
 revisaron las capturas móviles y se verificó la limpieza de la base temporal y su
 apagado. Los comandos y límites están en [hu-31-validacion.md](hu-31-validacion.md).
+
+## Ajustes de revisión antes de integrar
+
+La revisión del equipo asignó a HU-31 las versiones `008` y `009` para evitar
+el choque de nombres con HU-27. Ambas migraciones registran condicionalmente su
+aplicación en `treksafe_migraciones` dentro de la transacción y sin sobrescribir
+registros existentes. Se comprobó el comportamiento con los archivos completos
+en tres bases locales independientes, y se actualizaron todas las referencias.
+
+La referencia local de `develop` actualizada por Jhon es `f5d7bd4`, que incorpora
+HU-28 y HU-29. La integración debe conservar en `app.ts` los módulos de historial,
+plantillas y preparación; en `cachePrivada.test.ts`, sus tres rutas privadas; y
+en el historial, los accesos de repetir expedición y consultar equipo. La
+validación posterior al merge y la aplicación en DEV siguen pendientes.

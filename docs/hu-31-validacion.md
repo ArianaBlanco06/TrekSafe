@@ -141,6 +141,37 @@ funcional completa del retorno desde la PWA corresponde a las fases siguientes.
 
 Quedan pendientes las migraciones de HU-31 en DEV coordinadas con
 Sebastian, la prueba funcional real con dos cuentas, la evidencia del PR y la
-revisión y aceptación del equipo. La numeración de `004` y `005` debe confirmarse
-con Sebastian antes de aplicarlas en la base compartida. HU-31 todavía no está
+revisión y aceptación del equipo. Las migraciones se renombraron a
+`008_hu31_preparacion_expedicion.sql` y `009_hu31_operaciones_preparacion.sql`
+para integrarlas después de HU-27 sin colisiones. HU-31 todavía no está
 lista para declararse terminada.
+
+## Ajuste de numeración y registro de migraciones
+
+Por revisión del equipo se sustituyeron los nombres iniciales de HU-31 por
+`008_hu31_preparacion_expedicion.sql` y
+`009_hu31_operaciones_preparacion.sql`, evitando la colisión con HU-27 (PR #65),
+que debe integrarse antes. Se actualizaron las cabeceras, las referencias y el
+ejecutor local de pruebas.
+
+Cada archivo añade antes de `COMMIT` el mismo patrón de HU-27: comprueba
+`to_regclass('public.treksafe_migraciones')`, inserta versión, nombre y `HU-31`
+mediante SQL dinámico y usa `ON CONFLICT (version) DO NOTHING`. El registro es
+condicional e idempotente; las migraciones de creación siguen aplicándose una
+sola vez.
+
+Se ejecutaron los archivos completos en tres bases nuevas de PostgreSQL local:
+sin tabla de registro, con la tabla vacía y con ambas versiones preexistentes.
+Se comprobaron la ausencia de creación implícita del registro, las filas `008`
+y `009` correctas y la conservación de fecha y autor cuando ya existían.
+Las tres bases adicionales se eliminaron al terminar.
+
+La ejecución aprobó 232 pruebas backend y 43 frontend con PostgreSQL, además de
+la verificación de tipos del backend. Los datos de prueba quedaron limpios y se
+apagó la instancia. Estas comprobaciones corresponden a la rama de HU-31 antes
+de integrar el `origin/develop` actualizado a `f5d7bd4`; después de resolver los
+conflictos se deberán volver a ejecutar las validaciones de integración.
+
+Las migraciones no se aplicaron en Supabase DEV y no se publicaron comentarios
+ni un PR desde el asistente. Git, la actualización de rama y la publicación
+permanecen a cargo de Jhon según lo acordado.

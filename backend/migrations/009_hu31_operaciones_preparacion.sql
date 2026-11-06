@@ -1,4 +1,6 @@
--- Aplicar una vez despues de 004_hu31_preparacion_expedicion.sql.
+-- 009 · HU-31: consulta, asociacion y marcas de preparacion.
+-- Aplicar una vez despues de 008_hu31_preparacion_expedicion.sql.
+-- No depende de 000: registra la aplicacion solo si treksafe_migraciones existe.
 BEGIN;
 
 CREATE FUNCTION public.treksafe_obtener_preparacion(p_senderista_id UUID, p_expedicion_id UUID)
@@ -109,5 +111,17 @@ REVOKE ALL ON FUNCTION public.treksafe_obtener_preparacion(UUID, UUID),
 GRANT EXECUTE ON FUNCTION public.treksafe_obtener_preparacion(UUID, UUID),
     public.treksafe_asociar_lista_expedicion(UUID, UUID, UUID),
     public.treksafe_establecer_item_preparado(UUID, UUID, UUID, BOOLEAN) TO service_role;
+
+DO $$
+BEGIN
+    IF to_regclass('public.treksafe_migraciones') IS NOT NULL THEN
+        EXECUTE $sql$
+            INSERT INTO public.treksafe_migraciones (version, nombre, hu)
+            VALUES ('009', 'hu31_operaciones_preparacion', 'HU-31')
+            ON CONFLICT (version) DO NOTHING
+        $sql$;
+    END IF;
+END
+$$;
 
 COMMIT;

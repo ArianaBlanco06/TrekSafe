@@ -1,5 +1,6 @@
--- Aplicar una vez, después de las dos migraciones de HU-30.
--- Confirmar numeración y orden con Sebastian antes de aplicar en DEV.
+-- 008 · HU-31: copia de equipo por expedicion.
+-- Aplicar una vez, despues de HU-27 y de las dos migraciones de HU-30.
+-- No depende de 000: registra la aplicacion solo si treksafe_migraciones existe.
 BEGIN;
 
 CREATE TABLE public.preparaciones_expedicion (
@@ -41,5 +42,17 @@ GRANT SELECT, INSERT, UPDATE, DELETE
     ON public.preparaciones_expedicion, public.items_preparacion_expedicion TO service_role;
 -- SELECT FOR UPDATE requiere permisos de lectura y actualizacion del backend.
 GRANT SELECT, UPDATE ON public.expediciones TO service_role;
+
+DO $$
+BEGIN
+    IF to_regclass('public.treksafe_migraciones') IS NOT NULL THEN
+        EXECUTE $sql$
+            INSERT INTO public.treksafe_migraciones (version, nombre, hu)
+            VALUES ('008', 'hu31_preparacion_expedicion', 'HU-31')
+            ON CONFLICT (version) DO NOTHING
+        $sql$;
+    END IF;
+END
+$$;
 
 COMMIT;
