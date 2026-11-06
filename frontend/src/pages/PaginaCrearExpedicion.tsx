@@ -3,10 +3,13 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronDown, ChevronLeft, ChevronUp, Globe, Plus, WifiOff, X } from 'lucide-react';
 import { FieldError, FieldLabel } from '@/components/Layout';
 import { CoordinatePickerMapLazy } from '@/components/maps/CoordinatePickerMapLazy';
+import { GuardarComoPlantilla } from '@/components/plantillas/GuardarComoPlantilla';
+import { SelectorPlantillasCuenta } from '@/components/plantillas/SelectorPlantillasCuenta';
 import type { CoordinatePickerMapProps, CoordinatePickerTarget } from '@/components/maps/CoordinatePickerMap';
 import { PrepararExpedicionDesdeHistorial } from '@/components/expedicion/PrepararExpedicionDesdeHistorial';
 import { useAutenticacion } from '@/context/ContextoAutenticacion';
 import { useEstadoEnLinea } from '@/hooks/useEstadoEnLinea';
+import { mensajeAplicacionBorrador, type BorradorDesdePlantilla } from '@/lib/plantillasCuentaLogica';
 import { validateCoordinateInput } from '@/lib/coordinates';
 import { getSessionScope } from '@/lib/sesion';
 import { cachearContactos, obtenerContactosCacheados } from '@/lib/offlineContacts';
@@ -45,6 +48,8 @@ export function FormularioCrearExpedicion({ borrador, Mapa = CoordinatePickerMap
   const [scope] = useState(getSessionScope);
   const navigate = useNavigate();
   const enLinea = useEstadoEnLinea();
+  const { usuario } = useAutenticacion();
+  const [versionPlantillasCuenta, setVersionPlantillasCuenta] = useState(0);
   const [contactos, setContactos] = useState<ContactoEmergencia[]>([]);
   const [plantillas, setPlantillas] = useState<PlantillaRuta[]>([]);
   const [borradoresPendientes, setBorradoresPendientes] = useState(0);
@@ -175,6 +180,23 @@ export function FormularioCrearExpedicion({ borrador, Mapa = CoordinatePickerMap
     setMinutosTolerancia(plantilla.minutosTolerancia);
     setErrorCoordInicio('');
     setErrorCoordFin('');
+  };
+
+  const aplicarBorradorPlantilla = (desdePlantilla: BorradorDesdePlantilla) => {
+    setLugarInicio(desdePlantilla.lugarInicio);
+    setLugarFin(desdePlantilla.lugarFin);
+    setCoordenadasInicio(desdePlantilla.coordenadasInicio ?? '');
+    setCoordenadasFin(desdePlantilla.coordenadasFin ?? '');
+    setMinutosTolerancia(desdePlantilla.minutosTolerancia);
+    setIdsContactosSeleccionados(desdePlantilla.idsContactos);
+    setContactosRevisados(false);
+    setNombresAcompanantes(desdePlantilla.nombresAcompanantes.length > 0 ? desdePlantilla.nombresAcompanantes : ['']);
+    setHoraInicio('');
+    setHoraRetornoEstimada('');
+    setErrorCoordInicio('');
+    setErrorCoordFin('');
+    setError('');
+    setInfo(mensajeAplicacionBorrador(desdePlantilla));
   };
 
   const validarCoordenadas = (): boolean => {
@@ -321,6 +343,16 @@ export function FormularioCrearExpedicion({ borrador, Mapa = CoordinatePickerMap
 
       {info && <div className="mb-4 p-3 rounded-xl bg-primary/10 text-primary text-sm">{info}</div>}
       {error && <div role="alert" className="error-banner mb-4">{error}</div>}
+
+      {usuario && !borrador && (
+        <SelectorPlantillasCuenta
+          usuarioId={usuario.id}
+          enLinea={enLinea}
+          contactos={contactos}
+          versionLista={versionPlantillasCuenta}
+          onAplicar={aplicarBorradorPlantilla}
+        />
+      )}
 
       {plantillas.length > 0 && (
         <div className="mb-6">
@@ -576,6 +608,20 @@ export function FormularioCrearExpedicion({ borrador, Mapa = CoordinatePickerMap
             <Plus size={16} /> Agregar acompañante
           </button>
         </div>
+
+        <GuardarComoPlantilla
+          enLinea={enLinea}
+          datos={{
+            lugarInicio: lugarInicio.trim(),
+            lugarFin: lugarFin.trim(),
+            coordenadasInicio: coordenadasInicio.trim() || undefined,
+            coordenadasFin: coordenadasFin.trim() || undefined,
+            minutosTolerancia,
+            idsContactos: idsContactosSeleccionados,
+            nombresAcompanantes: acompanantesValidos,
+          }}
+          onGuardada={() => setVersionPlantillasCuenta((v) => v + 1)}
+        />
 
         </fieldset>
         <button type="submit" className="btn-primary" disabled={!puedeEnviar || cargando}>

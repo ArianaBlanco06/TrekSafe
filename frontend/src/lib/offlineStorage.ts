@@ -1,7 +1,7 @@
 import { getSessionScope } from './sesion';
 
-type ClaveOffline = 'route-templates' | 'expedition-drafts';
-const clavesPermitidas = new Set<ClaveOffline>(['route-templates', 'expedition-drafts']);
+export type ClaveOffline = 'route-templates' | 'expedition-drafts' | 'account-templates';
+const clavesPermitidas = new Set<ClaveOffline>(['route-templates', 'expedition-drafts', 'account-templates']);
 const cacheName = (scope: string) => `treksafe-offline-v2-${scope}`;
 const lsKey = (scope: string, key: ClaveOffline) => `treksafe:offline-v2:${scope}:${key}`;
 const dataUrl = (key: ClaveOffline) => new URL(`/__treksafe_offline__/${key}`, location.origin).href;
