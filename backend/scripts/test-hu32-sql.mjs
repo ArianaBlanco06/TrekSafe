@@ -80,8 +80,8 @@ const port = await new Promise((resolve, reject) => {
     server.close((error) => error ? reject(error) : resolve(assigned));
   });
 });
-const sql = (text) => command(exe('psql'), [
-  '-X', '-h', '127.0.0.1', '-p', String(port), '-U', user, '-d', 'postgres',
+const sql = (text, database = 'postgres') => command(exe('psql'), [
+  '-X', '-h', '127.0.0.1', '-p', String(port), '-U', user, '-d', database,
   '-v', 'ON_ERROR_STOP=1', '-A', '-t', '-q',
 ], text);
 const literal = (value) => `'${String(value).replaceAll("'", "''")}'`;
@@ -157,7 +157,7 @@ try {
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon, authenticated, service_role;`);
   // Esquema real del proyecto; solo se ejecuta en este cluster recien creado.
   await sql(await readFile(path.join(root, 'init_schema.sql'), 'utf8'));
-  const migration = await readFile(path.join(root, 'backend/migrations/hu32_puntos_ruta.sql'), 'utf8');
+  const migration = await readFile(path.join(root, 'backend/migrations/010_hu32_puntos_ruta.sql'), 'utf8');
 
   await test('precondicion de version: fallo sin crear ni modificar tablas', async () => {
     await assert.rejects(sql(migration), /HU32_VERSION_REQUERIDA/);
@@ -173,7 +173,47 @@ try {
     await sql('ALTER TABLE public.expediciones DROP COLUMN version;');
   });
   await sql('ALTER TABLE public.expediciones ADD COLUMN version integer NOT NULL DEFAULT 1;');
-  await sql(migration);
+  await test('010 se aplica sin tabla de registro y no la crea', async () => {
+    await sql(migration);
+    assert.equal(await sql("SELECT to_regclass('public.treksafe_migraciones') IS NULL;"), 't');
+    assert.equal(await sql("SELECT to_regclass('public.puntos_ruta') IS NOT NULL;"), 't');
+  });
+  // Cada variante instala el archivo completo una sola vez en otra base del
+  // mismo cluster desechable. No se reejecuta el DDL sobre puntos ya creados.
+  for (const existente of [false, true]) {
+    await test(existente
+      ? '010 conserva un registro previo, su fecha, autor y las otras versiones'
+      : '010 se registra cuando la tabla de migraciones esta vacia', async () => {
+      const database = existente ? 'hu32_registro_existente' : 'hu32_registro_vacio';
+      await sql(`CREATE DATABASE ${database};`);
+      const fixtureSql = (text) => sql(text, database);
+      await fixtureSql(await readFile(path.join(root, 'init_schema.sql'), 'utf8'));
+      await fixtureSql('ALTER TABLE public.expediciones ADD COLUMN version integer NOT NULL DEFAULT 1;');
+      await fixtureSql(await readFile(path.join(root, 'backend/migrations/000_registro_migraciones.sql'), 'utf8'));
+      await fixtureSql('DELETE FROM public.treksafe_migraciones;');
+      if (existente) {
+        await fixtureSql(`INSERT INTO public.treksafe_migraciones(version,nombre,hu,aplicada_en,aplicada_por)
+          VALUES ('010','hu32_puntos_ruta','HU-32','2000-01-01T00:00:00Z','equipo-pruebas'),
+                 ('009','hu31_operaciones_preparacion','HU-31','2000-01-01T00:00:00Z','equipo-pruebas');`);
+      }
+      const registry = () => fixtureSql(`SELECT coalesce(jsonb_agg(to_jsonb(m) ORDER BY version), '[]'::jsonb)
+        FROM public.treksafe_migraciones m;`);
+      const before = await registry();
+      await fixtureSql(migration);
+      if (existente) {
+        assert.deepEqual(JSON.parse(await registry()), JSON.parse(before));
+      } else {
+        const entries = JSON.parse(await registry());
+        assert.equal(entries.length, 1);
+        assert.equal(entries[0].version, '010');
+        assert.equal(entries[0].nombre, 'hu32_puntos_ruta');
+        assert.equal(entries[0].hu, 'HU-32');
+        assert.equal(entries[0].aplicada_por, user);
+        assert.ok(Number.isFinite(Date.parse(entries[0].aplicada_en)));
+      }
+      assert.equal(await fixtureSql("SELECT to_regclass('public.puntos_ruta') IS NOT NULL;"), 't');
+    });
+  }
   await test('contrato de catalogo: columna y RPC INTEGER sin sobrecarga BIGINT', async () => {
     assert.equal(await sql("SELECT atttypid='integer'::regtype FROM pg_attribute WHERE attrelid='public.expediciones'::regclass AND attname='version';"), 't');
     assert.equal(await sql("SELECT to_regprocedure('public.treksafe_guardar_puntos_ruta(uuid,uuid,integer,jsonb)') IS NOT NULL;"), 't');
@@ -410,6 +450,17 @@ try {
     console.log('Contrato del backend verificado con memoria y PostgreSQL temporal.');
   }
   if (withBrowser) {
+    // Develop ya consulta eventos_plan desde la expedicion activa (HU-35).
+    // Instalar las migraciones reales de plan en este cluster temporal antes
+    // de arrancar PostgREST; no simular la relacion ni omitir la regresion.
+    for (const filename of [
+      '002_hu26_version_y_eventos_plan.sql', '003_hu26_rpc_editar_expedicion.sql',
+      '004_hu27_estado_cancelada.sql', '005_hu27_rpc_cancelar_expedicion.sql',
+      '006_hu27_permiso_anonimizar_eventos.sql', '007_hu35_rpc_ampliar_retorno.sql',
+    ]) {
+      await sql(await readFile(path.join(root, 'backend/migrations', filename), 'utf8'));
+    }
+    console.log('Migraciones reales HU-26/HU-27/HU-35 instaladas solo en el cluster temporal.');
     const controlToken = randomUUID();
     const child = fork(path.join(root, 'backend/scripts/hu32-integration-server.mjs'), [], {
       env: { ...env, TREKSAFE_HU32_CONTROL_TOKEN: controlToken, TREKSAFE_HU32_POSTGREST_BIN: postgrestBin,

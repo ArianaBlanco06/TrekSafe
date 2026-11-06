@@ -6,7 +6,7 @@ El equipo indicó utilizar `expediciones.version INTEGER`, siguiendo HU-26 de Fa
 
 ## Contrato aplicado
 
-- La [migración](../../backend/migrations/hu32_puntos_ruta.sql) requiere `version INTEGER NOT NULL` con default. La columna debe existir por HU-26; HU-32 no la crea ni cambia su tipo.
+- La [migración](../../backend/migrations/010_hu32_puntos_ruta.sql) requiere `version INTEGER NOT NULL` con default. La columna debe existir por HU-26; HU-32 no la crea ni cambia su tipo.
 - La RPC de guardado y sus permisos usan `treksafe_guardar_puntos_ruta(uuid, uuid, integer, jsonb)`.
 - Versiones válidas: 1..2147483647. La API rechaza valores mayores, no positivos o fraccionarios con `400`; el adaptador también valida el rango de la respuesta RPC. TypeScript mantiene el tipo `number`.
 - Un cambio efectivo desde 2147483646 alcanza 2147483647. En el máximo, un guardado idéntico conserva datos y versión; un cambio efectivo falla sin modificar puntos ni metadatos. No hay reinicio ni vuelta a cero.

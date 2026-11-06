@@ -2,6 +2,8 @@
 
 Responsable: **Andriy Hitoshi Enciso Rojas (@Hitoshi)**. Release 2, sprint 1, **5 SP**.
 
+Revisión posterior solicitada por Ariana para PR #63: HU-26 y la estructura final HU-32 ya están aplicadas y verificadas en DEV según su confirmación. **No volver a ejecutar el SQL en DEV.** La migración se renombra a `010_hu32_puntos_ruta.sql` e incorpora registro condicional para instalaciones nuevas; Ariana registrará únicamente el asiento `010` en DEV tras CI. El listado conserva «Editar», «Gestionar puntos» y «Cancelar» dentro del mismo contenedor con `flex-wrap`. Resultado y pendientes en [revisión PR #63](revision-pr63.md). Los resultados siguientes conservan la fotografía anterior a esta revisión.
+
 Actualización del 5 de noviembre de 2026: contenido de los conflictos con `develop` combinado y validado en `feat/hu-32-puntos`. Pasaron 305 pruebas backend, 64 frontend, 12 UI HU-32, 39 comprobaciones SQL, 28 pruebas de contrato, 9 escenarios integrados reales y 14 escenarios PWA/compatibilidad, además de tipos y builds. Los grupos se solapan y algunas integraciones SQL de otras historias se omiten sin conexión configurada. Andriy debe marcar la resolución y finalizar el merge en Git; CI remoto, revisión y aplicación en DEV siguen pendientes. Véase [integración con develop](integracion-develop.md) y [plantilla del PR](borrador-pr.md).
 
 Estado al 1 de noviembre de 2026: implementación local y validación integrada completadas; paquete preparado para revisión del equipo. La aceptación del PO y la integración en DEV están pendientes. Este documento no cambia el estado del tablero o del backlog.
@@ -42,11 +44,11 @@ La fase 6 terminó con código 0 usando **Node 22.23.4**, PostgreSQL 18.6, Postg
 
 Los grupos tienen casos repetidos entre ejecuciones; no representan una suma de casos únicos ni un porcentaje de cobertura. La prueba fue local y aislada: no certifica la configuración del proyecto remoto de Supabase.
 
-## Condiciones para integrar en DEV
+## Estado de DEV y pendientes para integrar PR #63
 
-1. Integrar primero la migración de HU-26 que aporta `expediciones.version INTEGER NOT NULL` con default (fixture inicial: 1). Nombre y tipo confirmados por el mensaje del equipo; coordinar con Favio/Sebastian las reglas de incremento y aplicación.
-2. Sebastian coordina el orden y la aplicación de la migración de versión y de `hu32_puntos_ruta.sql`; registra entorno, fecha, archivo y commit que proporcione Andriy.
-3. Se revisa la compatibilidad con edición/cancelación de otras ramas y la política de cron compartido. El fixture de las pruebas no instala la versión en DEV ni incorpora HU-27.
+1. Ariana confirmó HU-26 y HU-32 en DEV, con INTEGER y `hu32_chk_version_segura`. Esta confirmación reemplaza el pendiente de aplicación anterior; el asistente no consultó ni modificó la base remota.
+2. No reejecutar `010_hu32_puntos_ruta.sql` en DEV: Ariana añadirá solo el asiento `010` al aprobar CI, con los metadatos reales. El bloque condicional del archivo sirve para instalaciones nuevas, no convierte el DDL en idempotente.
+3. Conservar HU-27/HU-35 de develop junto con los controles de puntos. Las migraciones reales de esas historias se incorporan al fixture temporal de navegador; no se instalan en DEV desde las pruebas.
 4. El equipo revisa el cambio y Marko registra su aceptación funcional. Ariana coordina la revisión y la evidencia.
 
 Git, ramas, commits, push y PR permanecen bajo el control de Andriy. Andriy comunicó el PR #63; el asistente no lo consultó ni modificó.

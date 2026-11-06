@@ -86,12 +86,43 @@ test('acceso desde el listado y extremos de solo lectura', async ({ page }) => {
     .toHaveAttribute('href', `/expediciones/${planId}/editar`);
   await expect(page.getByRole('link', { name: /Revisar equipo de la expedición/ }))
     .toHaveAttribute('href', `/senderista/expedicion/${planId}/equipo`);
+  await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Cancelar expedición' })).toBeVisible();
+  await page.getByRole('button', { name: 'Volver', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.getByRole('link', { name: 'Gestionar puntos' }).click();
   await expect(page).toHaveURL(path);
   await expect(page.getByRole('heading', { name: 'Puntos de la ruta' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Extremos de la ruta' })).toContainText('Cebollapampa');
   await expect(page.getByRole('region', { name: 'Extremos de la ruta' }).locator('input')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Guardar puntos', exact: true })).toBeDisabled();
+});
+
+test('cancelar desde el listado actualiza el estado y retira los tres controles de programada', async ({ page }) => {
+  const estado = await preparar(page);
+  let cancelaciones = 0;
+  await page.route(`**/api/expediciones/${planId}/cancelar`, async route => {
+    expect(route.request().method()).toBe('POST');
+    expect(route.request().headers().authorization).toBe('Bearer token-ficticio-hu32');
+    const body = route.request().postDataJSON() as { operacionId: string; motivo: string };
+    expect(body.operacionId).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(body.motivo).toBe('Cambio de planes');
+    cancelaciones++;
+    return route.fulfill({ json: { mensaje: 'Expedición cancelada',
+      expedicion: { id: planId, estado: 'cancelada', version: 2 } } });
+  });
+  await page.goto('/senderista/expedicion');
+  await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
+  await page.getByLabel('Motivo (opcional)').fill('Cambio de planes');
+  await page.getByRole('button', { name: 'Cancelar expedición', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('cancelada');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Editar', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Gestionar puntos' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Cancelar', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /Revisar equipo de la expedición/ })).toBeVisible();
+  expect(cancelaciones).toBe(1);
+  expect(estado.guardados).toEqual([]);
 });
 
 test('agregar, editar, reordenar, guardar y recargar conserva IDs y orden', async ({ page }) => {

@@ -2,6 +2,8 @@
 
 Fecha: 5 de noviembre de 2026. Responsable: Andriy Hitoshi Enciso Rojas (@Hitoshi).
 
+Nota posterior: este informe conserva la primera integración con develop. Ariana confirmó después la estructura HU-26/HU-32 en DEV y solicitó numerar el archivo como `010`, añadir su registro condicional y conservar cancelación HU-27/HU-35. Véase [revisión PR #63](revision-pr63.md), que reemplaza el pendiente de aplicar el DDL en DEV por el registro administrativo `010` a cargo de Ariana. No volver a ejecutar el SQL completo.
+
 Andriy inició el merge de `origin/develop` sobre `feat/hu-32-puntos`. La revisión local encontró HEAD `bad06a1` y MERGE_HEAD `98e8753`. Estos identifican las versiones incorporadas por el merge en curso; no se ejecutó fetch ni se certificó que el remoto no haya avanzado después.
 
 El contenido de los conflictos quedó combinado y validado. El índice de Git seguirá indicando siete archivos sin resolver hasta que Andriy ejecute `git add` y finalice el merge. Commit, push y publicación/revisión del PR permanecen a su cargo. El asistente no modificó ramas, referencias o índice de Git.
@@ -62,7 +64,7 @@ Además, ejecutar `typecheck:tests`, `test:equipo` y `test:pwa:privacidad` desde
 2. Usar `develop` como destino del PR. Si ya hay uno abierto con esa misma rama, actualizarlo en lugar de duplicarlo. No se consultó ni se creó ningún PR desde esta intervención.
 3. Verificar GitHub Actions después del push; la aprobación local no representa una ejecución remota de CI.
 4. Enlazar el issue real de HU-32 y adjuntar evidencias con datos ficticios. El ID del backlog no permite asumir que el issue sea #32.
-5. Sebastian coordina aplicación y registro de `hu32_puntos_ruta.sql` en DEV después de `002`. No se aplicó SQL ni se modificó configuración en Supabase durante esta tarea.
+5. Sebastian coordina aplicación y registro de `010_hu32_puntos_ruta.sql` en DEV después de `002`. No se aplicó SQL ni se modificó configuración en Supabase durante esta tarea.
 6. Revisión técnica, comprobación en DEV y aceptación funcional quedan a cargo del equipo. El asistente no hace merge del PR hacia develop.
 
 Plantilla actualizada: [borrador del PR](borrador-pr.md). Los documentos de las fases anteriores conservan sus resultados históricos; esta nota recoge la validación posterior al merge del 5 de noviembre.

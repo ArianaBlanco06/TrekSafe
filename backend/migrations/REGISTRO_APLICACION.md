@@ -9,3 +9,10 @@ Solo se anotan aplicaciones reales sobre un entorno (DEV, producción u otro). L
 | `008_hu31_preparacion_expedicion.sql` | 008 | 2026-11-06 02:05 UTC | DEV | 9250402 | Ariana | OK |
 | `009_hu31_operaciones_preparacion.sql` | 009 | 2026-11-06 02:05 UTC | DEV | 9250402 | Ariana | OK |
 | `011_hu29_endurecer_permisos.sql` | 011 | 2026-11-06 01:56 UTC | DEV | bcfeeac | Ariana | OK |
+| `004_hu27_estado_cancelada.sql` | 004 | 2026-11-06 03:41 UTC | DEV | 2fee4ea | Ariana | OK |
+| `005_hu27_rpc_cancelar_expedicion.sql` | 005 | 2026-11-06 03:41 UTC | DEV | 2fee4ea | Ariana | OK |
+| `006_hu27_permiso_anonimizar_eventos.sql` | 006 | 2026-11-06 03:41 UTC | DEV | 2fee4ea | Ariana | OK |
+| `007_hu35_rpc_ampliar_retorno.sql` | 007 | 2026-11-06 03:56 UTC | DEV | 780413c | Ariana | OK |
+
+HU-32: Ariana confirmó en DEV la estructura final ya aplicada, incluyendo la versión INTEGER de HU-26 y `hu32_chk_version_segura`. El archivo se identifica ahora como `010_hu32_puntos_ruta.sql`. El asiento `010` y sus metadatos están pendientes de que Ariana los registre después de aprobar CI; no se añade una fila de ejecución ficticia ni se debe volver a ejecutar el DDL completo en DEV.
+

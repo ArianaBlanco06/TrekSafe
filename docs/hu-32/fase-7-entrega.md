@@ -47,7 +47,7 @@ Estado que se puede comunicar: **implementación local terminada y preparada par
 ## 4. Orden sugerido para la revisión
 
 1. Revisar el [contrato](fase-2-contrato.md) y concretar la versión compartida con Favio/Sebastian. Si difiere del supuesto probado, adaptar SQL/DTO/contrato según corresponda y volver a ejecutar la validación afectada.
-2. Revisar la [migración](../../backend/migrations/hu32_puntos_ruta.sql), su orden, permisos y guardado transaccional. La aplicación debe ser incremental; no reinicializar la base compartida con `init_schema.sql`.
+2. Revisar la [migración](../../backend/migrations/010_hu32_puntos_ruta.sql), su orden, permisos y guardado transaccional. La aplicación debe ser incremental; no reinicializar la base compartida con `init_schema.sql`.
 3. Revisar backend y frontend con el mapa de [fase 4](fase-4-api.md) y [fase 5](fase-5-interfaz.md), y contrastar los cinco principios con [diseño SOLID](diseno-solid.md).
 4. Reproducir la validación aislada y la [demostración](guia-demostracion.md); después comprobar el entorno DEV coordinado y las dependencias integradas.
 5. Andriy completa el issue, su commit y los enlaces de evidencia en el [borrador de PR](borrador-pr.md). La revisión, publicación y aceptación se registran cuando efectivamente ocurran.

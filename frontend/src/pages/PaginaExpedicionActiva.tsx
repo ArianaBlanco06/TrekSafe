@@ -11,11 +11,16 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import { DialogoAmpliarRetorno } from '@/components/DialogoAmpliarRetorno';
 import { DialogoConfirmarRetorno } from '@/components/DialogoConfirmarRetorno';
 import { useCuentaRegresiva } from '@/hooks/useCuentaRegresiva';
 import { useEstadoEnLinea } from '@/hooks/useEstadoEnLinea';
 import { clearReminderDismissal } from '@/lib/recordatorioRetorno';
-import { obtenerExpedicionActiva, type ExpedicionActiva } from '@/services/expedicion';
+import {
+  obtenerExpedicionActiva,
+  type ExpedicionActiva,
+  type ResultadoAmpliacionRetorno,
+} from '@/services/expedicion';
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleString('es-PE', {
@@ -35,6 +40,8 @@ export function PaginaExpedicionActiva() {
   const [error, setError] = useState('');
   const [checkInAbierto, setCheckInAbierto] = useState(false);
   const [bannerDescartado, setBannerDescartado] = useState(false);
+  const [ampliarAbierto, setAmpliarAbierto] = useState(false);
+  const [avisoAmpliacion, setAvisoAmpliacion] = useState('');
 
   const cuentaRegresiva = useCuentaRegresiva(expedicion?.fechaLimite, expedicion?.horaInicio);
 
@@ -60,6 +67,32 @@ export function PaginaExpedicionActiva() {
     }, 30_000);
     return () => clearInterval(poll);
   }, []);
+
+  const recargarActiva = () => {
+    obtenerExpedicionActiva()
+      .then((r) => setExpedicion(r.expedicion))
+      .catch(() => undefined);
+  };
+
+  /** HU-35: aplica la respuesta sin recargar; el contador se recalcula con la nueva fechaLimite. */
+  const handleRetornoAmpliado = (resultado: ResultadoAmpliacionRetorno) => {
+    setExpedicion((actual) =>
+      actual && actual.id === resultado.id
+        ? {
+            ...actual,
+            version: resultado.version,
+            horaRetornoEstimada: resultado.horaRetornoEstimada,
+            fechaLimite: resultado.fechaLimite,
+            ampliacionesRestantes: Math.max(0, actual.ampliacionesRestantes - 1),
+          }
+        : actual,
+    );
+    // El recordatorio de 30 minutos debe poder volver a avisar con el nuevo límite.
+    clearReminderDismissal(resultado.id);
+    setBannerDescartado(false);
+    setAmpliarAbierto(false);
+    setAvisoAmpliacion(`Retorno ampliado. Nuevo límite: ${formatTime(resultado.fechaLimite)}.`);
+  };
 
   const handleRetornoConfirmado = (confirmadoEn: string) => {
     if (expedicion) clearReminderDismissal(expedicion.id);
@@ -115,6 +148,12 @@ export function PaginaExpedicionActiva() {
   }
 
   const esAlerta = expedicion.estado === 'alerta';
+  // HU-35: solo en curso, dentro del plazo y con ampliación disponible. El servidor lo
+  // vuelve a comprobar con su reloj; esto solo evita ofrecer algo que se rechazaría.
+  const puedeAmpliar =
+    expedicion.estado === 'en_progreso' &&
+    !cuentaRegresiva.vencida &&
+    (expedicion.ampliacionesRestantes ?? 0) > 0;
 
   const timerBg = esAlerta
     ? 'bg-destructive'
@@ -156,6 +195,24 @@ export function PaginaExpedicionActiva() {
       <Link to="/senderista" className="flex items-center gap-1 text-xs text-muted-foreground mb-4">
         <ChevronLeft size={16} /> Inicio
       </Link>
+
+      {avisoAmpliacion && (
+        <div
+          className="mb-4 flex items-start gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm"
+          role="status"
+        >
+          <CheckCircle size={18} className="flex-shrink-0 mt-0.5 text-primary" />
+          <span className="flex-1">{avisoAmpliacion}</span>
+          <button
+            type="button"
+            onClick={() => setAvisoAmpliacion('')}
+            className="btn-touch opacity-70 hover:opacity-100"
+            aria-label="Cerrar aviso"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       <p className="text-xs text-muted-foreground uppercase tracking-wide">
         {esAlerta ? 'Expedición en alerta' : 'Expedición activa'}
@@ -270,6 +327,29 @@ export function PaginaExpedicionActiva() {
         <p className="text-xs text-center text-muted-foreground mt-2">
           El check-in de retorno necesita conexión para avisar a contactos y rescatistas.
         </p>
+      )}
+
+      {puedeAmpliar && (
+        <button
+          type="button"
+          onClick={() => setAmpliarAbierto(true)}
+          disabled={!enLinea}
+          className="w-full mt-3 py-3 border border-border rounded-2xl font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          <Clock size={18} />
+          {enLinea ? 'Ampliar retorno' : 'Sin red — no se puede ampliar'}
+        </button>
+      )}
+
+      {ampliarAbierto && (
+        <DialogoAmpliarRetorno
+          expedicionId={expedicion.id}
+          versionEsperada={expedicion.version}
+          horaRetornoEstimada={expedicion.horaRetornoEstimada}
+          onClose={() => setAmpliarAbierto(false)}
+          onSuccess={handleRetornoAmpliado}
+          onRecargar={recargarActiva}
+        />
       )}
 
       <DialogoConfirmarRetorno
