@@ -1,5 +1,6 @@
 # HU-36: crea y apaga PostgreSQL local desechable. No utiliza DATABASE_URL ni Supabase.
-# Aplica el esquema inicial, 002 a 007 y 010 y ejecuta la suite SQL de eventos_plan.
+# Aplica el esquema inicial, 002 a 007 y 010, ejecuta la suite SQL de eventos_plan y
+# la integracion Node (contrato del lector contra PostgreSQL real mediante puente fetch).
 param([string]$PostgresBin = '')
 $ErrorActionPreference = 'Stop'
 if (-not $PostgresBin) { $PostgresBin = Split-Path (Get-Command initdb.exe -ErrorAction Stop).Source }
@@ -9,6 +10,11 @@ New-Item -ItemType Directory -Path $testDir | Out-Null
 $dataDir = Join-Path $testDir 'data'
 $listener = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
 try { $listener.Start(); $testPort = $listener.LocalEndpoint.Port } finally { $listener.Stop() }
+$previousHu36Url = $env:HU36_TEST_DATABASE_URL
+# Emula los privilegios por defecto de Supabase para service_role (CRUD en public y en
+# las tablas que se creen despues). init_schema.sql no concede nada a service_role; asi
+# la 010 debe retirar de verdad UPDATE, DELETE y TRUNCATE sobre eventos_plan.
+$privilegiosSupabase = 'GRANT USAGE ON SCHEMA public TO service_role; GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role; GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO service_role; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO service_role;'
 Write-Output ('Pruebas locales HU-36: ' + $testDir)
 Push-Location $repoRoot
 try {
@@ -47,11 +53,22 @@ try {
         } finally { $ErrorActionPreference = $previousErrorPreference }
         if ($LASTEXITCODE -ne 0) { Get-Content -LiteralPath $logPath | Select-Object -Last 20; throw ('Fallo SQL: ' + $file) }
         Write-Output ('SQL correcto: ' + $file)
+        if ($file -eq 'init_schema.sql') {
+            & (Join-Path $PostgresBin 'psql.exe') @argsSql -d treksafe_hu36_test -c $privilegiosSupabase
+            if ($LASTEXITCODE -ne 0) { throw 'No se pudieron emular los privilegios por defecto de Supabase.' }
+        }
     }
+    $env:HU36_TEST_DATABASE_URL = "postgres://postgres@127.0.0.1:$testPort/treksafe_hu36_test"
+    Push-Location (Join-Path $repoRoot 'backend')
+    try {
+        & node.exe --import tsx --test src/testing/hu36Postgres.integration.test.ts
+        if ($LASTEXITCODE -ne 0) { throw 'Fallo la integracion Node de HU-36 contra PostgreSQL.' }
+    } finally { Pop-Location }
     $restantes = & (Join-Path $PostgresBin 'psql.exe') @argsSql -d treksafe_hu36_test -t -A -c 'SELECT count(*) FROM public.eventos_plan;'
     if ($LASTEXITCODE -ne 0 -or ($restantes -join '').Trim() -ne '0') { throw 'Quedaron eventos de las pruebas.' }
     Write-Output 'HU-36: cero eventos restantes.'
 } finally {
+    $env:HU36_TEST_DATABASE_URL = $previousHu36Url
     if (Test-Path -LiteralPath (Join-Path $dataDir 'postmaster.pid')) {
         & (Join-Path $PostgresBin 'pg_ctl.exe') -D $dataDir -m fast -w stop
         if ($LASTEXITCODE -ne 0) { Write-Warning ('Revisar apagado de la instancia: ' + $dataDir) }

@@ -239,7 +239,11 @@ expedición del evento ya no existe) y el TRUNCATE. Retira a
 `service_role` los permisos de tabla UPDATE, DELETE y TRUNCATE y vuelve a conceder
 `UPDATE (cambios, motivo)`. **Su aplicación en DEV sigue pendiente.**
 
-Suite local desechable (aplica el esquema inicial, `002` a `007` y dos veces `010`):
+Suite local desechable: aplica el esquema inicial, emula los privilegios por defecto de
+Supabase para `service_role` (CRUD en `public`, también para las tablas creadas después),
+aplica `002` a `007` y dos veces `010`, ejecuta `tests/hu36_eventos_plan_solo_anexado.test.sql`
+y luego `src/testing/hu36Postgres.integration.test.ts` con `HU36_TEST_DATABASE_URL`
+(contrato del lector contra PostgreSQL real mediante un puente fetch; no es PostgREST):
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File backend/scripts/test-hu36-postgres.ps1 -PostgresBin "C:\Program Files\PostgreSQL\17\bin"
