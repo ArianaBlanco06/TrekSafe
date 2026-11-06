@@ -1,15 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type {
-  EventoPlan,
-  IEventosPlanDAO,
-  NuevoEventoPlan,
-} from '../../domain/repositories/IEventosPlanDAO.js';
+import type { EventoPlan, ILectorEventosPlan } from '../../domain/repositories/IEventosPlanDAO.js';
 import { sanearCambios } from '../../domain/value-objects/camposEventoPlan.js';
 import { esTipoEventoPlan, type TipoEventoPlan } from '../../domain/value-objects/tiposEventoPlan.js';
-import {
-  errorHistorialCambiosNoDisponible,
-  errorOperacionYaRegistrada,
-} from '../../shared/errors/erroresHistorialCambios.js';
+import { errorHistorialCambiosNoDisponible } from '../../shared/errors/erroresHistorialCambios.js';
 
 type FilaEventoPlan = {
   id: string;
@@ -27,10 +20,18 @@ type FilaEventoPlan = {
 type FilaEventoPlanValida = FilaEventoPlan & { tipo: TipoEventoPlan };
 
 /** Columnas explícitas: nunca `*`. */
-const COLUMNAS = 'id, expedicion_id, senderista_id, tipo, actor_id, ocurrido_en, version_resultante, cambios, motivo, operacion_id';
+export const COLUMNAS_EVENTO_PLAN =
+  'id, expedicion_id, senderista_id, tipo, actor_id, ocurrido_en, version_resultante, cambios, motivo, operacion_id';
 
 function tieneTipoConocido(fila: FilaEventoPlan): fila is FilaEventoPlanValida {
   return esTipoEventoPlan(fila.tipo);
+}
+
+/** PostgREST devuelve `timestamptz` con microsegundos y desfase; se normaliza a ISO en ms y UTC. */
+function aIsoCanonico(valor: string): string {
+  const fecha = new Date(valor);
+  if (Number.isNaN(fecha.getTime())) throw errorHistorialCambiosNoDisponible();
+  return fecha.toISOString();
 }
 
 function aEvento(fila: FilaEventoPlanValida): EventoPlan {
@@ -40,7 +41,7 @@ function aEvento(fila: FilaEventoPlanValida): EventoPlan {
     senderistaId: fila.senderista_id,
     tipo: fila.tipo,
     actorId: fila.actor_id,
-    ocurridoEn: fila.ocurrido_en,
+    ocurridoEn: aIsoCanonico(fila.ocurrido_en),
     versionResultante: fila.version_resultante,
     // Defensa adicional al trigger de 010: lo que no esté en la lista blanca no sale.
     cambios: sanearCambios(fila.cambios),
@@ -50,15 +51,16 @@ function aEvento(fila: FilaEventoPlanValida): EventoPlan {
 }
 
 /**
- * Lectura y registro de `eventos_plan`. Solo anexa: sin update, delete ni upsert.
- * Las RPC de HU-26, HU-27 y HU-35 siguen siendo quienes registran en producción.
+ * Solo lectura de `eventos_plan`.
+ * En Supabase registran las RPC 003/005/007 en la misma transacción que suben la versión;
+ * no hay escritura desde TS.
  */
-export class EventosPlanDAOSupabase implements IEventosPlanDAO {
+export class EventosPlanDAOSupabase implements ILectorEventosPlan {
   constructor(private readonly cliente: Pick<SupabaseClient, 'from'>) {}
 
   async listarPorExpedicion(senderistaId: string, expedicionId: string): Promise<EventoPlan[]> {
     const { data, error } = await this.cliente.from('eventos_plan')
-      .select(COLUMNAS)
+      .select(COLUMNAS_EVENTO_PLAN)
       .eq('expedicion_id', expedicionId)
       .eq('senderista_id', senderistaId)
       .order('ocurrido_en', { ascending: true })
@@ -68,29 +70,5 @@ export class EventosPlanDAOSupabase implements IEventosPlanDAO {
     return ((data ?? []) as unknown as FilaEventoPlan[])
       .filter(tieneTipoConocido)
       .map(aEvento);
-  }
-
-  async registrar(evento: NuevoEventoPlan): Promise<EventoPlan> {
-    const { data, error } = await this.cliente.from('eventos_plan')
-      .insert({
-        expedicion_id: evento.expedicionId,
-        senderista_id: evento.senderistaId,
-        tipo: evento.tipo,
-        actor_id: evento.actorId,
-        version_resultante: evento.versionResultante,
-        cambios: sanearCambios(evento.cambios),
-        motivo: evento.motivo,
-        operacion_id: evento.operacionId,
-      })
-      .select(COLUMNAS)
-      .single();
-
-    if (error) {
-      if (error.code === '23505') throw errorOperacionYaRegistrada();
-      throw errorHistorialCambiosNoDisponible();
-    }
-    const fila = data as unknown as FilaEventoPlan;
-    if (!tieneTipoConocido(fila)) throw errorHistorialCambiosNoDisponible();
-    return aEvento(fila);
   }
 }

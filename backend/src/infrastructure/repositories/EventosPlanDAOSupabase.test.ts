@@ -7,7 +7,7 @@ const actor = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const expedicionId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const operacionId = '99999999-9999-4999-8999-999999999999';
 
-type Solicitud = { url: URL; metodo: string | undefined; prefer: string | null; cuerpo: unknown };
+type Solicitud = { url: URL; metodo: string | undefined };
 
 function clienteConRespuesta(datos: unknown, estado = 200) {
   const solicitudes: Solicitud[] = [];
@@ -15,11 +15,7 @@ function clienteConRespuesta(datos: unknown, estado = 200) {
     auth: { persistSession: false, autoRefreshToken: false },
     global: { fetch: async (input, init) => {
       const url = new URL(typeof input === 'string' || input instanceof URL ? input : input.url);
-      const cabeceras = new Headers(init?.headers);
-      solicitudes.push({
-        url, metodo: init?.method, prefer: cabeceras.get('prefer'),
-        cuerpo: typeof init?.body === 'string' ? JSON.parse(init.body) : undefined,
-      });
+      solicitudes.push({ url, metodo: init?.method });
       return Response.json(datos, { status: estado });
     } },
   });
@@ -41,7 +37,7 @@ describe('Eventos del plan en Supabase (HU-36): SDK con transporte sustituido', 
     const eventos = await new EventosPlanDAOSupabase(cliente).listarPorExpedicion(actor, expedicionId);
     assert.deepEqual(eventos, [{
       id: '11111111-1111-4111-8111-111111111111', expedicionId, senderistaId: actor, tipo: 'EDITADA',
-      actorId: actor, ocurridoEn: '2026-11-01T10:00:00+00:00', versionResultante: 2,
+      actorId: actor, ocurridoEn: '2026-11-01T10:00:00.000Z', versionResultante: 2,
       cambios: { lugarFin: { antes: 'Laguna 69', despues: 'Nevado Ishinca' } }, motivo: null, operacionId,
     }]);
     assert.equal(solicitudes.length, 1);
@@ -81,34 +77,22 @@ describe('Eventos del plan en Supabase (HU-36): SDK con transporte sustituido', 
     });
   });
 
-  it('registra con un POST simple, sin upsert ni fecha o id del cliente', async () => {
-    const { cliente, solicitudes } = clienteConRespuesta(fila());
-    const registrado = await new EventosPlanDAOSupabase(cliente).registrar({
-      expedicionId, senderistaId: actor, tipo: 'EDITADA', actorId: actor, versionResultante: 2,
-      cambios: { lugarFin: { antes: 'Laguna 69', despues: 'Nevado Ishinca' } }, motivo: null, operacionId,
-    });
-    assert.equal(registrado.operacionId, operacionId);
-    const { url, metodo, prefer, cuerpo } = solicitudes[0];
-    assert.equal(metodo, 'POST');
-    assert.equal(url.pathname, '/rest/v1/eventos_plan');
-    assert.equal(url.searchParams.get('on_conflict'), null);
-    assert.doesNotMatch(prefer ?? '', /resolution|merge-duplicates|ignore-duplicates/);
-    assert.deepEqual(Object.keys(cuerpo as object).sort(), ['actor_id', 'cambios', 'expedicion_id', 'motivo',
-      'operacion_id', 'senderista_id', 'tipo', 'version_resultante']);
+  it('normaliza ocurrido_en a ISO canónico en ms y UTC', async () => {
+    const { cliente } = clienteConRespuesta([fila({ ocurrido_en: '2026-11-01T10:00:00.123456+00:00' })]);
+    const [evento] = await new EventosPlanDAOSupabase(cliente).listarPorExpedicion(actor, expedicionId);
+    assert.equal(evento.ocurridoEn, '2026-11-01T10:00:00.123Z');
   });
 
-  it('traduce un operacion_id duplicado a 409 y otros fallos a 500', async () => {
-    const nuevo = {
-      expedicionId, senderistaId: actor, tipo: 'CANCELADA' as const, actorId: actor, versionResultante: 3,
-      cambios: {}, motivo: null, operacionId,
-    };
-    const duplicado = clienteConRespuesta({ code: '23505', message: 'duplicate key value' }, 409);
-    await assert.rejects(new EventosPlanDAOSupabase(duplicado.cliente).registrar(nuevo), {
-      codigoEstado: 409, codigo: 'OPERACION_YA_REGISTRADA',
-    });
-    const fallo = clienteConRespuesta({ code: 'P0001', message: 'EVENTO_PLAN_INMUTABLE' }, 400);
-    await assert.rejects(new EventosPlanDAOSupabase(fallo.cliente).registrar(nuevo), {
+  it('una fecha inválida se traduce a error sin exponer detalles', async () => {
+    const { cliente } = clienteConRespuesta([fila({ ocurrido_en: 'no-es-fecha' })]);
+    await assert.rejects(new EventosPlanDAOSupabase(cliente).listarPorExpedicion(actor, expedicionId), {
       codigoEstado: 500, codigo: 'HISTORIAL_CAMBIOS_NO_DISPONIBLE',
     });
+  });
+
+  it('solo lee: no expone registrar (registran las RPC 003/005/007)', () => {
+    const { cliente } = clienteConRespuesta([]);
+    const dao = new EventosPlanDAOSupabase(cliente);
+    assert.equal('registrar' in dao, false);
   });
 });
