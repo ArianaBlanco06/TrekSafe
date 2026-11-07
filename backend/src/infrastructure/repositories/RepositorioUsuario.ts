@@ -207,6 +207,12 @@ export class RepositorioUsuario {
       .eq('id', senderistaId);
     if (errorCuenta) throw new ErrorAplicacion(500, errorCuenta.message);
 
+    // HU-37 ARCO: Limpiar avisos residuales asociados al usuario eliminado
+    await this.supabase
+      .from('avisos_usuario')
+      .delete()
+      .eq('usuario_id', senderistaId);
+
     return {
       fichaMedicaEliminada: true,
       contactosEliminados: contactos?.length ?? 0,
