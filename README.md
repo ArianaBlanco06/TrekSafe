@@ -18,7 +18,7 @@ El senderista registra su plan de expedición y confirma el retorno seguro. Si n
 > Proyecto académico — **Universidad de Lima** · Ingeniería de Software 1 · 2026  
 > Release 01–02 · **25/25** historias de usuario · **96** story points
 
-> **Continuidad ISW2 — HU-32:** gestión de puntos intermedios implementada y validada localmente. [Dossier, demostración y evidencia](docs/hu-32/README.md). La integración en DEV requiere coordinar la versión compartida del plan y las migraciones.
+> **Continuidad ISW2 — HU-32:** gestión de puntos intermedios implementada y validada localmente. [Dossier, demostración y evidencia](docs/hu-32/README.md). Su migración `010_hu32_puntos_ruta.sql` está aplicada y registrada en Supabase DEV.
 
 ## Contenido
 
