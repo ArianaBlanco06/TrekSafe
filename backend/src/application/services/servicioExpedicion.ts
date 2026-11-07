@@ -73,6 +73,7 @@ export class ServicioExpedicion {
       horaInicio: entrada.horaInicio,
       horaRetornoEstimada: entrada.horaRetornoEstimada,
       minutosTolerancia: entrada.minutosTolerancia,
+      minutosRecordatorio: entrada.minutosRecordatorio ?? 30,
       estado: estado as 'programada' | 'en_progreso',
       idsContactos: entrada.idsContactos,
       nombresAcompanantes: entrada.nombresAcompanantes,
