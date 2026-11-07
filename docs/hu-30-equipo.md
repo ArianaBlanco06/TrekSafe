@@ -10,12 +10,12 @@ listas inicialmente vacías y también quitar todos los ítems de una lista exis
 | --- | --- |
 | 1 Alcance | Reglas delimitadas y listas vacías confirmadas por Jhon. |
 | 2 Diseño | Entidades, contrato DAO y responsabilidades definidos. |
-| 3 Esquema | Migración y pruebas locales PostgreSQL; aplicación en DEV pendiente de coordinación. |
+| 3 Esquema | Migración y pruebas locales PostgreSQL; aplicada y verificada en Supabase DEV. |
 | 4 Reglas | Entidades, servicio y DAO de pruebas implementados; comprobación de tipos y pruebas aprobadas. |
 | 5 Persistencia y API | Adaptador, RPC y rutas comprobados localmente; aplicación y validación en Supabase DEV pendientes. |
 | 6 Interfaz | Pantalla y acceso desde el perfil implementados; pruebas de React aprobadas, revisión visual pendiente. |
 | 7 Validación | 80 pruebas locales aprobadas con Node 22; revisión visual y Supabase DEV pendientes. |
-| 8 Entrega | Pendiente de revisión, evidencia en DEV y aceptación del equipo. |
+| 8 Entrega | Integrada en develop con el PR #62; aceptación del PO a registrar en la Review. |
 
 ## Reglas y contrato
 

@@ -372,4 +372,4 @@ La referencia local de `develop` actualizada por Jhon es `f5d7bd4`, que incorpor
 HU-28 y HU-29. La integración debe conservar en `app.ts` los módulos de historial,
 plantillas y preparación; en `cachePrivada.test.ts`, sus tres rutas privadas; y
 en el historial, los accesos de repetir expedición y consultar equipo. La
-validación posterior al merge y la aplicación en DEV siguen pendientes.
+validación funcional posterior al merge sigue pendiente; 008 y 009 se aplicaron en DEV el 6 de noviembre.
