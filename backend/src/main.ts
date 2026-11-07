@@ -3,6 +3,7 @@ import { loadEnv } from './infrastructure/config/env.js';
 import { verificarConexionBaseDatos } from './infrastructure/database/supabase.js';
 import { ServicioCorreo } from './infrastructure/email/ServicioCorreo.js';
 import { iniciarCronFechaLimiteExpedicion } from './infrastructure/jobs/cronFechaLimiteExpedicion.js';
+import { iniciarWorkerOutbox } from './infrastructure/jobs/workerOutboxJob.js';
 
 async function bootstrap() {
   loadEnv();
@@ -28,6 +29,7 @@ async function bootstrap() {
 
   if (cronEnabled) {
     iniciarCronFechaLimiteExpedicion();
+    iniciarWorkerOutbox();
   } else {
     console.log('[Cron] desactivado (CRON_ENABLED=false)');
   }
