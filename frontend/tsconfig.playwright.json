@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "types": ["node"]
+  },
+  "include": [
+    "playwright.config.ts",
+    "playwright.integration.config.ts",
+    "tests/hu32/**/*.ts",
+    "tests/hu32-integration/**/*.ts"
+  ]
+}

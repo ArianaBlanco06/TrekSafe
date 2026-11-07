@@ -51,6 +51,11 @@ export default defineConfig({
         clientsClaim: true,
         runtimeCaching: [
           {
+            // El editor necesita una version vigente y aislada de la cache API.
+            urlPattern: ({ url }) => /\/expediciones\/[^/]+\/puntos\/?$/.test(url.pathname),
+            handler: 'NetworkOnly',
+          },
+          {
             urlPattern: ({ url }) => /^\/api\/usuario\/listas-equipo(?:\/|$)/.test(url.pathname),
             handler: 'NetworkOnly',
           },

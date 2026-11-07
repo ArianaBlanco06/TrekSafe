@@ -10,9 +10,12 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const dist = path.join(root, 'dist');
 await readFile(path.join(dist, 'sw.js')); // Exige un build PWA previo.
 const bundle = await build({
-  configFile: false, logLevel: 'error',
+  configFile: false, envFile: false, logLevel: 'error',
   resolve: { alias: { '@': path.join(root, 'src') } },
-  define: { 'import.meta.env': JSON.stringify({ VITE_API_URL: '/api' }) },
+  define: {
+    'import.meta.env': JSON.stringify({ VITE_API_URL: '/api' }),
+    'import.meta.env.VITE_API_URL': JSON.stringify('/api'),
+  },
   build: { write: false, minify: false,
     lib: { entry: path.join(root, 'tests/pwa/probe.ts'), formats: ['es'], fileName: 'probe' } },
 });
