@@ -25,6 +25,7 @@ import { CreadorDesdeHistorial } from '../../application/creacion-plan/CreadorDe
 import { DAOContactosVigentesSupabase } from '../../infrastructure/repositories/DAOContactosVigentesSupabase.js';
 import { HistorialExpedicionesDAOSupabase } from '../../infrastructure/repositories/HistorialExpedicionesDAOSupabase.js';
 import { crearRutasRepetirExpedicion } from './routes/rutasRepetirExpedicion.js';
+import { crearRutasAvisos } from './routes/rutasAvisos.js';
 
 export function createApp() {
   const env = loadEnv();
@@ -70,6 +71,7 @@ export function createApp() {
   app.use(`${env.apiPrefix}/expediciones`, crearRutasExpedicion());
   app.use(`${env.apiPrefix}/plantillas`, crearRutasPlantillas(ensamblarModuloPlantillas()));
   app.use(`${env.apiPrefix}/rescate`, crearRutasRescate());
+  app.use(`${env.apiPrefix}/avisos`, crearRutasAvisos());
 
   app.use(notFoundHandler);
   app.use(errorHandler);
