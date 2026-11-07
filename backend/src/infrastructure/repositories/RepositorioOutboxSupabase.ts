@@ -184,4 +184,54 @@ export class RepositorioOutboxSupabase implements IRepositorioOutbox {
       })
       .eq('id', id);
   }
+
+  async buscarPorId(id: string): Promise<MensajeOutbox | null> {
+    const { data, error } = await this.supabase
+      .from('outbox_notificaciones')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) {
+      throw new ErrorAplicacion(500, `Error al buscar en outbox: ${error.message}`);
+    }
+
+    return data ? this.mapearFila(data) : null;
+  }
+
+  async listarPorExpedicion(expedicionId: string): Promise<MensajeOutbox[]> {
+    const { data, error } = await this.supabase
+      .from('outbox_notificaciones')
+      .select('*')
+      .filter('metadata->>expedicionId', 'eq', expedicionId)
+      .order('creado_en', { ascending: true });
+
+    if (error) {
+      throw new ErrorAplicacion(500, `Error al listar outbox por expedición: ${error.message}`);
+    }
+
+    return (data || []).map((d: any) => this.mapearFila(d));
+  }
+
+  async reencolarParaReintentoManual(id: string): Promise<MensajeOutbox> {
+    const ahora = new Date();
+    const { data, error } = await this.supabase
+      .from('outbox_notificaciones')
+      .update({
+        estado: 'pendiente',
+        proximo_intento_en: ahora.toISOString(),
+        bloqueado_hasta: null,
+        bloqueado_por: null,
+        actualizado_en: ahora.toISOString(),
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      throw new ErrorAplicacion(500, `Error al reencolar outbox: ${error.message}`);
+    }
+
+    return this.mapearFila(data);
+  }
 }

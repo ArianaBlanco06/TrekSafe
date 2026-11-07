@@ -9,4 +9,7 @@ export interface IRepositorioOutbox {
   marcarFallido(id: string, intentosActuales: number, errorFinal: string): Promise<void>;
   marcarIncierto(id: string, intentosActuales: number, motivoIncierto: string): Promise<void>;
   liberarLease(id: string): Promise<void>;
+  buscarPorId(id: string): Promise<MensajeOutbox | null>;
+  listarPorExpedicion(expedicionId: string): Promise<MensajeOutbox[]>;
+  reencolarParaReintentoManual(id: string): Promise<MensajeOutbox>;
 }
