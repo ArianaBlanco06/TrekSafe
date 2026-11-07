@@ -8,6 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "test:ui": "playwright test",
+    "typecheck:ui": "tsc --noEmit -p tsconfig.playwright.json",
     "typecheck:tests": "tsc --noEmit -p tsconfig.tests.json",
     "test:equipo": "tsx --tsconfig tsconfig.json --test src/**/*.test.ts src/**/*.test.tsx",
     "test:pwa:privacidad": "playwright test --config playwright.privacy.config.ts",

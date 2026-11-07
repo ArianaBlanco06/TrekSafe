@@ -14,7 +14,9 @@ Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos
 - Las tablas nuevas activan RLS y crean la política `treksafe_deny_anon_authenticated`.
   El backend entra con `service_role`.
 - Las funciones invocadas por RPC usan `SECURITY INVOKER` y `search_path` vacío,
-  y solo `service_role` puede ejecutarlas.
+  y solo `service_role` puede ejecutarlas. HU-32 conserva sus dos RPC
+  `SECURITY DEFINER` con permisos restringidos y `search_path` fijo,
+  descritas en su sección específica.
 
 ## Orden de aplicación
 
@@ -32,6 +34,8 @@ Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos
 | `20261101_hu30_operaciones_equipo.sql` | Posición de ítems y RPC de listas de equipo | `20261101_hu30_listas_equipo.sql` |
 | `008_hu31_preparacion_expedicion.sql` | Copia de equipo por expedición, ítems, restricciones y permisos | Las dos migraciones de HU-30; integrar después de HU-27 |
 | `009_hu31_operaciones_preparacion.sql` | RPC de consulta, asociación atómica y marcas de preparación | `008_hu31_preparacion_expedicion.sql` |
+| `010_hu32_puntos_ruta.sql` | Tabla puntos_ruta y RPC de consulta/guardado atómico | `002` |
+| `011_hu29_endurecer_permisos.sql` | Endurece permisos de las tablas y funciones de HU-29 | `000` y `001` |
 
 Las migraciones `002` a `007` son re-ejecutables. No dependen de
 `000_registro_migraciones.sql`: si la tabla `treksafe_migraciones` existe, registran
@@ -52,6 +56,7 @@ Aplica las migraciones **antes** de desplegar el backend. El código de HU-26
 selecciona `expediciones.version`, por lo que sin `002` también fallarían los
 listados y `GET /api/expediciones/activa`. La API de HU-30 requiere sus tablas y RPC.
 La API `/api/plantillas` de HU-29 requiere `000` y `001`.
+La API de puntos de HU-32 requiere además `010_hu32_puntos_ruta.sql`.
 
 ## HU-29: plantillas personales de ruta
 
@@ -175,8 +180,7 @@ Esta ejecución no se conectó a Supabase ni acredita una aplicación en DEV.
 Los archivos `008_hu31_preparacion_expedicion.sql` y
 `009_hu31_operaciones_preparacion.sql` sustituyen los nombres iniciales de HU-31
 para evitar el choque de numeración con HU-27 (PR #65), que se integra antes.
-**Su aplicación en DEV sigue pendiente.** Se aplican una sola vez; no son
-re-ejecutables.
+Las migraciones 008 y 009 fueron aplicadas y registradas correctamente en Supabase DEV el 6 de noviembre de 2026.
 
 Antes de `COMMIT`, cada archivo registra su versión (`008` o `009`), nombre y
 `HU-31` en `public.treksafe_migraciones` solo si esa tabla existe. El bloque usa
@@ -225,3 +229,101 @@ la limpieza y apaga la instancia en `finally`. Las pruebas condicionadas usan
 La ejecución no toma `DATABASE_URL` ni se conecta a Supabase.
 
 Resultados y límites: [validación local de HU-31](../../docs/hu-31-validacion.md).
+
+## HU-32: puntos intermedios de ruta
+
+Esta sección conserva la documentación y las garantías de HU-32. La aplicación y el registro se coordinan con Sebastian; no sustituye las migraciones compartidas descritas arriba.
+
+### Orden y requisito compartido
+
+1. Contar con el esquema base de TrekSafe instalado previamente.
+2. Contar con `002_hu26_version_y_eventos_plan.sql`, que aporta la versión INTEGER compartida con HU-26.
+3. Para instalaciones nuevas, revisar y aplicar `010_hu32_puntos_ruta.sql` una sola vez.
+
+**Estado de DEV confirmado por Ariana:** HU-26 y la estructura de HU-32 están aplicadas y verificadas, incluida la versión INTEGER y `hu32_chk_version_segura`. El asiento administrativo `010` ya fue registrado correctamente en `public.treksafe_migraciones` el 2026-11-06 a las 05:23 UTC. No volver a ejecutar el archivo completo en DEV.
+
+El archivo se renombró desde `hu32_puntos_ruta.sql` para ajustarse a la numeración del equipo. Antes del `COMMIT` incorpora el registro condicional en `treksafe_migraciones`, con `ON CONFLICT (version) DO NOTHING`, como `008`/`009`. Esto permite instalarlo sin tabla de registro o conservar un asiento existente; no vuelve re-ejecutable el DDL ni modifica una instalación ya aplicada por renombrar el archivo.
+
+El contrato compartido indicado por el equipo el 3 de noviembre de 2026 es `public.expediciones.version INTEGER`, siguiendo HU-26 de Favio. HU-32 requiere `NOT NULL` y default (fixture inicial: 1), comprueba el tipo exacto antes de crear objetos y restringe las versiones positivas a 1..2147483647. La migración de HU-26 aporta la columna; HU-32 no la crea ni cambia su tipo. Ariana confirmó esta estructura en DEV; en otros entornos se comprueba la dependencia antes de instalar.
+
+El ajuste INTEGER paso la validacion completa: 39 comprobaciones SQL, 28 pruebas de contrato y las suites backend/UI/integracion. Resultados y alcance en [ajuste INTEGER](../../docs/hu-32/ajuste-integer.md).
+
+La migracion se ejecuta dentro de `BEGIN`/`COMMIT`. Ante un requisito ausente o un error, se revierte completa. Un segundo intento sobre una migracion ya aplicada falla en lugar de ocultar diferencias de esquema mediante `IF NOT EXISTS`.
+
+`init_schema.sql` contiene eliminacion de tablas y solo se usa en una base nueva/descartable. No se vuelve a ejecutar sobre DEV compartido con trabajo del equipo.
+
+### Objetos y acceso
+
+| Objeto | Responsabilidad |
+| --- | --- |
+| `puntos_ruta` | UUID v4 estable, FK a expedicion, nombre normalizado, coordenadas a cinco decimales y orden 1..20 unico por expedicion. |
+| `treksafe_normalizar_nombre_punto(text)` | Normalizacion de espacios equivalente a `String.trim()` de JavaScript. |
+| `treksafe_validar_puntos_ruta(jsonb)` | Validacion pura y coleccion canonica; conserva indices del arreglo original en los errores. |
+| `treksafe_consultar_puntos_ruta(uuid, uuid)` | Fotografia privada de contexto, version y puntos ordenados, en una sola sentencia. |
+| `treksafe_guardar_puntos_ruta(uuid, uuid, integer, jsonb)` | Bloqueo del plan y actualizacion atomica de la coleccion, con verificacion de version, estado, hora e IDs. |
+
+Las funciones de normalizacion/validacion no son RPC para clientes. `anon` y `authenticated` no tienen privilegios en los objetos nuevos. `service_role` solo puede ejecutar consulta/guardado; no puede acceder directamente a `puntos_ruta`. Las dos RPC usan `SECURITY DEFINER`, nombres de tabla/funcion calificados y un `search_path` fijo. El propietario que aplica la migracion debe ser un rol confiable con acceso al esquema base y capacidad para definir estos permisos.
+
+`SECURITY DEFINER` es una excepción deliberada a la convención INVOKER: permite mantener revocado el acceso directo del backend a `puntos_ruta` y concentrar la consulta, propiedad y escritura atómica en las dos RPC autorizadas; Ariana confirmó esos permisos en DEV.
+
+La API obtiene el ID del actor del JWT propio de TrekSafe y lo pasa a la RPC desde el servidor. Estas funciones no validan un JWT ni utilizan `auth.uid()`. Una clave `service_role` sigue siendo un secreto exclusivo del backend.
+
+### Resultados SQL para el adaptador
+
+Consulta: JSON con `expedicion` y `puntos`, o SQL `NULL` para expedicion ajena/inexistente. Guardado:
+
+| `tipo` | Contenido adicional | Traduccion HTTP prevista |
+| --- | --- | --- |
+| `guardado` | `ruta`: contexto y puntos persistidos | 200 |
+| `datos_invalidos` | `detalles`: errores por campo | 400, `DATOS_PUNTOS_INVALIDOS` |
+| `no_encontrado` | Ninguno | 404, `NO_ENCONTRADO` |
+| `expedicion_no_editable` | Ninguno | 409, `EXPEDICION_NO_EDITABLE` |
+| `expedicion_ya_iniciada` | Ninguno | 409, `EXPEDICION_YA_INICIADA` |
+| `version_obsoleta` | Ninguno | 409, `VERSION_PLAN_OBSOLETA` |
+
+Los errores SQL inesperados se propagan para que se revierta la transacción; la API los convierte en un error genérico. Las fechas del JSON SQL se expresan como timestamps ISO de PostgreSQL y el adaptador las normaliza a UTC según el contrato HTTP.
+
+### Garantias de actualizacion
+
+- Las validaciones estructurales preceden al acceso al plan; despues se comprueban propietario, estado, hora tras el bloqueo, version e IDs ajenos.
+- Todas las escrituras de puntos por la aplicacion pasan por la RPC y por el mismo bloqueo de expedicion. El cron y los cambios de estado tambien actualizan esa fila; las futuras ediciones deben respetar la version compartida.
+- Maximo 20 por validacion y por las 20 posiciones unicas permitidas. La RPC exige orden consecutivo. El propietario administrativo de la base puede alterar datos directamente; ese acceso no representa el flujo de la aplicacion.
+- El intercambio de posiciones usa una restriccion unica diferible. Se actualizan las filas existentes conservando su identidad; no se borran para recrearlas al reordenar.
+- Los puntos omitidos se eliminan. Nombres y coordenadas se normalizan antes de comparar. Si la coleccion canonica es identica y la version esta vigente, no cambian la version ni `actualizado_en`.
+- Un cambio efectivo actualiza version y metadatos con los puntos. Un fallo, incluida una colision concurrente de UUID, no deja bajas o cambios parciales.
+- Con version 2147483647 se admite un guardado identico; un cambio efectivo falla sin escribir puntos ni metadatos. La API rechaza versiones fuera de 1..2147483647 con 400; una llamada SQL directa fuera del rango INTEGER falla en la conversion del argumento antes de ejecutar la RPC.
+- La restriccion de orden se verifica antes de devolver exito; una violacion inesperada aborta la operacion.
+
+### Pruebas locales reproducibles
+
+Desde la raiz del repositorio, con Node.js y PostgreSQL nativo instalados:
+
+```powershell
+node backend/scripts/test-hu32-sql.mjs --pg-bin "C:\Program Files\PostgreSQL\18\bin"
+```
+
+El script usa solo modulos incluidos en Node, sin `npm install`. Crea un cluster en una carpeta temporal `treksafe-hu32-sql-*`, elige otro puerto libre y escucha exclusivamente en `127.0.0.1`. Ejecuta el esquema real y esta migracion con datos ficticios, sin leer `.env`, sin credenciales y sin conectarse al servicio instalado o a Supabase. Requiere permiso para ejecutar los binarios locales y abrir el puerto de loopback.
+
+Con las dependencias del backend instaladas, agregar `--with-backend` ejecuta también los mismos 14 escenarios de contrato contra el repositorio en memoria y el adaptador de producción conectado a PostgreSQL temporal. El runner prepara la configuración de loopback y la pasa solo al proceso hijo de pruebas; no se configura ninguna conexión desde `.env`.
+
+#### Integracion completa y PWA
+
+Con las dependencias de ambos proyectos y PostgREST nativo disponibles:
+
+```powershell
+node backend/scripts/test-hu32-sql.mjs --pg-bin "C:\Program Files\PostgreSQL\18\bin" --with-browser --postgrest "C:\ruta\PostgREST\postgrest.exe"
+```
+
+Este modo incluye builds, comprobaciones de tipos, pruebas de regresion y navegador, la suite SQL y el contrato. Despues ejecuta la API real y el SDK Supabase contra PostgREST nativo y el cluster temporal, con el build PWA y su worker activo. Las conexiones y credenciales son ficticias/locales; API, PostgREST y PostgreSQL temporal se cierran al finalizar. El loader historico puede leer `.env` en el proceso de integracion, pero se sustituyen todos sus campos antes de inicializar la configuracion y los repositorios. No se modifica el archivo ni se usan sus destinos. Detalle y evidencia: [fase 6](../../docs/hu-32/fase-6-integracion.md).
+
+La version del plan se crea **solo como fixture de esa base temporal**, despues de comprobar que la migracion rechaza correctamente el esquema sin version. No sustituye la migración `002` ni acredita su aplicación en DEV.
+
+Las pruebas cubren reglas, permisos, normalizacion, IDs estables, eliminacion, no-op, version obsoleta, rollback por fallo inyectado y concurrencia de sesiones. Al finalizar se detiene la instancia temporal. Se conservan su carpeta y logs para inspeccion; el script imprime su ubicacion. El servicio PostgreSQL instalado no se detiene ni se reconfigura.
+
+### Registro de aplicacion
+
+Completar tras una aplicacion coordinada; ejecutar pruebas temporales no aplica la migracion a DEV:
+
+| Archivo | Entorno | Fecha | Commit | Responsable | Resultado |
+| --- | --- | --- | --- | --- | --- |
+| `010_hu32_puntos_ruta.sql` | DEV compartido | 2026-11-06 05:23 UTC | `594b23f` | Ariana | Aplicada y registrada correctamente (OK) |

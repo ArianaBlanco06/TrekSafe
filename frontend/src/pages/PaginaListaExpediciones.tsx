@@ -130,12 +130,16 @@ export function PaginaListaExpediciones() {
                   </p>
                 )}
                 {exp.estado === 'programada' && (
-                  <div className="flex items-center gap-5 mt-3">
+                  <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
                     <Link
                       to={`/expediciones/${exp.id}/editar`}
                       className="text-sm font-semibold inline-flex items-center gap-1 text-primary min-h-12"
                     >
                       <Pencil size={14} /> Editar
+                    </Link>
+                    <Link to={`/senderista/expedicion/${exp.id}/puntos`}
+                      className="flex min-h-11 items-center gap-1 text-sm font-semibold text-primary">
+                      Gestionar puntos <ChevronRight size={16} aria-hidden="true" />
                     </Link>
                     <button
                       type="button"

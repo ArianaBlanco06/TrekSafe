@@ -65,6 +65,9 @@ jobs:
       - name: Verificar tipos de pruebas
         run: npm run typecheck:tests --prefix frontend
 
+      - name: Verificar tipos de pruebas de puntos (HU-32)
+        run: npm run typecheck:ui --prefix frontend
+
       - name: Ejecutar pruebas de equipo (HU-30)
         run: npm run test:equipo --prefix frontend
 
@@ -76,6 +79,9 @@ jobs:
       - name: Instalar Chromium para pruebas PWA
         working-directory: frontend
         run: npx playwright install --with-deps chromium
+
+      - name: Probar interfaz de puntos (HU-32)
+        run: npm run test:ui --prefix frontend
 
       - name: Probar privacidad con Service Worker activo
         run: npm run test:pwa:privacidad --prefix frontend
