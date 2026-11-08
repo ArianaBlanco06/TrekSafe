@@ -1,5 +1,6 @@
 import { ServicioNotificacionAlerta } from '../../application/services/servicioNotificacionAlerta.js';
 import { ServicioAlertaRescate } from '../../application/services/servicioAlertaRescate.js';
+import { ServicioRecordatorioExpedicion } from '../../application/services/servicioRecordatorioExpedicion.js';
 import { ServicioCorreo } from '../email/ServicioCorreo.js';
 import { loadEnv, type Env } from '../config/env.js';
 import { RepositorioExpedicion } from '../repositories/RepositorioExpedicion.js';
@@ -10,12 +11,14 @@ export type ResultadoTickCron = {
   enAlerta: number;
   correosContacto: number;
   correosRescate: number;
+  recordatoriosGenerados?: number;
 };
 
 export async function ejecutarTickFechaLimite(
   repo = new RepositorioExpedicion(),
   alertasContacto = new ServicioNotificacionAlerta(),
   alertasRescate = new ServicioAlertaRescate(),
+  recordatorios = new ServicioRecordatorioExpedicion(),
 ): Promise<ResultadoTickCron> {
   const promovidas = await repo.promoverProgramadasListas();
   const idsEnAlerta = await repo.marcarEnProgresoExpiradaComoAlerta();
@@ -31,7 +34,27 @@ export async function ejecutarTickFechaLimite(
     correosRescate += rescate.enviados + rescate.registrados;
   }
 
-  return { promovidas, enAlerta: idsEnAlerta.length, correosContacto, correosRescate };
+  // HU-38: Evaluar recordatorios in-app para expediciones en progreso
+  let recordatoriosGenerados = 0;
+  try {
+    const resRec = await recordatorios.procesarRecordatorios();
+    recordatoriosGenerados = resRec.avisosGenerados;
+  } catch (err) {
+    console.error('[Cron] Error al procesar recordatorios de expediciones:', err);
+  }
+
+  const resultado: ResultadoTickCron = {
+    promovidas,
+    enAlerta: idsEnAlerta.length,
+    correosContacto,
+    correosRescate,
+  };
+
+  if (recordatoriosGenerados > 0) {
+    resultado.recordatoriosGenerados = recordatoriosGenerados;
+  }
+
+  return resultado;
 }
 
 export function iniciarCronFechaLimiteExpedicion(

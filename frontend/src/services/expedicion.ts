@@ -46,6 +46,7 @@ export type DatosCrearExpedicion = {
   horaInicio: string;
   horaRetornoEstimada: string;
   minutosTolerancia: number;
+  minutosRecordatorio?: number;
   idsContactos: string[];
   nombresAcompanantes: string[];
 };
@@ -70,6 +71,7 @@ export type DatosEdicionExpedicion = {
   horaInicio: string;
   horaRetornoEstimada: string;
   minutosTolerancia: number;
+  minutosRecordatorio?: number;
   idsContactos: string[];
   nombresAcompanantes: string[];
   versionEsperada: number;
@@ -185,6 +187,7 @@ export type BorradorDesdeHistorial = {
   coordenadasInicio: string | null;
   coordenadasFin: string | null;
   minutosTolerancia: number;
+  minutosRecordatorio?: number;
   idsContactos: string[];
   cantidadContactosNoVigentes: number;
   nombresAcompanantes: string[];

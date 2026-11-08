@@ -13,6 +13,7 @@ export type FilaExpedicion = {
   hora_inicio: string;
   hora_retorno_estimada: string;
   minutos_tolerancia: number;
+  minutos_recordatorio?: number;
   estado: string;
   version: number;
   creado_en?: string;
@@ -68,6 +69,7 @@ export class RepositorioExpedicion {
       horaInicio: string;
       horaRetornoEstimada: string;
       minutosTolerancia: number;
+      minutosRecordatorio?: number;
       estado: 'programada' | 'en_progreso';
       idsContactos: string[];
       nombresAcompanantes: string[];
@@ -91,10 +93,11 @@ export class RepositorioExpedicion {
         hora_inicio: input.horaInicio,
         hora_retorno_estimada: input.horaRetornoEstimada,
         minutos_tolerancia: input.minutosTolerancia,
+        minutos_recordatorio: input.minutosRecordatorio ?? 30,
         estado: input.estado,
       })
       .select(
-        'id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada, minutos_tolerancia, estado, version, creado_en',
+        'id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada, minutos_tolerancia, minutos_recordatorio, estado, version, creado_en',
       )
       .single();
 
@@ -310,5 +313,30 @@ export class RepositorioExpedicion {
     }
 
     return data;
+  }
+
+  async buscarEnProgresoParaRecordatorio(): Promise<
+    Array<{
+      id: string;
+      senderistaId: string;
+      horaRetornoEstimada: string;
+      minutosRecordatorio: number;
+    }>
+  > {
+    const { data, error } = await this.supabase
+      .from('expediciones')
+      .select('id, senderista_id, hora_retorno_estimada, minutos_recordatorio')
+      .eq('estado', 'en_progreso');
+
+    if (error) {
+      throw new ErrorAplicacion(500, error.message);
+    }
+
+    return (data || []).map((d: any) => ({
+      id: d.id,
+      senderistaId: d.senderista_id,
+      horaRetornoEstimada: d.hora_retorno_estimada,
+      minutosRecordatorio: d.minutos_recordatorio ?? 30,
+    }));
   }
 }
