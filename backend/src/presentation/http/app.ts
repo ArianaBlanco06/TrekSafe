@@ -28,6 +28,7 @@ import { crearRutasRepetirExpedicion } from './routes/rutasRepetirExpedicion.js'
 import { ConsultarHistorialCambios } from '../../application/use-cases/ConsultarHistorialCambios.js';
 import { EventosPlanDAOSupabase } from '../../infrastructure/repositories/EventosPlanDAOSupabase.js';
 import { PropiedadExpedicionSupabase } from '../../infrastructure/repositories/PropiedadExpedicionSupabase.js';
+import { crearRutasHistorialCambios } from './routes/rutasHistorialCambios.js';
 import { crearRutasAvisos } from './routes/rutasAvisos.js';
 
 export function createApp() {
