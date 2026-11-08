@@ -148,7 +148,7 @@ describe('HU-28: historial y formulario con React y HTTP sustituido', () => {
     assert.equal(e.escrituras().length, 1);
     const payload = JSON.parse(String(e.escrituras()[0].opciones?.body)) as DatosCrearExpedicion;
     assert.deepEqual(Object.keys(payload).sort(), ['lugarInicio', 'lugarFin', 'coordenadasInicio', 'coordenadasFin',
-      'horaInicio', 'horaRetornoEstimada', 'minutosTolerancia', 'idsContactos', 'nombresAcompanantes'].sort());
+      'horaInicio', 'horaRetornoEstimada', 'minutosTolerancia', 'minutosRecordatorio', 'idsContactos', 'nombresAcompanantes'].sort());
     assert.deepEqual(payload.idsContactos, [contactoId]);
     assert.deepEqual(payload.nombresAcompanantes, ['Ana Torres']);
     assert.ok(Date.parse(payload.horaInicio) > Date.now());
