@@ -36,8 +36,9 @@ Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos
 | `009_hu31_operaciones_preparacion.sql` | RPC de consulta, asociación atómica y marcas de preparación | `008_hu31_preparacion_expedicion.sql` |
 | `010_hu32_puntos_ruta.sql` | Tabla puntos_ruta y RPC de consulta/guardado atómico | `002` |
 | `011_hu29_endurecer_permisos.sql` | Endurece permisos de las tablas y funciones de HU-29 | `000` y `001` |
+| `012_hu36_eventos_plan_solo_anexado.sql` | `eventos_plan` solo anexado: lista blanca de `cambios`, `ocurrido_en` del servidor, sin UPDATE salvo anonimización ARCO, sin DELETE salvo la cascada (detectada porque la expedición ya no existe), sin TRUNCATE | `002` y `006` |
 
-Las migraciones `002` a `007` son re-ejecutables. No dependen de
+Las migraciones `002` a `007` y `012` son re-ejecutables. No dependen de
 `000_registro_migraciones.sql`: si la tabla `treksafe_migraciones` existe, registran
 su aplicación, y si no existe, continúan.
 
