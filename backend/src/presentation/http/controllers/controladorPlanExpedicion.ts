@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { ComandoAmpliarRetorno } from '../../../application/commands/ComandoAmpliarRetorno.js';
 import { ComandoCancelarPlan } from '../../../application/commands/ComandoCancelarPlan.js';
+import type { AvisadorCambiosPlan } from '../../../application/services/AvisadorCambiosPlan.js';
 import { idExpedicionSchema } from '../../../application/dto/expedicion.dto.js';
 import type { AmpliarRetorno } from '../../../application/use-cases/AmpliarRetorno.js';
 import type { CancelarPlan } from '../../../application/use-cases/CancelarPlan.js';
@@ -18,6 +19,7 @@ export function crearControladorPlanExpedicion(
   editarPlan: EditarPlan,
   cancelarPlan: CancelarPlan,
   ampliarRetorno: AmpliarRetorno,
+  avisos?: AvisadorCambiosPlan,
 ) {
   return {
     async obtener(req: Request, res: Response): Promise<void> {
@@ -33,6 +35,11 @@ export function crearControladorPlanExpedicion(
         expedicionId,
         req.body,
       );
+      await avisos?.avisarEdicion(
+        (req as SolicitudAutenticada).user.id,
+        expedicionId,
+        (req.body as { operacionId?: string } | undefined)?.operacionId,
+      );
       res.status(200).json({ mensaje: 'Expedición actualizada', expedicion: respuestaPlan(plan) });
     },
 
@@ -44,6 +51,7 @@ export function crearControladorPlanExpedicion(
         req.body,
       );
       const expedicion = await cancelarPlan.ejecutar(comando);
+      await avisos?.avisarCancelacion(comando.senderistaId, expedicionId, comando.operacionId, comando.motivo);
       res.status(200).json({ mensaje: 'Expedición cancelada', expedicion });
     },
 
@@ -55,6 +63,12 @@ export function crearControladorPlanExpedicion(
         req.body,
       );
       const expedicion = await ampliarRetorno.ejecutar(comando);
+      await avisos?.avisarAmpliacion(
+        comando.senderistaId,
+        expedicionId,
+        comando.operacionId,
+        expedicion.horaRetornoEstimada,
+      );
       res.status(200).json({ mensaje: 'Retorno ampliado', expedicion });
     },
   };

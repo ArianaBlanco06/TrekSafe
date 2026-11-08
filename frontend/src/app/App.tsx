@@ -18,6 +18,7 @@ import { PaginaContactos } from '@/pages/PaginaContactos';
 import { PaginaListasEquipo } from '@/pages/PaginaListasEquipo';
 import { PaginaHistorialExpediciones } from '@/pages/PaginaHistorialExpediciones';
 import { PaginaPlantillas } from '@/pages/PaginaPlantillas';
+import { PaginaAvisos } from '@/pages/PaginaAvisos';
 import { PaginaPrivacidad } from '@/pages/PaginaPrivacidad';
 import { PaginaRevocacionDatos } from '@/pages/PaginaRevocacionDatos';
 import { PaginaListaExpediciones } from '@/pages/PaginaListaExpediciones';
@@ -70,6 +71,7 @@ export function App() {
               <Route path="perfil/equipo" element={<PaginaListasEquipo />} />
               <Route path="perfil/historial" element={<PaginaHistorialExpediciones />} />
               <Route path="perfil/plantillas" element={<PaginaPlantillas />} />
+              <Route path="avisos" element={<PaginaAvisos />} />
               <Route path="perfil/privacidad" element={<PaginaPrivacidad />} />
               <Route path="perfil/privacidad/solicitud" element={<PaginaRevocacionDatos />} />
               <Route path="expedicion" element={<PaginaListaExpediciones />} />

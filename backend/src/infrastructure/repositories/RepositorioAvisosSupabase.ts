@@ -10,7 +10,8 @@ type FilaAviso = {
   id: string;
   usuario_id: string;
   expedicion_id: string | null;
-  evento_id: string;
+  evento_id: string | null;
+  clave_evento: string;
   tipo: TipoAviso;
   titulo: string;
   mensaje: string;
@@ -24,7 +25,7 @@ function mapearFilaAAviso(fila: FilaAviso): Aviso {
     id: fila.id,
     usuarioId: fila.usuario_id,
     expedicionId: fila.expedicion_id,
-    eventoId: fila.evento_id,
+    eventoId: fila.clave_evento,
     tipo: fila.tipo,
     titulo: fila.titulo,
     mensaje: fila.mensaje,
@@ -43,7 +44,8 @@ export class RepositorioAvisosSupabase implements INotificacionDAO {
       .insert({
         usuario_id: input.usuarioId,
         expedicion_id: input.expedicionId ?? null,
-        evento_id: input.eventoId,
+        evento_id: input.tipo === 'recordatorio' ? null : input.eventoId,
+        clave_evento: input.eventoId,
         tipo: input.tipo,
         titulo: input.titulo,
         mensaje: input.mensaje,
@@ -67,7 +69,7 @@ export class RepositorioAvisosSupabase implements INotificacionDAO {
       .from('avisos_usuario')
       .select('*')
       .eq('usuario_id', usuarioId)
-      .eq('evento_id', eventoId)
+      .eq('clave_evento', eventoId)
       .maybeSingle();
 
     if (error) {
@@ -75,6 +77,25 @@ export class RepositorioAvisosSupabase implements INotificacionDAO {
     }
 
     return data ? mapearFilaAAviso(data as FilaAviso) : null;
+  }
+
+  /** Id del evento que HU-26, HU-27 o HU-35 guardaron en eventos_plan con esa operación. */
+  async buscarIdEventoPorOperacion(
+    operacionId: string,
+    expedicionId: string,
+  ): Promise<string | null> {
+    const { data, error } = await this.supabase
+      .from('eventos_plan')
+      .select('id')
+      .eq('operacion_id', operacionId)
+      .eq('expedicion_id', expedicionId)
+      .maybeSingle();
+
+    if (error) {
+      throw new ErrorAplicacion(500, `Error al consultar evento del plan: ${error.message}`);
+    }
+
+    return data ? (data as { id: string }).id : null;
   }
 
   async listarPorUsuario(usuarioId: string, soloNoLeidos = false): Promise<Aviso[]> {

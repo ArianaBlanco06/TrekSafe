@@ -8,7 +8,10 @@ CREATE TABLE public.avisos_usuario (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     usuario_id UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
     expedicion_id UUID REFERENCES public.expediciones(id) ON DELETE CASCADE,
-    evento_id UUID NOT NULL REFERENCES public.eventos_plan(id) ON DELETE CASCADE,
+    -- Evento del plan (edición, cancelación, ampliación). Vacío solo en recordatorios (HU-38).
+    evento_id UUID REFERENCES public.eventos_plan(id) ON DELETE CASCADE,
+    -- Clave de idempotencia: el id del evento, o 'RECORDATORIO:<expedicion>:<minutos>'.
+    clave_evento VARCHAR(150) NOT NULL,
     tipo VARCHAR(50) NOT NULL CHECK (tipo IN ('edicion', 'cancelacion', 'ampliacion', 'recordatorio')),
     titulo VARCHAR(255) NOT NULL,
     mensaje TEXT NOT NULL,
@@ -16,12 +19,14 @@ CREATE TABLE public.avisos_usuario (
     creado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     actualizado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-    -- Idempotencia estricta por evento y usuario
-    CONSTRAINT uq_aviso_usuario_evento UNIQUE (usuario_id, evento_id)
+    -- Idempotencia estricta: un aviso por usuario y evento
+    CONSTRAINT uq_aviso_usuario_clave UNIQUE (usuario_id, clave_evento),
+    -- Edición, cancelación y ampliación siempre apuntan a un evento real del plan
+    CONSTRAINT ck_aviso_evento_obligatorio CHECK (tipo = 'recordatorio' OR evento_id IS NOT NULL)
 );
 
 COMMENT ON TABLE public.avisos_usuario IS
-    'Bandeja de avisos in-app generados a partir de eventos del plan y recordatorios; vinculados obligatoriamente a un evento_plan.';
+    'Bandeja de avisos in-app: eventos del plan (con evento_id) y recordatorios de HU-38 (sin evento_id).';
 
 CREATE INDEX idx_avisos_usuario_leido 
     ON public.avisos_usuario (usuario_id, leido, creado_en DESC);
