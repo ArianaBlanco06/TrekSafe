@@ -37,7 +37,7 @@ export async function contextoPostgresEventosPlanPruebas(pool: pg.Pool, t: TestC
   const senderistaB = randomUUID();
   const expedicionA = randomUUID();
   const expedicionB = randomUUID();
-  // Borrar las cuentas elimina expediciones y eventos por cascada (permitida por la 010).
+  // Borrar las cuentas elimina expediciones y eventos por cascada (permitida por la 012).
   t.after(async () => {
     await pool.query('DELETE FROM public.usuarios WHERE id = ANY($1::uuid[])', [[senderistaA, senderistaB]]);
   });

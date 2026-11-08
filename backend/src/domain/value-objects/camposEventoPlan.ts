@@ -2,7 +2,7 @@
  * Campos del plan que puede registrar un evento de `eventos_plan` (HU-26, HU-27, HU-35)
  * y que el historial de cambios (HU-36) puede mostrar. Lista blanca y orden de presentación.
  *
- * Debe coincidir con `treksafe_sanear_cambios_evento_plan` (migración 010).
+ * Debe coincidir con `treksafe_sanear_cambios_evento_plan` (migración 012).
  */
 export const CAMPOS_EVENTO_PLAN = [
   'lugarInicio',

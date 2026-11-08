@@ -21,9 +21,9 @@ Issue: #37.
 
 ## Persistencia
 
-No se crea una tabla nueva: se lee `public.eventos_plan` (contrato en `docs/hu-26/diseno.md`). En Supabase **solo registran las RPC** 003 (HU-26), 005 (HU-27) y 007 (HU-35), en la misma transacción que suben la versión; esas RPC no se modifican y no hay escritura desde TypeScript. La sección 5 de `PLAN_SEBASTIAN_RELEASE2.md` (tabla con `valores_antes`/`valores_despues`) queda obsoleta; solo se reutiliza el número `010`.
+No se crea una tabla nueva: se lee `public.eventos_plan` (contrato en `docs/hu-26/diseno.md`). En Supabase **solo registran las RPC** 003 (HU-26), 005 (HU-27) y 007 (HU-35), en la misma transacción que suben la versión; esas RPC no se modifican y no hay escritura desde TypeScript. La sección 5 de `PLAN_SEBASTIAN_RELEASE2.md` (tabla con `valores_antes`/`valores_despues`) queda obsoleta; solo se reutiliza el número de migración, renumerado de `010` a `012` porque develop asignó `010` a HU-32 (`011` ya era de HU-29).
 
-`backend/migrations/010_hu36_eventos_plan_solo_anexado.sql` (requiere `002` y `006`, re-ejecutable, no reescribe filas):
+`backend/migrations/012_hu36_eventos_plan_solo_anexado.sql` (requiere `002` y `006`, re-ejecutable, no reescribe filas):
 
 | Pieza | Efecto |
 |---|---|
@@ -40,7 +40,7 @@ Fuentes únicas y sincronía (cada una con su prueba):
 
 | Constante | Debe coincidir con |
 |---|---|
-| `CAMPOS_EVENTO_PLAN` (`domain/value-objects/camposEventoPlan.ts`) | La lista blanca de la 010 y `CAMPOS_CAMBIO_PLAN` del frontend |
+| `CAMPOS_EVENTO_PLAN` (`domain/value-objects/camposEventoPlan.ts`) | La lista blanca de la 012 y `CAMPOS_CAMBIO_PLAN` del frontend |
 | `TIPOS_EVENTO_PLAN` (`domain/value-objects/tiposEventoPlan.ts`) | `tipo IN (...)` de la 002 y `TIPOS_CAMBIO_PLAN` del frontend |
 
 ### Anonimizado y «sin detalle»
@@ -98,7 +98,7 @@ La respuesta no incluye `operacionId`, `senderistaId` ni `actorId`. Los campos d
 | Clase: `EventosPlanDAOMemoria` (`IEventosPlanDAO` = lector + registro) | |
 |---|---|
 | **Responsabilidades** | **Colaboradores** |
-| Sustituto con la semántica de la 010: anexar, sanear, fijar `ocurridoEn` con su reloj | `IReloj`, `sanearCambios` |
+| Sustituto con la semántica de la 012: anexar, sanear, fijar `ocurridoEn` con su reloj | `IReloj`, `sanearCambios` |
 | Rechazar un `operacionId` repetido sin sobrescribir | `errorOperacionYaRegistrada` |
 
 `IRegistroEventosPlan` aplica solo a escritores desde TypeScript; hoy, solo la memoria.
@@ -122,7 +122,7 @@ La respuesta no incluye `operacionId`, `senderistaId` ni `actorId`. Los campos d
 
 | Archivo | Cubre |
 |---|---|
-| `backend/src/domain/value-objects/camposEventoPlan.test.ts` | Lista blanca (CA-03), `esEventoAnonimizado`, sincronía con la 010 y con el frontend |
+| `backend/src/domain/value-objects/camposEventoPlan.test.ts` | Lista blanca (CA-03), `esEventoAnonimizado`, sincronía con la 012 y con el frontend |
 | `backend/src/domain/value-objects/tiposEventoPlan.test.ts` | Guarda de tipos, sincronía con la 002 y con el frontend |
 | `backend/src/infrastructure/repositories/memoria/EventosPlanDAOMemoria.test.ts` | Contratos del lector y del registro |
 | `backend/src/infrastructure/repositories/EventosPlanDAOSupabase.test.ts`, `PropiedadExpedicionSupabase.test.ts` | Consultas PostgREST, `select` sin `*`, saneamiento, anonimizado desde la fila cruda, ISO canónico, sin `registrar`, errores |
@@ -140,7 +140,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File backend/scripts/test-hu3
 
 ## Pendientes y deuda
 
-- Confirmar el número `010` con Ariana y los triggers con Favio; las decisiones de producto con Marko.
-- Aplicar `010` en DEV (no se ha aplicado; el registro de aplicación lo mantiene el equipo).
+- Confirmar el número `012` con Ariana (antes `010`, asignado a HU-32 en develop) y los triggers con Favio; las decisiones de producto con Marko.
+- Aplicar `012` en DEV (no se ha aplicado; el registro de aplicación lo mantiene el equipo).
 - Deuda: un formateador de fechas común para esta vista y `PaginaHistorialExpediciones`.
 - El puente de pruebas no es PostgREST: no valida el despliegue en Supabase DEV.

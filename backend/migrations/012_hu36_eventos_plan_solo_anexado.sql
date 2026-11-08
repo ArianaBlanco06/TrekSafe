@@ -1,5 +1,5 @@
 -- =============================================================================
--- 010 · HU-36: eventos_plan solo admite anexar (historial de cambios del plan)
+-- 012 · HU-36: eventos_plan solo admite anexar (historial de cambios del plan)
 -- Requiere: 002_hu26_version_y_eventos_plan.sql y 006_hu27_permiso_anonimizar_eventos.sql.
 -- Re-ejecutable: CREATE OR REPLACE, DROP TRIGGER IF EXISTS y permisos idempotentes.
 -- No reescribe filas existentes.
@@ -166,7 +166,7 @@ BEGIN
     IF to_regclass('public.treksafe_migraciones') IS NOT NULL THEN
         EXECUTE $sql$
             INSERT INTO public.treksafe_migraciones (version, nombre, hu)
-            VALUES ('010', 'hu36_eventos_plan_solo_anexado', 'HU-36')
+            VALUES ('012', 'hu36_eventos_plan_solo_anexado', 'HU-36')
             ON CONFLICT (version) DO NOTHING
         $sql$;
     END IF;

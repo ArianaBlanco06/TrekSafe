@@ -1,6 +1,6 @@
 -- Solo PostgreSQL local desechable; todos los datos de prueba se revierten.
 -- Requiere: init_schema.sql, los privilegios por defecto de Supabase para anon, authenticated
--- y service_role, y las migraciones 002 a 007 y 010 aplicadas. Se ejecuta con
+-- y service_role, y las migraciones 002 a 007 y 012 aplicadas. Se ejecuta con
 -- backend/scripts/test-hu36-postgres.ps1, que emula esos privilegios (HU-36-S2).
 BEGIN;
 

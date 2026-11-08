@@ -1,5 +1,5 @@
 # HU-36: crea y apaga PostgreSQL local desechable. No utiliza DATABASE_URL ni Supabase.
-# Aplica el esquema inicial, 002 a 007 y 010, ejecuta la suite SQL de eventos_plan y
+# Aplica el esquema inicial, 002 a 007 y 012, ejecuta la suite SQL de eventos_plan y
 # la integracion Node (contrato del lector contra PostgreSQL real mediante puente fetch).
 param([string]$PostgresBin = '')
 $ErrorActionPreference = 'Stop'
@@ -15,7 +15,7 @@ $previousHu36Url = $env:HU36_TEST_DATABASE_URL
 # service_role: ALL sobre tablas y secuencias de public, EXECUTE sobre funciones, tanto
 # para lo que ya existe como para lo que se cree despues (ALTER DEFAULT PRIVILEGES).
 # init_schema.sql no concede nada a estos roles; asi los asserts de "anon/authenticated
-# sin acceso" prueban de verdad los REVOKE de la 002 y la 010, y la 010 debe retirar de
+# sin acceso" prueban de verdad los REVOKE de la 002 y la 012, y la 012 debe retirar de
 # verdad UPDATE, DELETE y TRUNCATE de service_role sobre eventos_plan.
 $rolesSupabase = 'anon, authenticated, service_role'
 $privilegiosSupabase = (@(
@@ -39,7 +39,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'No se pudieron crear los roles de prueba.' }
     & (Join-Path $PostgresBin 'psql.exe') @argsSql -d postgres -c 'CREATE DATABASE treksafe_hu36_test;'
     if ($LASTEXITCODE -ne 0) { throw 'No se pudo crear la base desechable.' }
-    # 010 se aplica dos veces para comprobar que es re-ejecutable.
+    # 012 se aplica dos veces para comprobar que es re-ejecutable.
     $files = @(
         'init_schema.sql',
         'backend/migrations/002_hu26_version_y_eventos_plan.sql',
@@ -48,8 +48,8 @@ try {
         'backend/migrations/005_hu27_rpc_cancelar_expedicion.sql',
         'backend/migrations/006_hu27_permiso_anonimizar_eventos.sql',
         'backend/migrations/007_hu35_rpc_ampliar_retorno.sql',
-        'backend/migrations/010_hu36_eventos_plan_solo_anexado.sql',
-        'backend/migrations/010_hu36_eventos_plan_solo_anexado.sql',
+        'backend/migrations/012_hu36_eventos_plan_solo_anexado.sql',
+        'backend/migrations/012_hu36_eventos_plan_solo_anexado.sql',
         'backend/migrations/tests/hu36_eventos_plan_solo_anexado.test.sql'
     )
     $indice = 0

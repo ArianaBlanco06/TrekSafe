@@ -43,7 +43,7 @@ function aEvento(fila: FilaEventoPlanValida): EventoPlan {
     actorId: fila.actor_id,
     ocurridoEn: aIsoCanonico(fila.ocurrido_en),
     versionResultante: fila.version_resultante,
-    // Defensa adicional al trigger de 010: lo que no esté en la lista blanca no sale.
+    // Defensa adicional al trigger de 012: lo que no esté en la lista blanca no sale.
     cambios: sanearCambios(fila.cambios),
     motivo: fila.motivo,
     operacionId: fila.operacion_id,

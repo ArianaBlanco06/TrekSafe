@@ -65,8 +65,8 @@ describe('HU-36 CA-03: lista blanca de cambios del plan', () => {
     assert.deepEqual(constanteFrontend('CAMPOS_CAMBIO_PLAN'), [...CAMPOS_EVENTO_PLAN]);
   });
 
-  it('coincide con la lista blanca de la migración 010', () => {
-    const sql = readFileSync(new URL('../../../migrations/010_hu36_eventos_plan_solo_anexado.sql', import.meta.url), 'utf8');
+  it('coincide con la lista blanca de la migración 012', () => {
+    const sql = readFileSync(new URL('../../../migrations/012_hu36_eventos_plan_solo_anexado.sql', import.meta.url), 'utf8');
     const bloque = /WHERE e\.key IN \(([^)]*)\)/.exec(sql)?.[1] ?? '';
     const camposSql = [...bloque.matchAll(/'([^']+)'/g)].map((coincidencia) => coincidencia[1]);
     assert.deepEqual(camposSql, [...CAMPOS_EVENTO_PLAN]);

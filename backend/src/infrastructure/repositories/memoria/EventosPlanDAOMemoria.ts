@@ -10,7 +10,7 @@ function copiar(evento: EventoPlan): EventoPlan {
 }
 
 /**
- * Sustituto con la semántica de `eventos_plan` tras la migración 010: solo anexa,
+ * Sustituto con la semántica de `eventos_plan` tras la migración 012: solo anexa,
  * sanea `cambios`, fija `ocurridoEn` con su reloj y rechaza `operacionId` repetidos.
  */
 export class EventosPlanDAOMemoria implements IEventosPlanDAO {
