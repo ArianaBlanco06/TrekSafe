@@ -29,6 +29,7 @@ import { ConsultarHistorialCambios } from '../../application/use-cases/Consultar
 import { EventosPlanDAOSupabase } from '../../infrastructure/repositories/EventosPlanDAOSupabase.js';
 import { PropiedadExpedicionSupabase } from '../../infrastructure/repositories/PropiedadExpedicionSupabase.js';
 import { crearRutasHistorialCambios } from './routes/rutasHistorialCambios.js';
+import { crearRutasAvisos } from './routes/rutasAvisos.js';
 
 export function createApp() {
   const env = loadEnv();
@@ -79,6 +80,7 @@ export function createApp() {
   app.use(`${env.apiPrefix}/expediciones`, crearRutasExpedicion());
   app.use(`${env.apiPrefix}/plantillas`, crearRutasPlantillas(ensamblarModuloPlantillas()));
   app.use(`${env.apiPrefix}/rescate`, crearRutasRescate());
+  app.use(`${env.apiPrefix}/avisos`, crearRutasAvisos());
 
   app.use(notFoundHandler);
   app.use(errorHandler);

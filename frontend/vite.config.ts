@@ -56,6 +56,11 @@ export default defineConfig({
             handler: 'NetworkOnly',
           },
           {
+            // HU-37: la bandeja de avisos es privada; nunca se guarda en caché.
+            urlPattern: ({ url }) => /^\/api\/avisos(?:\/|$)/.test(url.pathname),
+            handler: 'NetworkOnly',
+          },
+          {
             urlPattern: ({ url }) => /^\/api\/usuario\/listas-equipo(?:\/|$)/.test(url.pathname),
             handler: 'NetworkOnly',
           },

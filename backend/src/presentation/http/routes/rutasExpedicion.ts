@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { AvisadorCambiosPlan } from '../../../application/services/AvisadorCambiosPlan.js';
 import { AmpliarRetorno } from '../../../application/use-cases/AmpliarRetorno.js';
 import { CancelarPlan } from '../../../application/use-cases/CancelarPlan.js';
 import { EditarPlan } from '../../../application/use-cases/EditarPlan.js';
@@ -26,6 +27,7 @@ export function crearRutasExpedicion(): Router {
     new EditarPlan(dao, reloj),
     new CancelarPlan(dao, reloj),
     new AmpliarRetorno(dao, reloj),
+    new AvisadorCambiosPlan(),
   );
 
   router.use(middlewareAutenticacion, requerirRol('senderista'));
