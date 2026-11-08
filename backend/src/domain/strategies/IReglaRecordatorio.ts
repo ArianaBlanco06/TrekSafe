@@ -1,4 +1,4 @@
-import { type IReloj, RelojSistema } from '../services/IReloj.js';
+import type { IReloj } from '../services/IReloj.js';
 
 export type UmbralRecordatorioMinutos = 15 | 30 | 60;
 
@@ -10,13 +10,13 @@ export const UMBRAL_RECORDATORIO_POR_DEFECTO: UmbralRecordatorioMinutos = 30;
  */
 export interface IReglaRecordatorio {
   readonly minutosAnticipacion: UmbralRecordatorioMinutos;
-  correspondeAvisar(horaRetornoEstimada: string | Date, reloj?: IReloj): boolean;
+  correspondeAvisar(horaRetornoEstimada: string | Date, reloj: IReloj): boolean;
 }
 
 abstract class ReglaRecordatorioBase implements IReglaRecordatorio {
   abstract readonly minutosAnticipacion: UmbralRecordatorioMinutos;
 
-  correspondeAvisar(horaRetornoEstimada: string | Date, reloj: IReloj = new RelojSistema()): boolean {
+  correspondeAvisar(horaRetornoEstimada: string | Date, reloj: IReloj): boolean {
     const fechaRetorno = new Date(horaRetornoEstimada).getTime();
     if (isNaN(fechaRetorno)) return false;
 

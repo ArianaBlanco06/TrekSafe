@@ -1,7 +1,8 @@
 import {
   FabricaReglaRecordatorio,
 } from '../../domain/strategies/IReglaRecordatorio.js';
-import { type IReloj, RelojSistema } from '../../domain/services/IReloj.js';
+import type { IReloj } from '../../domain/services/IReloj.js';
+import { RelojSistema } from '../../infrastructure/services/RelojSistema.js';
 import { RepositorioExpedicion } from '../../infrastructure/repositories/RepositorioExpedicion.js';
 import { ServicioBandejaAvisos } from './servicioBandejaAvisos.js';
 
