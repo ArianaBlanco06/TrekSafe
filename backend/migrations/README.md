@@ -1,6 +1,6 @@
 # Migraciones SQL de TrekSafe
 
-HU-34: `016_hu34_avances_expedicion.sql` está preparada y probada únicamente en PostgreSQL desechable. Requiere 002/010 y aplicación única coordinada en DEV; no registrar una aplicación inexistente. Añade su asiento 016 solo si existe el registro de migraciones. Sus dos RPC son SECURITY DEFINER, como HU-32: verifican actor/estado/punto y mantienen revocado el acceso directo a avances. No escribe en eventos_plan ni cambia el plan o cron. Pruebas: `node backend/scripts/test-hu34-postgres.mjs --pg-bin "C:\Program Files\PostgreSQL\18\bin"`; agregar `--with-browser --postgrest <ejecutable>` tras compilar para la cadena real. Detalles en [dossier HU-34](../../docs/hu-34/README.md).
+HU-34: `016_hu34_avances_expedicion.sql` está aplicada y registrada en Supabase DEV (2026-11-09 03:05 UTC). No es re-ejecutable: no volver a ejecutarla. Detalles en [dossier HU-34](../../docs/hu-34/README.md).
 
 Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos
 `sprint*_migration.sql` y `post_mvp_migration.sql` de la raíz están obsoletos.
@@ -37,9 +37,13 @@ Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos
 | `008_hu31_preparacion_expedicion.sql` | Copia de equipo por expedición, ítems, restricciones y permisos | Las dos migraciones de HU-30; integrar después de HU-27 |
 | `009_hu31_operaciones_preparacion.sql` | RPC de consulta, asociación atómica y marcas de preparación | `008_hu31_preparacion_expedicion.sql` |
 | `010_hu32_puntos_ruta.sql` | Tabla puntos_ruta y RPC de consulta/guardado atómico | `002` |
-| `016_hu34_avances_expedicion.sql` | Avances manuales, registro idempotente y consulta privada | `002`, `010`; pendiente de aplicar en DEV |
 | `011_hu29_endurecer_permisos.sql` | Endurece permisos de las tablas y funciones de HU-29 | `000` y `001` |
 | `012_hu36_eventos_plan_solo_anexado.sql` | `eventos_plan` solo anexado: lista blanca de `cambios`, `ocurrido_en` del servidor, sin UPDATE salvo anonimización ARCO, sin DELETE salvo la cascada (detectada porque la expedición ya no existe), sin TRUNCATE | `002` y `006` |
+| `013_hu37_avisos.sql` | Tabla `avisos_usuario` (bandeja in-app) con `clave_evento` única por usuario | `002` |
+| `014_hu38_minutos_recordatorio.sql` | Columna `expediciones.minutos_recordatorio` (15, 30 o 60; por defecto 30) | Esquema inicial |
+| `016_hu34_avances_expedicion.sql` | Tabla `avances_expedicion` y RPC de registro idempotente y último avance. Aplicar una sola vez | `002` y `010` |
+
+`015` está reservada para HU-45 (outbox, PR #90). Para nuevas migraciones, usar el siguiente número libre al momento del merge.
 
 Las migraciones `002` a `007` y `012` son re-ejecutables. No dependen de
 `000_registro_migraciones.sql`: si la tabla `treksafe_migraciones` existe, registran
