@@ -189,7 +189,7 @@ export class RepositorioUsuario {
       .from('expediciones')
       .select('id')
       .eq('senderista_id', senderistaId)
-      .in('estado', ['completada', 'programada']);
+      .in('estado', ['completada', 'programada', 'cancelada']);
     if (errorConsultaExp) throw new ErrorAplicacion(500, errorConsultaExp.message);
 
     const idsExpediciones = (expediciones ?? []).map((e) => e.id);
@@ -206,6 +206,12 @@ export class RepositorioUsuario {
       .delete()
       .eq('id', senderistaId);
     if (errorCuenta) throw new ErrorAplicacion(500, errorCuenta.message);
+
+    // HU-37 ARCO: Limpiar avisos residuales asociados al usuario eliminado
+    await this.supabase
+      .from('avisos_usuario')
+      .delete()
+      .eq('usuario_id', senderistaId);
 
     return {
       fichaMedicaEliminada: true,
@@ -228,7 +234,7 @@ export class RepositorioUsuario {
       .from('expediciones')
       .select('id')
       .eq('senderista_id', senderistaId)
-      .eq('estado', 'completada');
+      .in('estado', ['completada', 'cancelada']);
     if (errorConsulta) throw new ErrorAplicacion(500, errorConsulta.message);
 
     const ids = (expediciones ?? []).map((e) => e.id);
@@ -252,6 +258,14 @@ export class RepositorioUsuario {
       .delete()
       .in('expedicion_id', ids);
     if (errorAcompanantes) throw new ErrorAplicacion(500, errorAcompanantes.message);
+
+    // Los eventos del plan (HU-26/27) guardan lugares, coordenadas, acompañantes y motivos.
+    // Se conservan tipo, fecha y versión para auditoría, sin datos personales.
+    const { error: errorEventos } = await this.supabase
+      .from('eventos_plan')
+      .update({ cambios: {}, motivo: null })
+      .in('expedicion_id', ids);
+    if (errorEventos) throw new ErrorAplicacion(500, errorEventos.message);
 
     return { expedicionesAnonimizadas: ids.length };
   }

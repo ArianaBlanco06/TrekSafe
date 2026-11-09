@@ -13,6 +13,7 @@ export type FilaExpedicion = {
   hora_inicio: string;
   hora_retorno_estimada: string;
   minutos_tolerancia: number;
+  minutos_recordatorio?: number;
   estado: string;
   version: number;
   creado_en?: string;
@@ -24,6 +25,8 @@ type FilaExpedicionActiva = FilaExpedicion & {
   vinculos_expedicion_contacto: {
     contactos_emergencia: { nombre_completo: string; correo_electronico: string } | null;
   }[];
+  /** HU-35: solo el tipo, para contar las ampliaciones del retorno. */
+  eventos_plan?: { tipo: string }[];
 };
 
 export class RepositorioExpedicion {
@@ -66,6 +69,7 @@ export class RepositorioExpedicion {
       horaInicio: string;
       horaRetornoEstimada: string;
       minutosTolerancia: number;
+      minutosRecordatorio?: number;
       estado: 'programada' | 'en_progreso';
       idsContactos: string[];
       nombresAcompanantes: string[];
@@ -89,10 +93,11 @@ export class RepositorioExpedicion {
         hora_inicio: input.horaInicio,
         hora_retorno_estimada: input.horaRetornoEstimada,
         minutos_tolerancia: input.minutosTolerancia,
+        minutos_recordatorio: input.minutosRecordatorio ?? 30,
         estado: input.estado,
       })
       .select(
-        'id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada, minutos_tolerancia, estado, version, creado_en',
+        'id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada, minutos_tolerancia, minutos_recordatorio, estado, version, creado_en',
       )
       .single();
 
@@ -166,7 +171,8 @@ export class RepositorioExpedicion {
         acompanantes_expedicion ( nombre_acompanante ),
         vinculos_expedicion_contacto (
           contactos_emergencia ( nombre_completo, correo_electronico )
-        )
+        ),
+        eventos_plan ( tipo )
       `,
       )
       .eq('senderista_id', senderistaId)
@@ -241,7 +247,11 @@ export class RepositorioExpedicion {
       return data as string[];
     }
 
-    // Fallback si la función RPC no está migrada aún
+    // Fallback si la función RPC no está migrada aún. Se registra para que no pase inadvertido.
+    console.error(
+      '[RepositorioExpedicion] treksafe_marcar_expiradas_en_progreso_como_alerta falló; se usa la alternativa:',
+      error?.message ?? 'respuesta inesperada',
+    );
     const ahoraMs = Date.now();
     const ahoraIso = new Date().toISOString();
 
@@ -252,25 +262,31 @@ export class RepositorioExpedicion {
 
     if (errorConsulta) throw new ErrorAplicacion(500, errorConsulta.message);
 
-    const idsExpirados = (filas ?? [])
-      .filter(
-        (fila) =>
-          new Date(calcularFechaLimite(fila.hora_retorno_estimada, fila.minutos_tolerancia)).getTime() <
-          ahoraMs,
-      )
-      .map((fila) => fila.id);
+    const expiradas = (filas ?? []).filter(
+      (fila) =>
+        new Date(calcularFechaLimite(fila.hora_retorno_estimada, fila.minutos_tolerancia)).getTime() <
+        ahoraMs,
+    );
 
-    if (idsExpirados.length === 0) return [];
+    // Compare-and-swap por fila (HU-35): el UPDATE exige la hora y la tolerancia leídas.
+    // Si el senderista amplió el retorno entre la lectura y la escritura, la hora ya no
+    // coincide y la fila no se marca: así no se genera una alerta falsa.
+    const marcadas: string[] = [];
+    for (const fila of expiradas) {
+      const { data: actualizada, error: errorActualizar } = await this.supabase
+        .from('expediciones')
+        .update({ estado: 'alerta', actualizado_en: ahoraIso })
+        .eq('id', fila.id)
+        .eq('estado', 'en_progreso')
+        .eq('hora_retorno_estimada', fila.hora_retorno_estimada)
+        .eq('minutos_tolerancia', fila.minutos_tolerancia)
+        .select('id')
+        .maybeSingle();
 
-    const { data: actualizadas, error: errorActualizar } = await this.supabase
-      .from('expediciones')
-      .update({ estado: 'alerta', actualizado_en: ahoraIso })
-      .in('id', idsExpirados)
-      .eq('estado', 'en_progreso')
-      .select('id');
-
-    if (errorActualizar) throw new ErrorAplicacion(500, errorActualizar.message);
-    return (actualizadas ?? []).map((fila) => fila.id);
+      if (errorActualizar) throw new ErrorAplicacion(500, errorActualizar.message);
+      if (actualizada) marcadas.push(actualizada.id);
+    }
+    return marcadas;
   }
 
   async completarConfirmacionRetorno(expedicionId: string, senderistaId: string): Promise<FilaExpedicion> {
@@ -297,5 +313,30 @@ export class RepositorioExpedicion {
     }
 
     return data;
+  }
+
+  async buscarEnProgresoParaRecordatorio(): Promise<
+    Array<{
+      id: string;
+      senderistaId: string;
+      horaRetornoEstimada: string;
+      minutosRecordatorio: number;
+    }>
+  > {
+    const { data, error } = await this.supabase
+      .from('expediciones')
+      .select('id, senderista_id, hora_retorno_estimada, minutos_recordatorio')
+      .eq('estado', 'en_progreso');
+
+    if (error) {
+      throw new ErrorAplicacion(500, error.message);
+    }
+
+    return (data || []).map((d: any) => ({
+      id: d.id,
+      senderistaId: d.senderista_id,
+      horaRetornoEstimada: d.hora_retorno_estimada,
+      minutosRecordatorio: d.minutos_recordatorio ?? 30,
+    }));
   }
 }

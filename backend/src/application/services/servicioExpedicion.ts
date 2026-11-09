@@ -1,3 +1,4 @@
+import { ampliacionesRestantes } from '../../domain/value-objects/ampliacionRetorno.js';
 import { ErrorAplicacion } from '../../shared/errors/ErrorAplicacion.js';
 import type { EntradaConfirmarRetorno } from '../dto/expedicion.dto.js';
 import type { EntradaCrearExpedicion } from '../dto/usuario.dto.js';
@@ -23,6 +24,8 @@ export type ResumenExpedicionActiva = {
   cantidadContactos: number;
   acompanantes: string[];
   contactos: { nombreCompleto: string; correoElectronico: string }[];
+  /** HU-35: ampliaciones del retorno que aún puede usar. */
+  ampliacionesRestantes: number;
 };
 
 export class ServicioExpedicion {
@@ -70,6 +73,7 @@ export class ServicioExpedicion {
       horaInicio: entrada.horaInicio,
       horaRetornoEstimada: entrada.horaRetornoEstimada,
       minutosTolerancia: entrada.minutosTolerancia,
+      minutosRecordatorio: entrada.minutosRecordatorio ?? 30,
       estado: estado as 'programada' | 'en_progreso',
       idsContactos: entrada.idsContactos,
       nombresAcompanantes: entrada.nombresAcompanantes,
@@ -111,6 +115,9 @@ export class ServicioExpedicion {
       cantidadContactos: contactos.length,
       acompanantes,
       contactos,
+      ampliacionesRestantes: ampliacionesRestantes(
+        (fila.eventos_plan ?? []).filter((evento) => evento.tipo === 'RETORNO_AMPLIADO').length,
+      ),
     };
   }
 

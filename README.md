@@ -18,7 +18,7 @@ El senderista registra su plan de expedición y confirma el retorno seguro. Si n
 > Proyecto académico — **Universidad de Lima** · Ingeniería de Software 1 · 2026  
 > Release 01–02 · **25/25** historias de usuario · **96** story points
 
-> **Continuidad ISW2 — HU-32:** gestión de puntos intermedios implementada y validada localmente. [Dossier, demostración y evidencia](docs/hu-32/README.md). La integración en DEV requiere coordinar la versión compartida del plan y las migraciones.
+> **Continuidad ISW2 — HU-32:** gestión de puntos intermedios implementada y validada localmente. [Dossier, demostración y evidencia](docs/hu-32/README.md). Su migración `010_hu32_puntos_ruta.sql` está aplicada y registrada en Supabase DEV.
 
 ## Contenido
 
@@ -203,7 +203,7 @@ Artefactos: [`backend/fly.toml`](backend/fly.toml) · [`backend/Dockerfile`](bac
 <details>
 <summary>Base de datos</summary>
 
-Estados de expedición: `programada` → `en_progreso` → `completada` | `alerta`.
+Estados de expedición: `programada` → `en_progreso` → `completada` | `alerta`. Una `programada` puede pasar a `cancelada` (HU-27), que es final: el cron no la activa ni la alerta.
 
 Entidades: `usuarios`, `perfiles_senderista`, `perfiles_rescatista`, `expediciones`, `contactos_emergencia`, `fichas_medicas`, `bitacoras_rescate`, `despachos_correo`, `auditoria_acceso_medico`, …
 
@@ -220,7 +220,7 @@ Prefijo `/api` · `Authorization: Bearer <JWT>` · JSON `camelCase`
 | Salud | `GET /salud` |
 | Auth | `POST /auth/registrar-senderista` · `registrar-rescatista` · `iniciar-sesion` |
 | Usuario | `/usuario/ficha-medica` · `/contactos` · `/privacidad/revocar` |
-| Expediciones | `POST /` · `GET /` · `GET /activa` · `GET /historial` · `GET /:id` · `PUT /:id` · `POST /:id/confirmar-retorno` |
+| Expediciones | `POST /` · `GET /` · `GET /activa` · `GET /historial` · `GET /:id` · `PUT /:id` · `POST /:id/cancelar` · `POST /:id/ampliar-retorno` · `POST /:id/confirmar-retorno` |
 | Rescate | `/expediciones` · `/historial` · `/alertas` · confirmar · bitácora |
 
 ## Seguridad

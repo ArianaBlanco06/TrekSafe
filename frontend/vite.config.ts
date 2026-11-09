@@ -51,8 +51,13 @@ export default defineConfig({
         clientsClaim: true,
         runtimeCaching: [
           {
-            // Conservar tambien la exclusion explicita de puntos de HU-32.
+            // El editor necesita una version vigente y aislada de la cache API.
             urlPattern: ({ url }) => /\/expediciones\/[^/]+\/puntos\/?$/.test(url.pathname),
+            handler: 'NetworkOnly',
+          },
+          {
+            // HU-37: la bandeja de avisos es privada; nunca se guarda en caché.
+            urlPattern: ({ url }) => /^\/api\/avisos(?:\/|$)/.test(url.pathname),
             handler: 'NetworkOnly',
           },
           {

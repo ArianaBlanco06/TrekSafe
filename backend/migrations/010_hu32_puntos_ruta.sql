@@ -309,4 +309,17 @@ REVOKE ALL ON FUNCTION public.treksafe_guardar_puntos_ruta(uuid, uuid, integer, 
 GRANT EXECUTE ON FUNCTION public.treksafe_consultar_puntos_ruta(uuid, uuid) TO service_role;
 GRANT EXECUTE ON FUNCTION public.treksafe_guardar_puntos_ruta(uuid, uuid, integer, jsonb) TO service_role;
 
+-- Registro condicional, como HU-31. No convierte el DDL en re-ejecutable.
+DO $$
+BEGIN
+    IF to_regclass('public.treksafe_migraciones') IS NOT NULL THEN
+        EXECUTE $sql$
+            INSERT INTO public.treksafe_migraciones (version, nombre, hu)
+            VALUES ('010', 'hu32_puntos_ruta', 'HU-32')
+            ON CONFLICT (version) DO NOTHING
+        $sql$;
+    END IF;
+END
+$$;
+
 COMMIT;

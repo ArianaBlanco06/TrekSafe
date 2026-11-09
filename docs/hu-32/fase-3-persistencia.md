@@ -2,13 +2,13 @@
 
 Fecha: 1 de noviembre de 2026. Responsable: Andriy Hitoshi Enciso Rojas (@Hitoshi).
 
-Estado: migración incremental preparada y verificada en PostgreSQL local aislado. No aplicada en Supabase ni en el servicio PostgreSQL instalado. La creación de endpoints y la conexión con el backend corresponden a la fase 4.
+Estado al cierre original de esta fase: migración incremental preparada y verificada en PostgreSQL local aislado; todavía no aplicada en Supabase en ese momento. Actualización posterior: Ariana confirmó la estructura final en DEV; el archivo se renombra a `010_hu32_puntos_ruta.sql` y solo queda pendiente su asiento `010`, a cargo de Ariana tras CI. No reejecutar el DDL en DEV. Véase [revisión PR #63](revision-pr63.md). El resto de esta fase conserva su fotografía original.
 
 ## 1. Archivos entregados
 
 | Archivo | Contenido |
 | --- | --- |
-| [hu32_puntos_ruta.sql](../../backend/migrations/hu32_puntos_ruta.sql) | Tabla, restricciones, validación, consulta y guardado transaccional; permisos de los objetos nuevos. |
+| [010_hu32_puntos_ruta.sql](../../backend/migrations/010_hu32_puntos_ruta.sql) | Tabla, restricciones, validación, consulta y guardado transaccional; permisos de los objetos nuevos. |
 | [README de migraciones](../../backend/migrations/README.md) | Requisitos, orden propuesto, resultados SQL, operación y registro pendiente de aplicación. |
 | [test-hu32-sql.mjs](../../backend/scripts/test-hu32-sql.mjs) | Verificador reproducible con un clúster PostgreSQL temporal y datos ficticios, sin dependencias npm. |
 | [Contrato de fase 2](fase-2-contrato.md) | Se enlaza esta entrega y se precisa que el acuerdo de versión condiciona la aplicación en DEV compartido; la preparación local usa una precondición verificable. |

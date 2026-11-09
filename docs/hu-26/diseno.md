@@ -160,6 +160,8 @@ Para HU-36 y HU-37 (lectura), y HU-27 y HU-35 (escritura). Se crea en `backend/m
 }
 ```
 
+**`RETORNO_AMPLIADO` (HU-35):** solo `{"horaRetornoEstimada": {"antes": ..., "despues": ...}}`. Los minutos ampliados se derivan de `despues - antes`; no se guardan aparte (ver `docs/hu-35/diseno.md`).
+
 **Campos de una edición:** `lugarInicio`, `lugarFin`, `coordenadasInicio`, `coordenadasFin`, `horaInicio`, `horaRetornoEstimada`, `minutosTolerancia`, `idsContactos` y `nombresAcompanantes`. Las horas son cadenas ISO 8601; las dos últimas claves son listas ordenadas.
 
 **Reglas para quien escriba o lea:**
@@ -168,4 +170,5 @@ Para HU-36 y HU-37 (lectura), y HU-27 y HU-35 (escritura). Se crea en `backend/m
 - Inserta el evento dentro de la misma función que modifica el plan.
 - Solo `service_role` puede leer e insertar. RLS deniega a `anon` y `authenticated`.
 - Antes de mostrar eventos, filtra por propietario. `cambios` puede contener lugares, coordenadas y nombres de acompañantes, y ids de contactos.
-- Los eventos se eliminan en cascada con su expedición. La anonimización de `RepositorioUsuario.anonimizarHistorialRutas` todavía **no** los limpia.
+- Los eventos se eliminan en cascada con su expedición. Desde HU-27, `RepositorioUsuario.anonimizarHistorialRutas` deja `cambios = '{}'` y `motivo = NULL` en los eventos de las expediciones que anonimiza (ver `docs/hu-27/diseno.md`).
+- Desde HU-36 (migración `012`), la tabla solo admite anexar: un trigger sanea `cambios` con la lista blanca de campos de arriba más `estado` y fija `ocurrido_en = now()`; se rechazan con `EVENTO_PLAN_INMUTABLE` el UPDATE (salvo la anonimización ARCO), el DELETE mientras la expedición exista (la cascada pasa porque la expedición ya no es visible) y el TRUNCATE. Una clave nueva en `cambios` exige ampliar `CAMPOS_EVENTO_PLAN`, `CAMPOS_CAMBIO_PLAN` (frontend) y la función `treksafe_sanear_cambios_evento_plan`; un tipo nuevo, `TIPOS_EVENTO_PLAN` y `TIPOS_CAMBIO_PLAN`. Las pruebas comprueban la sincronía. Solo las RPC escriben eventos; TypeScript solo los lee. La lectura para el senderista es `GET /api/expediciones/:id/cambios` (ver `docs/hu-36/diseno.md`).

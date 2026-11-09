@@ -2,7 +2,7 @@
 export type RolUsuario = 'senderista' | 'rescatista';
 
 /** Ciclo de vida de una expedición */
-export type EstadoExpedicion = 'programada' | 'en_progreso' | 'completada' | 'alerta';
+export type EstadoExpedicion = 'programada' | 'en_progreso' | 'completada' | 'alerta' | 'cancelada';
 
 /** Estados operativos de la bitácora de rescate */
 export type EstadoRescate = 'en_busqueda' | 'localizados' | 'cerrado';

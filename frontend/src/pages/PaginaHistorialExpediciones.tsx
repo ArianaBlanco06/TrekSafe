@@ -108,6 +108,12 @@ export function PaginaHistorialExpediciones() {
                   Retorno confirmado: {formatDt(exp.actualizadoEn)}
                 </p>
               )}
+              <Link to={`/senderista/expedicion/${encodeURIComponent(exp.id)}/equipo`}
+                aria-label={`Consultar equipo de la expedición a ${exp.lugarFin}`}
+                className="inline-flex items-center min-h-12 mt-2 text-sm font-semibold text-primary">Consultar equipo</Link>
+              <Link to={`/senderista/expedicion/${encodeURIComponent(exp.id)}/cambios`}
+                aria-label={`Ver cambios del plan de la expedición a ${exp.lugarFin}`}
+                className="inline-flex items-center min-h-12 mt-2 ml-4 text-sm font-semibold text-primary">Ver cambios</Link>
               {enLinea ? (
                 <Link to={`/senderista/expedicion/nueva?repetir=${encodeURIComponent(exp.id)}`}
                   aria-label={`Repetir expedición a ${exp.lugarFin}`}

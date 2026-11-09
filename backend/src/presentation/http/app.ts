@@ -12,16 +12,24 @@ import { ensamblarModuloPlantillas } from '../../infrastructure/composicion/modu
 import { crearRutasPlantillas } from './routes/rutasPlantillas.js';
 import { crearRutasRescate } from './routes/rutasRescate.js';
 import { crearRutasUsuario } from './routes/rutasUsuario.js';
+import { crearRutasPuntosRuta } from './routes/rutasPuntosRuta.js';
+import { crearServicioPuntosRuta } from '../../infrastructure/composition/puntosRuta.js';
 import { crearRutasListasEquipo } from './routes/rutasListasEquipo.js';
 import { ServicioListasEquipo } from '../../application/services/servicioListasEquipo.js';
 import { RepositorioListasEquipoSupabase } from '../../infrastructure/repositories/RepositorioListasEquipoSupabase.js';
 import { getSupabaseAdmin } from '../../infrastructure/database/supabase.js';
+import { ServicioPreparacionExpedicion } from '../../application/services/servicioPreparacionExpedicion.js';
+import { RepositorioPreparacionExpedicionSupabase } from '../../infrastructure/repositories/RepositorioPreparacionExpedicionSupabase.js';
+import { crearRutasPreparacionExpedicion } from './routes/rutasPreparacionExpedicion.js';
 import { CreadorDesdeHistorial } from '../../application/creacion-plan/CreadorDesdeHistorial.js';
 import { DAOContactosVigentesSupabase } from '../../infrastructure/repositories/DAOContactosVigentesSupabase.js';
 import { HistorialExpedicionesDAOSupabase } from '../../infrastructure/repositories/HistorialExpedicionesDAOSupabase.js';
 import { crearRutasRepetirExpedicion } from './routes/rutasRepetirExpedicion.js';
-import { crearRutasPuntosRuta } from './routes/rutasPuntosRuta.js';
-import { crearServicioPuntosRuta } from '../../infrastructure/composition/puntosRuta.js';
+import { ConsultarHistorialCambios } from '../../application/use-cases/ConsultarHistorialCambios.js';
+import { EventosPlanDAOSupabase } from '../../infrastructure/repositories/EventosPlanDAOSupabase.js';
+import { PropiedadExpedicionSupabase } from '../../infrastructure/repositories/PropiedadExpedicionSupabase.js';
+import { crearRutasHistorialCambios } from './routes/rutasHistorialCambios.js';
+import { crearRutasAvisos } from './routes/rutasAvisos.js';
 
 export function createApp() {
   const env = loadEnv();
@@ -56,15 +64,23 @@ export function createApp() {
   const servicioEquipo = new ServicioListasEquipo(new RepositorioListasEquipoSupabase(getSupabaseAdmin()));
   app.use(`${env.apiPrefix}/usuario/listas-equipo`, crearRutasListasEquipo(servicioEquipo));
   app.use(`${env.apiPrefix}/usuario`, crearRutasUsuario());
+  app.use(`${env.apiPrefix}/expediciones`, crearRutasPuntosRuta(crearServicioPuntosRuta()));
+  const servicioPreparacion = new ServicioPreparacionExpedicion(new RepositorioPreparacionExpedicionSupabase(getSupabaseAdmin()));
+  app.use(`${env.apiPrefix}/expediciones`, crearRutasPreparacionExpedicion(servicioPreparacion));
   const creadorDesdeHistorial = new CreadorDesdeHistorial(
     new DAOContactosVigentesSupabase(getSupabaseAdmin()),
     new HistorialExpedicionesDAOSupabase(getSupabaseAdmin()),
   );
   app.use(`${env.apiPrefix}/expediciones`, crearRutasRepetirExpedicion(creadorDesdeHistorial));
-  app.use(`${env.apiPrefix}/expediciones`, crearRutasPuntosRuta(crearServicioPuntosRuta()));
+  const consultarHistorialCambios = new ConsultarHistorialCambios(
+    new PropiedadExpedicionSupabase(getSupabaseAdmin()),
+    new EventosPlanDAOSupabase(getSupabaseAdmin()),
+  );
+  app.use(`${env.apiPrefix}/expediciones`, crearRutasHistorialCambios(consultarHistorialCambios));
   app.use(`${env.apiPrefix}/expediciones`, crearRutasExpedicion());
   app.use(`${env.apiPrefix}/plantillas`, crearRutasPlantillas(ensamblarModuloPlantillas()));
   app.use(`${env.apiPrefix}/rescate`, crearRutasRescate());
+  app.use(`${env.apiPrefix}/avisos`, crearRutasAvisos());
 
   app.use(notFoundHandler);
   app.use(errorHandler);
