@@ -2,7 +2,7 @@
 
 Fecha: 5 de noviembre de 2026. Responsable: Andriy Hitoshi Enciso Rojas (@Hitoshi).
 
-Estado: contrato preparado para implementación por fases y revisión del equipo. Los endpoints, tipos y objetos de este documento aún no están implementados. Esta fase solo modifica documentación.
+Estado al redactar fase 2: especificación sin implementación. Actualización del 8 de noviembre: implementada y validada en [fases 3 a 7](README.md). La decisión de permisos se ajusta a la instrucción posterior del equipo: RPC SECURITY DEFINER, como HU-32, sin acceso directo del backend a puntos. Esta fase conserva el contrato y sus fundamentos.
 
 Base: [mapa de fase 1](fase-1-mapa.md), criterios HU-34 del Product Backlog ISW2 y convenciones locales de autenticación, errores y privacidad. Las decisiones de detalle siguientes concretan esos criterios para el desarrollo; no afirman una nueva aprobación del PO ni del esquema compartido.
 
@@ -204,7 +204,7 @@ La colisión entre expediciones diferentes requiere una lectura posterior que ve
 
 La lectura del último avance puede resolverse con otra RPC privada `treksafe_consultar_ultimo_avance`, que distinga expedición inaccesible de expedición propia sin registros sin revelar datos ajenos. Índices: clave única de idempotencia e índice de consulta por `(expedicion_id, registrado_en DESC, id DESC)`.
 
-RLS y permisos: activar RLS con denegación para `anon`/`authenticated`, sin acceso del navegador. Las RPC son exclusivas de `service_role`, con nombres de esquema explícitos y `search_path` fijo. Elegir `SECURITY INVOKER` y los permisos mínimos necesarios coherentes con las migraciones compartidas; documentar cualquier ajuste necesario por los permisos reales de HU-32, sin abrir sus tablas a los roles del cliente. El rol del servidor es de confianza; las comprobaciones de propiedad siguen siendo obligatorias en la RPC.
+RLS y permisos: denegación para `anon`/`authenticated`, sin acceso del navegador. Conforme a la instrucción posterior del equipo, las RPC usan `SECURITY DEFINER`, nombres calificados y `search_path` fijo. `service_role` solo recibe ejecución; las funciones operan con un propietario confiable y mantienen los permisos cerrados de HU-32. Las comprobaciones de propiedad siguen siendo obligatorias dentro de la RPC. Esta decisión reemplaza la propuesta inicial INVOKER de fase 2.
 
 ## 9. Coordinación con cron, retorno y plan
 

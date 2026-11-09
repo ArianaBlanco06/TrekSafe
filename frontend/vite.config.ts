@@ -51,6 +51,11 @@ export default defineConfig({
         clientsClaim: true,
         runtimeCaching: [
           {
+            // HU-34: los avances y sus notas nunca se almacenan como respuestas offline.
+            urlPattern: ({ url }) => /^\/api\/expediciones\/[^/]+\/avances(?:\/|$)/.test(url.pathname),
+            handler: 'NetworkOnly',
+          },
+          {
             // El editor necesita una version vigente y aislada de la cache API.
             urlPattern: ({ url }) => /\/expediciones\/[^/]+\/puntos\/?$/.test(url.pathname),
             handler: 'NetworkOnly',

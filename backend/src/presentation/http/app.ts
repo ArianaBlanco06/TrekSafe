@@ -14,6 +14,9 @@ import { crearRutasRescate } from './routes/rutasRescate.js';
 import { crearRutasUsuario } from './routes/rutasUsuario.js';
 import { crearRutasPuntosRuta } from './routes/rutasPuntosRuta.js';
 import { crearServicioPuntosRuta } from '../../infrastructure/composition/puntosRuta.js';
+import { RepositorioAvancesExpedicion } from '../../infrastructure/repositories/RepositorioAvancesExpedicion.js';
+import { RegistrarAvance } from '../../application/use-cases/RegistrarAvance.js';
+import { crearRutasAvancesExpedicion } from './routes/rutasAvancesExpedicion.js';
 import { crearRutasListasEquipo } from './routes/rutasListasEquipo.js';
 import { ServicioListasEquipo } from '../../application/services/servicioListasEquipo.js';
 import { RepositorioListasEquipoSupabase } from '../../infrastructure/repositories/RepositorioListasEquipoSupabase.js';
@@ -65,6 +68,8 @@ export function createApp() {
   app.use(`${env.apiPrefix}/usuario/listas-equipo`, crearRutasListasEquipo(servicioEquipo));
   app.use(`${env.apiPrefix}/usuario`, crearRutasUsuario());
   app.use(`${env.apiPrefix}/expediciones`, crearRutasPuntosRuta(crearServicioPuntosRuta()));
+  const avances = new RepositorioAvancesExpedicion(getSupabaseAdmin());
+  app.use(`${env.apiPrefix}/expediciones`, crearRutasAvancesExpedicion(orden => new RegistrarAvance(orden, avances), avances));
   const servicioPreparacion = new ServicioPreparacionExpedicion(new RepositorioPreparacionExpedicionSupabase(getSupabaseAdmin()));
   app.use(`${env.apiPrefix}/expediciones`, crearRutasPreparacionExpedicion(servicioPreparacion));
   const creadorDesdeHistorial = new CreadorDesdeHistorial(

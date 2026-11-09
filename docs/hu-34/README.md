@@ -2,7 +2,7 @@
 
 Responsable: Andriy Hitoshi Enciso Rojas (@Hitoshi). Release 2, sprint 1, 5 SP. Fecha: 5 de noviembre de 2026.
 
-Estado: fases 1 y 2 completadas mediante análisis y documentación. La funcionalidad todavía no está implementada. Se mantiene el desarrollo gradual de HU-32 y la aplicación de SOLID del curso.
+Actualización del 8 de noviembre de 2026: fases 1 a 7 implementadas y validadas localmente. Preparado para un PR que cierre el issue #35, revisión técnica y aplicación coordinada de la migración 016. La historia no se marca aceptada o integrada por esta documentación. Se aplica Command/DAO y SOLID.
 
 El propietario podrá registrar online su llegada a un punto declarado de una expedición en progreso, con hora del servidor y nota opcional. Un reenvío con el mismo identificador no duplicará el avance. Registrar un avance no confirma el retorno, no amplía el plazo y no evita alertas.
 
@@ -12,23 +12,23 @@ El propietario podrá registrar online su llegada a un punto declarado de una ex
 | --- | --- | --- | --- |
 | 1. Preparación y mapa | Leer criterios, revisar la base, identificar dependencias y responsabilidades. | [Mapa inicial](fase-1-mapa.md). | Completada. |
 | 2. Contrato | Precisar entradas, respuestas, permisos, idempotencia, notas, tiempo, concurrencia y errores. | [Contrato de avances](fase-2-contrato.md). | Completada; pendiente de implementación y revisión del equipo. |
-| 3. Persistencia | Preparar migración incremental, restricciones y operación transaccional sobre los puntos de HU-32. | SQL y pruebas en una base desechable. | Pendiente; Andriy debe finalizar el merge de HU-32. |
-| 4. API | Implementar comando, puertos pequeños, adaptador, controlador y rutas autenticadas. | Pruebas de negocio, contrato y HTTP. | Pendiente. |
-| 5. Interfaz | Seleccionar punto, escribir nota, enviar online y consultar último avance autorizado. | Estados de carga, envío, error, desconexión y reintento. | Pendiente. |
-| 6. Integración | Probar UI → API → PostgreSQL, cron con colaboradores controlados, sesiones y PWA. | Evidencia de aceptación y regresión. | Pendiente. |
-| 7. Entrega | Documentar SOLID, resultados, limitaciones y demostración. | Material para que Andriy publique su PR y el equipo lo revise. | Pendiente. |
+| 3. Persistencia | Migración 016 y garantías transaccionales. | [Persistencia](fase-3-persistencia.md). | Validada localmente; no aplicada en DEV. |
+| 4. API | Comando, puertos, adaptador y endpoints. | [API y SOLID](fase-4-api.md). | Implementada y probada. |
+| 5. Interfaz | Punto, nota, último avance y reintento online. | [Interfaz](fase-5-interfaz.md). | Implementada y probada. |
+| 6. Integración | Cadena real, SQL, privacidad y regresión. | [Resultados](fase-6-integracion.md). | Aprobada en entorno desechable. |
+| 7. Entrega | Documentación y demostración. | [Entrega](fase-7-entrega.md), [PR](borrador-pr.md). | Preparada; pendiente revisión/CI remoto. |
 
-Cada fase conserva un cambio acotado y sus comprobaciones. Esta entrega no adelanta la implementación de las fases siguientes.
+Las fases 1 y 2 conservan la preparación inicial; las fases 3 a 7 documentan la implementación del 8 de noviembre. Pasaron tipos/builds, 460 pruebas backend, 79 frontend (2 integraciones PostgreSQL omitidas), 13 regresiones UI HU-32, 17 PWA/compatibilidad, 19 comprobaciones SQL y 5 escenarios con API/SDK/PostgREST/PostgreSQL/worker reales. Los grupos se solapan y no certifican Supabase DEV.
 
 ## Dependencia inmediata
 
-La rama de trabajo es `feat/hu-34-avances-manuales`. Durante las fases 1 y 2 sus archivos todavía no incluían HU-32. Después, Andriy inició el merge de `origin/feat/hu-32-puntos`: los archivos de puntos ya están en el árbol de trabajo y se combinaron los seis archivos que presentaron conflictos. Andriy debe marcar la resolución y finalizar el merge mediante Git. Véase [integración de HU-32](integracion-hu32.md). No se certificó la aplicación de su migración en Supabase.
+La rama es `feat/hu-34-avances-manuales`, actualizada con develop en `1f63856`. Ya contiene HU-32 y las demás historias actuales; la [integración anterior de HU-32](integracion-hu32.md) conserva su contexto histórico. HU-33 se entregó primero en PR #97, sin merge; su código no se incluye en esta rama. HU-34 requiere 016 después de 002/010, aún pendiente de instalar por el equipo en DEV.
 
-Git, cambios de rama, commits, push y publicación en GitHub quedan exclusivamente a cargo de Andriy. Las fases 1 y 2 solo modificaron documentación; la resolución posterior del merge combina el código existente de HU-32 con la base actual. No se implementaron avances HU-34 ni se modificaron `.env`, configuración de Supabase o bases de datos.
+Andriy autorizó expresamente Git, commits, push y apertura de ambos PR el 8 de noviembre; no se autoriza merge a develop. No se modificaron `.env` o configuración de Supabase y no se ejecutó SQL en la base del equipo. La validación usa bases desechables.
 
 ## Decisiones del contrato
 
-El registro se hará mediante `POST /api/expediciones/:id/avances` y el último avance se consultará mediante `GET /api/expediciones/:id/avances/ultimo`. Son rutas especificadas, todavía no implementadas.
+El registro usa `POST /api/expediciones/:id/avances` y la consulta `GET /api/expediciones/:id/avances/ultimo`, ya implementados.
 
 La clave de idempotencia será `(senderistaId, solicitudId)`: el reenvío equivalente devuelve el avance original, incluso si la expedición terminó después. Un ID usado con contenido distinto produce conflicto. La hora la asignará PostgreSQL y el registro no modificará el plan, su versión INTEGER ni el cron.
 
