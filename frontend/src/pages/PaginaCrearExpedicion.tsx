@@ -23,6 +23,8 @@ import {
 } from '@/lib/offlineExpedicion';
 import { obtenerContactos, type ContactoEmergencia } from '@/services/usuario';
 import { crearExpedicion, type BorradorDesdeHistorial } from '@/services/expedicion';
+import { puntosRutaApi } from '@/services/puntosRuta';
+import { copiarPuntosParaPlanNuevo } from '@/lib/puntosRuta';
 
 export function PaginaCrearExpedicion({ Mapa }: Pick<PropsFormulario, 'Mapa'> = {}) {
   const [parametros] = useSearchParams();
@@ -228,6 +230,7 @@ export function FormularioCrearExpedicion({ borrador, Mapa = CoordinatePickerMap
   };
 
   const acompanantesValidos = nombresAcompanantes.map((n) => n.trim()).filter((n) => n.length >= 2);
+  const puntosOrigen = borrador?.puntos ?? [];
 
   const puedeEnviar =
     lugarInicio.trim().length >= 3 &&
@@ -236,6 +239,7 @@ export function FormularioCrearExpedicion({ borrador, Mapa = CoordinatePickerMap
     horaRetornoEstimada &&
     idsContactosSeleccionados.length > 0 &&
     acompanantesValidos.length > 0 &&
+    (enLinea || puntosOrigen.length === 0) &&
     (!borrador || (contactosRevisados && !cargandoContactos &&
       idsContactosSeleccionados.every((id) => contactos.some((contacto) => contacto.id === id)))) &&
     !errorCoordInicio &&
@@ -293,6 +297,20 @@ export function FormularioCrearExpedicion({ borrador, Mapa = CoordinatePickerMap
       }
       const { expedicion } = await crearExpedicion(payload);
       if (scope !== getSessionScope()) return;
+      if (puntosOrigen.length > 0) {
+        try {
+          await puntosRutaApi.guardar(expedicion.id, expedicion.version, copiarPuntosParaPlanNuevo(puntosOrigen));
+        } catch {
+          if (scope !== getSessionScope()) return;
+          // Ya se creó el plan: consultar su editor evita registrar un duplicado
+          // y permite comprobar si el guardado llegó a persistir antes del fallo.
+          navigate(`/senderista/expedicion/${encodeURIComponent(expedicion.id)}/puntos`, {
+            state: { copiaPuntosNoConfirmada: true },
+          });
+          return;
+        }
+        if (scope !== getSessionScope()) return;
+      }
       await guardarPlantillaRuta({
         lugarInicio: payload.lugarInicio,
         lugarFin: payload.lugarFin,
@@ -330,13 +348,24 @@ export function FormularioCrearExpedicion({ borrador, Mapa = CoordinatePickerMap
           {borrador.cantidadContactosNoVigentes > 0 && (
             <p>{borrador.cantidadContactosNoVigentes} contacto(s) anterior(es) ya no están disponibles.</p>
           )}
+          {puntosOrigen.length > 0 && (
+            <p>Se copiarán {puntosOrigen.length} punto(s) intermedio(s) de la ruta original.</p>
+          )}
         </div>
       )}
 
       {!enLinea && (
         <div className="mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-100 text-sm flex items-center gap-2">
-          <WifiOff size={16} /> Sin conexión: puedes usar tus plantillas y guardar borradores de esta sesión.
+          <WifiOff size={16} /> {puntosOrigen.length > 0
+            ? 'Sin conexión: conservamos este formulario mientras mantengas la pantalla abierta.'
+            : 'Sin conexión: puedes usar tus plantillas y guardar borradores de esta sesión.'}
         </div>
+      )}
+
+      {!enLinea && puntosOrigen.length > 0 && (
+        <p role="status" className="mb-4 text-sm text-muted-foreground">
+          Vuelve a conectarte para registrar esta expedición con sus puntos. Tu formulario permanece en esta pantalla.
+        </p>
       )}
 
       {borradoresPendientes > 0 && (
