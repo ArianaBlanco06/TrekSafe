@@ -1,10 +1,38 @@
 # Validación de HU-28 en Supabase DEV
 
+## Complemento local: copia de puntos (8 de noviembre de 2026)
+
+Se incorporó el cambio de `hu28-copiar-puntos.patch` con estos ajustes: los fallos
+al consultar puntos no se convierten en una lista vacía; un guardado no confirmado
+abre el editor del plan ya creado con un aviso; no se inicia otra petición ni se
+navega con respuestas de una sesión anterior; una repetición con puntos requiere
+conexión para evitar perderlos en el borrador offline, que no admite ese campo.
+La función de copia conserva todos los puntos recibidos sin truncarlos.
+
+Verificación local: 88 pruebas de frontend aprobadas, 2 integraciones PostgreSQL
+omitidas por no activar su entorno; `typecheck`, `typecheck:tests` y build PWA
+correctos. Las pruebas de HU-28 usan React y HTTP sustituido: comprueban copia
+con IDs nuevos, orden y coordenadas, conservación del origen, errores, consulta
+de lo persistido tras un guardado incierto, desconexión y cambios de sesión.
+Estos resultados no sustituyen la evidencia contra Supabase DEV.
+
+Para completar el criterio en DEV, repetir una expedición propia completada con
+al menos dos puntos, introducir fechas futuras y revisar contactos. Comprobar el
+aviso de copia, registrar y abrir los puntos de la nueva expedición; recargar y
+verificar nombres, orden y coordenadas. Confirmar también que el origen conserva
+sus puntos y que los IDs de la copia son distintos. Adjuntar capturas y el
+resultado al PR. Este complemento reutiliza la API y las migraciones de HU-32;
+no añade otra migración.
+
+## Evidencia histórica: 4 de noviembre de 2026
+
 El 4 de noviembre de 2026 se comprobó el recorrido real de HU-28 con la PWA en
 Edge, la API Express de esta rama y PostgREST de Supabase DEV. Se aprobaron el
 login de dos cuentas ficticias, la preparación del borrador, la creación con otro
 id, la persistencia al recargar, la conservación del origen y el aislamiento.
-La copia de puntos intermedios sigue pendiente y no se declara la HU aceptada.
+Aquella ejecución no incluyó la copia de puntos intermedios. Su implementación
+local se incorporó el 8 de noviembre de 2026; la evidencia de ese criterio en DEV
+sigue pendiente y no se declara la HU aceptada.
 
 La ejecución final terminó a las **14:40:50 de America/Bogota**
 (`2026-11-04T19:40:50.868Z`) con Node **22.23.4**. El ejecutor devolvió

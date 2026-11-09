@@ -5,9 +5,11 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from '../context/ContextoAutenticacion';
 import { PaginaCrearExpedicion } from '../pages/PaginaCrearExpedicion';
 import { PaginaHistorialExpediciones } from '../pages/PaginaHistorialExpediciones';
+import { PaginaPuntosRuta } from '../pages/PaginaPuntosRuta';
 import { isoADatetimeLocal } from '../lib/fechaLocal';
 import { vaciarContactosEnMemoria } from '../lib/offlineContacts';
 import type { BorradorDesdeHistorial, DatosCrearExpedicion } from '../services/expedicion';
+import type { PuntoRuta } from '../services/puntosRuta';
 import { promesaPendiente } from './listasEquipoApiPruebas';
 
 const origenId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
@@ -17,6 +19,10 @@ const contactoId = '11111111-1111-4111-8111-111111111111';
 const rutaNueva = `/senderista/expedicion/nueva?repetir=${origenId}`;
 const horaFutura = (dias: number) => isoADatetimeLocal(new Date(Date.now() + dias * 86_400_000).toISOString());
 const MapaPruebas = () => null;
+const puntosDeEjemplo: PuntoRuta[] = [
+  { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2', nombre: 'Laguna', latitud: -9.1, longitud: -77.6, orden: 2 },
+  { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1', nombre: 'Refugio', latitud: -9.2, longitud: -77.5, orden: 1 },
+];
 
 function almacenamiento() {
   const datos = new Map<string, string>();
@@ -48,10 +54,24 @@ async function preparar(t: TestContext) {
   const completada = { id: origenId, lugarInicio: borrador.lugarInicio, lugarFin: borrador.lugarFin,
     horaInicio: '2025-01-10T08:00:00Z', horaRetornoEstimada: '2025-01-10T18:00:00Z',
     minutosTolerancia: 45, estado: 'completada', version: 1, creadoEn: '2025-01-01T12:00:00Z' };
+  const puntos: PuntoRuta[] = [];
+  let puntosGuardados: PuntoRuta[] = [];
+  const rutaConPuntos = (original: boolean) => ({
+    expedicion: { ...completada, id: original ? origenId : nuevaId,
+      estado: original ? 'completada' : 'programada', editable: !original,
+      horaInicio: new Date(Date.now() + 86_400_000).toISOString(),
+      coordenadasInicio: borrador.coordenadasInicio, coordenadasFin: borrador.coordenadasFin },
+    puntos: original ? puntos : puntosGuardados,
+  });
   const api = {
     contactos: [{ id: contactoId, nombreCompleto: 'Contacto vigente', correoElectronico: 'contacto@example.invalid',
       parentesco: 'Familiar', telefono: '+51900000001' }],
     responderBorrador: async () => Response.json({ borrador }),
+    responderPuntos: async () => Response.json(rutaConPuntos(true)),
+    responderGuardadoPuntos: async (datos: { versionEsperada: number; puntos: PuntoRuta[] }): Promise<Response> => {
+      puntosGuardados = datos.puntos;
+      return Response.json(rutaConPuntos(false));
+    },
     responderContactos: async (): Promise<Response> => Response.json({ contactos: api.contactos }),
     responderCreacion: async (datos: DatosCrearExpedicion): Promise<Response> =>
       Response.json({ expedicion: { ...datos, id: nuevaId, estado: 'programada', version: 1, creadoEn: new Date().toISOString() } }, { status: 201 }),
@@ -61,6 +81,12 @@ async function preparar(t: TestContext) {
     const url = new URL(String(input), 'http://127.0.0.1');
     peticiones.push({ ruta: url.pathname, opciones });
     if (url.pathname === `/api/expediciones/${origenId}/borrador`) return api.responderBorrador();
+    if (url.pathname === `/api/expediciones/${origenId}/puntos`) return api.responderPuntos();
+    if (url.pathname === `/api/expediciones/${nuevaId}/puntos`) {
+      return opciones?.method === 'PUT'
+        ? api.responderGuardadoPuntos(JSON.parse(String(opciones.body)))
+        : Response.json(rutaConPuntos(false));
+    }
     if (url.pathname === '/api/usuario/contactos') return api.responderContactos();
     if (url.pathname === '/api/expediciones/historial') return Response.json({ expediciones: [completada],
       estadisticas: { totalCompletadas: 1, destinosUnicos: 1, promedioHoras: 10, ultimaCompletadaEn: completada.horaRetornoEstimada } });
@@ -84,6 +110,7 @@ async function preparar(t: TestContext) {
       arbol = create(<MemoryRouter initialEntries={[ruta]}><AuthProvider><Routes>
         <Route path="/senderista/perfil/historial" element={<PaginaHistorialExpediciones />} />
         <Route path="/senderista/expedicion/nueva" element={<PaginaCrearExpedicion Mapa={MapaPruebas} />} />
+        <Route path="/senderista/expedicion/:id/puntos" element={<PaginaPuntosRuta />} />
         <Route path="/senderista/expedicion" element={<h2>Expedición nueva registrada</h2>} />
       </Routes></AuthProvider></MemoryRouter>);
     });
@@ -93,7 +120,7 @@ async function preparar(t: TestContext) {
     await act(async () => { navegador.onLine = enLinea; eventos.dispatchEvent(new Event(enLinea ? 'online' : 'offline')); });
   }
   return { montar, raiz: () => arbol!.root, texto: () => JSON.stringify(arbol!.toJSON()), conexion,
-    borrador, completada, api, peticiones, sesion, local,
+    borrador, completada, puntos, api, peticiones, sesion, local,
     escrituras: () => peticiones.filter((peticion) => peticion.opciones?.method === 'POST') };
 }
 
@@ -112,6 +139,110 @@ function completarFechas(raiz: ReactTestInstance) {
 }
 
 describe('HU-28: historial y formulario con React y HTTP sustituido', () => {
+  it('consulta los puntos del origen y los guarda en el plan nuevo con otra identidad', async (t) => {
+    const e = await preparar(t);
+    e.puntos.push(...structuredClone(puntosDeEjemplo));
+    const antes = structuredClone(e.puntos);
+    await e.montar();
+    assert.match(e.texto(), /Se copiarán/);
+    const lectura = e.peticiones.find((p) => p.ruta.endsWith('/puntos'))!;
+    assert.equal(lectura.opciones?.cache, 'no-store');
+    assert.equal((lectura.opciones?.headers as Record<string, string>).Authorization, 'Bearer token-ficticio-A');
+    completarFechas(e.raiz());
+    cambiar(e.raiz(), 'exp-contactos-revisados', true);
+    await enviar(e.raiz());
+    const escritura = e.peticiones.find((p) => p.opciones?.method === 'PUT')!;
+    assert.equal(escritura.ruta, `/api/expediciones/${nuevaId}/puntos`);
+    const datos = JSON.parse(String(escritura.opciones?.body)) as { versionEsperada: number; puntos: PuntoRuta[] };
+    assert.equal(datos.versionEsperada, 1);
+    assert.deepEqual(datos.puntos.map(({ id, ...p }) => p), [...antes].sort((a, b) => a.orden - b.orden).map(({ id, ...p }) => p));
+    assert.equal(new Set(datos.puntos.map((p) => p.id)).size, 2);
+    assert.ok(datos.puntos.every((p) => !antes.some((origen) => origen.id === p.id)));
+    assert.deepEqual(e.puntos, antes);
+    assert.equal(e.escrituras().length, 1);
+    assert.match(e.texto(), /Expedición nueva registrada/);
+  });
+
+  it('un fallo al leer puntos impide repetir sin ellos y permite reintentar', async (t) => {
+    const e = await preparar(t);
+    const consultar = e.api.responderPuntos;
+    e.api.responderPuntos = async () => Response.json({ mensaje: 'No pudimos consultar los puntos.' }, { status: 500 });
+    await e.montar();
+    assert.equal(e.raiz().findAllByType('form').length, 0);
+    assert.match(e.texto(), /No pudimos consultar los puntos/);
+    assert.equal(e.escrituras().length, 0);
+    e.api.responderPuntos = consultar;
+    await act(async () => { boton(e.raiz(), 'Reintentar').props.onClick(); });
+    assert.equal(e.raiz().findAllByType('form').length, 1);
+  });
+
+  it('si no se confirma el guardado, abre el plan creado, avisa y consulta lo persistido', async (t) => {
+    const e = await preparar(t);
+    e.puntos.push(...structuredClone(puntosDeEjemplo));
+    const guardar = e.api.responderGuardadoPuntos;
+    e.api.responderGuardadoPuntos = async (datos) => {
+      await guardar(datos); // Simula escritura confirmada en servidor y respuesta perdida.
+      return Response.json({ mensaje: 'Respuesta no confirmada' }, { status: 500 });
+    };
+    await e.montar();
+    completarFechas(e.raiz());
+    cambiar(e.raiz(), 'exp-contactos-revisados', true);
+    await enviar(e.raiz());
+    assert.match(e.texto(), /La expedición ya se creó/);
+    assert.match(e.texto(), /no pudimos confirmar la copia/);
+    assert.equal(e.escrituras().length, 1);
+    assert.equal(e.peticiones.filter((p) => p.opciones?.method === 'PUT').length, 1);
+    assert.ok(e.peticiones.some((p) => p.ruta === `/api/expediciones/${nuevaId}/puntos` && p.opciones?.method === 'GET'));
+    assert.ok(e.raiz().findAllByType('input').some((p) => p.props.value === 'Refugio'));
+  });
+
+  it('no permite guardar offline una repetición con puntos que el borrador offline no conserva', async (t) => {
+    const e = await preparar(t);
+    e.puntos.push(...structuredClone(puntosDeEjemplo));
+    await e.montar();
+    completarFechas(e.raiz());
+    await e.conexion(false);
+    cambiar(e.raiz(), 'exp-contactos-revisados', true);
+    assert.equal(boton(e.raiz(), 'Guardar borrador offline').props.disabled, true);
+    await enviar(e.raiz());
+    assert.match(e.texto(), /Vuelve a conectarte para registrar esta expedición con sus puntos/);
+    assert.equal([...e.local.datos.keys()].some((k) => k.endsWith(':expedition-drafts')), false);
+    assert.equal(e.escrituras().length, 0);
+    await e.conexion(true);
+    cambiar(e.raiz(), 'exp-contactos-revisados', true);
+    assert.equal(boton(e.raiz(), 'Registrar expedición').props.disabled, false);
+  });
+
+  it('descarta los puntos tardíos al cambiar de sesión', async (t) => {
+    const e = await preparar(t);
+    const pendiente = promesaPendiente<Response>();
+    e.api.responderPuntos = async () => pendiente.promesa;
+    await e.montar();
+    e.sesion.setItem('treksafe:token', 'token-ficticio-B');
+    e.sesion.removeItem('treksafe:offline-scope');
+    await act(async () => { pendiente.resolver(Response.json({ puntos: puntosDeEjemplo })); });
+    assert.equal(e.raiz().findAllByType('form').length, 0);
+    assert.doesNotMatch(e.texto(), /Laguna 69/);
+  });
+
+  it('un guardado fallido de la sesión anterior no navega al editor en la nueva', async (t) => {
+    const e = await preparar(t);
+    e.puntos.push(...structuredClone(puntosDeEjemplo));
+    const pendiente = promesaPendiente<Response>();
+    e.api.responderGuardadoPuntos = async () => pendiente.promesa;
+    await e.montar();
+    completarFechas(e.raiz());
+    cambiar(e.raiz(), 'exp-contactos-revisados', true);
+    let envio!: Promise<void>;
+    await act(async () => { envio = e.raiz().findByType('form').props.onSubmit({ preventDefault() {} }); });
+    assert.ok(e.peticiones.some((p) => p.opciones?.method === 'PUT'));
+    e.sesion.setItem('treksafe:token', 'token-ficticio-B');
+    e.sesion.removeItem('treksafe:offline-scope');
+    await act(async () => { pendiente.resolver(Response.json({}, { status: 500 })); await envio; });
+    assert.doesNotMatch(e.texto(), /La expedición ya se creó/);
+    assert.equal(e.peticiones.some((p) => p.ruta === `/api/expediciones/${nuevaId}/puntos` && p.opciones?.method === 'GET'), false);
+  });
+
   it('el enlace del historial abre un borrador autorizado sin registrar una expedición', async (t) => {
     const e = await preparar(t);
     await e.montar('/senderista/perfil/historial');
