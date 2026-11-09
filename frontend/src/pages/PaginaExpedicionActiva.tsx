@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { DialogoAmpliarRetorno } from '@/components/DialogoAmpliarRetorno';
 import { DialogoConfirmarRetorno } from '@/components/DialogoConfirmarRetorno';
+import { PanelAvancesExpedicion } from '@/components/expedicion/PanelAvancesExpedicion';
 import { useCuentaRegresiva } from '@/hooks/useCuentaRegresiva';
 import { useEstadoEnLinea } from '@/hooks/useEstadoEnLinea';
 import { clearReminderDismissal } from '@/lib/recordatorioRetorno';
@@ -351,6 +352,8 @@ export function PaginaExpedicionActiva() {
           onRecargar={recargarActiva}
         />
       )}
+
+      <PanelAvancesExpedicion expedicionId={expedicion.id} estado={expedicion.estado} />
 
       <DialogoConfirmarRetorno
         expedicionId={expedicion.id}
