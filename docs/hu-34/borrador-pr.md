@@ -14,7 +14,7 @@ Closes #35.
 
 ## Validación
 
-Tipos y builds aprobados. 460 pruebas backend, 79 frontend (2 integraciones PostgreSQL omitidas), 13 regresiones UI HU-32, 17 PWA/compatibilidad, 19 comprobaciones SQL y 5 escenarios con Express, SDK Supabase, PostgREST, PostgreSQL y worker reales. Cubren permisos, concurrencia, rollback, respuesta perdida y vencimiento posterior al avance. Detalles y límites en `docs/hu-34/fase-6-integracion.md`.
+Validación final sobre develop `8214042`, que ya incorpora HU-33 y la mejora HU-28 integrada por el equipo: tipos y builds aprobados; 467 pruebas backend, 88 frontend (2 integraciones PostgreSQL omitidas), 13 regresiones UI HU-32, 20 PWA/compatibilidad, 19 comprobaciones SQL y 5 escenarios con Express, SDK Supabase, PostgREST, PostgreSQL y worker reales. Cubren permisos, concurrencia, rollback, respuesta perdida y vencimiento posterior al avance. Detalles y límites en `docs/hu-34/fase-6-integracion.md`.
 
 Las suites SQL optativas de otras historias se omiten sin sus entornos. No se modificó .env ni se ejecutó SQL en Supabase.
 

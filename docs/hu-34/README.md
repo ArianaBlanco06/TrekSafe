@@ -18,11 +18,11 @@ El propietario podrá registrar online su llegada a un punto declarado de una ex
 | 6. Integración | Cadena real, SQL, privacidad y regresión. | [Resultados](fase-6-integracion.md). | Aprobada en entorno desechable. |
 | 7. Entrega | Documentación y demostración. | [Entrega](fase-7-entrega.md), [PR](borrador-pr.md). | Preparada; pendiente revisión/CI remoto. |
 
-Las fases 1 y 2 conservan la preparación inicial; las fases 3 a 7 documentan la implementación del 8 de noviembre. Pasaron tipos/builds, 460 pruebas backend, 79 frontend (2 integraciones PostgreSQL omitidas), 13 regresiones UI HU-32, 17 PWA/compatibilidad, 19 comprobaciones SQL y 5 escenarios con API/SDK/PostgREST/PostgreSQL/worker reales. Los grupos se solapan y no certifican Supabase DEV.
+Las fases 1 y 2 conservan la preparación inicial; las fases 3 a 7 documentan la implementación del 8 de noviembre. Tras actualizar al develop `8214042`, pasaron tipos/builds, 467 pruebas backend, 88 frontend (2 integraciones PostgreSQL omitidas), 13 regresiones UI HU-32, 20 PWA/compatibilidad, 19 comprobaciones SQL y 5 escenarios con API/SDK/PostgREST/PostgreSQL/worker reales. Los grupos se solapan y no certifican Supabase DEV.
 
 ## Dependencia inmediata
 
-La rama es `feat/hu-34-avances-manuales`, actualizada con develop en `1f63856`. Ya contiene HU-32 y las demás historias actuales; la [integración anterior de HU-32](integracion-hu32.md) conserva su contexto histórico. HU-33 se entregó primero en PR #97, sin merge; su código no se incluye en esta rama. HU-34 requiere 016 después de 002/010, aún pendiente de instalar por el equipo en DEV.
+La rama es `feat/hu-34-avances-manuales`, actualizada inicialmente en `1f63856` y después con develop `8214042`. Ya contiene HU-32 y las demás historias actuales; la [integración anterior de HU-32](integracion-hu32.md) conserva su contexto histórico. HU-33 se entregó primero en PR #97, y ArianaBlanco06 lo integró mientras se desarrollaba HU-34; por eso su código entra mediante develop, junto con la mejora HU-28 de copia de puntos. HU-34 requiere 016 después de 002/010, aún pendiente de instalar por el equipo en DEV.
 
 Andriy autorizó expresamente Git, commits, push y apertura de ambos PR el 8 de noviembre; no se autoriza merge a develop. No se modificaron `.env` o configuración de Supabase y no se ejecutó SQL en la base del equipo. La validación usa bases desechables.
 

@@ -9,6 +9,7 @@ type MapOnlineGateProps = {
   endLabel?: string;
   className?: string;
   children: ReactNode;
+  fallback?: ReactNode;
 };
 
 export function MapOnlineGate({
@@ -18,10 +19,12 @@ export function MapOnlineGate({
   endLabel,
   className,
   children,
+  fallback,
 }: MapOnlineGateProps) {
   const online = useEstadoEnLinea();
 
   if (!online) {
+    if (fallback !== undefined) return <>{fallback}</>;
     return (
       <MapCoordsFallback
         startCoordinates={startCoordinates}

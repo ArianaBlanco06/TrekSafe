@@ -16,13 +16,13 @@ El build de pruebas utiliza `/api` en el proceso. El bootstrap histórico puede 
 | --- | --- |
 | Tipos backend/frontend, pruebas compartidas y UI | Aprobados. |
 | Builds backend y frontend/PWA | Aprobados. |
-| Backend | 460 aprobadas, 0 fallos; suites SQL optativas omitidas sin conexión dedicada. |
-| Frontend `test:equipo` | 79 aprobadas, 2 integraciones PostgreSQL omitidas, 0 fallos. |
+| Backend | 467 aprobadas, 0 fallos; suites SQL optativas omitidas sin conexión dedicada. |
+| Frontend `test:equipo` | 88 aprobadas, 2 integraciones PostgreSQL omitidas, 0 fallos. |
 | Regresión UI HU-32 | 13 aprobadas. |
 | SQL HU-34 | 19 aprobadas. |
 | Cadena real HU-34 | 5 aprobadas con worker activo. |
-| PWA/compatibilidad | 17 aprobadas, incluidas 3 nuevas de formulario con worker bloqueado; las de privacidad conservan el worker real. |
+| PWA/compatibilidad | 20 aprobadas, incluidas HU-33 y 3 nuevas de formulario con worker bloqueado; las de privacidad conservan el worker real. |
 
-Los cinco escenarios reales cubren formulario y snapshot del plan intacto, idempotencia/reenvío tras completar, autenticación/rol/propiedad/punto/hora falsificada, respuesta perdida después del commit y recarga offline sin recuperar notas. SQL añade barreras de concurrencia entre dos sesiones, colisión entre planes, alerta confirmada mientras espera el bloqueo, rollback y FK/cascadas. El vencimiento usa el reloj local y la función SQL existente de expiración, sin correo ni modificar el cron.
+Los resultados finales corresponden a develop `8214042`, posterior a la integración de HU-33 y la copia de puntos HU-28 por el equipo. Se repitieron tipos, builds, suites y cadena real después de resolver dos conflictos en app/Vite conservando ambas rutas y reglas privadas. Los cinco escenarios reales cubren formulario y snapshot del plan intacto, idempotencia/reenvío tras completar, autenticación/rol/propiedad/punto/hora falsificada, respuesta perdida después del commit y recarga offline sin recuperar notas. SQL añade barreras de concurrencia entre dos sesiones, colisión entre planes, alerta confirmada mientras espera el bloqueo, rollback y FK/cascadas. El vencimiento usa el reloj local y la función SQL existente de expiración, sin correo ni modificar el cron.
 
 Grupos solapados, no cobertura única. Las integraciones SQL propias de otras historias no se ejecutaron. La validación no certifica Supabase DEV: 016 requiere aplicación coordinada después de revisión. Capturas/trazas se generan en `frontend/test-results/hu34-integration` y los logs SQL en la carpeta temporal que imprime el runner.
