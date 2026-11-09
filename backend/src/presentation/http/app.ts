@@ -14,6 +14,10 @@ import { crearRutasRescate } from './routes/rutasRescate.js';
 import { crearRutasUsuario } from './routes/rutasUsuario.js';
 import { crearRutasPuntosRuta } from './routes/rutasPuntosRuta.js';
 import { crearServicioPuntosRuta } from '../../infrastructure/composition/puntosRuta.js';
+import { RepositorioPuntosRuta } from '../../infrastructure/repositories/RepositorioPuntosRuta.js';
+import { ExpedicionDAOSupabase } from '../../infrastructure/repositories/ExpedicionDAOSupabase.js';
+import { FachadaPlanExpedicion } from '../../application/services/FachadaPlanExpedicion.js';
+import { crearRutasRecorrido } from './routes/rutasRecorrido.js';
 import { crearRutasListasEquipo } from './routes/rutasListasEquipo.js';
 import { ServicioListasEquipo } from '../../application/services/servicioListasEquipo.js';
 import { RepositorioListasEquipoSupabase } from '../../infrastructure/repositories/RepositorioListasEquipoSupabase.js';
@@ -66,6 +70,11 @@ export function createApp() {
   app.use(`${env.apiPrefix}/usuario`, crearRutasUsuario());
   app.use(`${env.apiPrefix}/expediciones`, crearRutasPuntosRuta(crearServicioPuntosRuta()));
   const servicioPreparacion = new ServicioPreparacionExpedicion(new RepositorioPreparacionExpedicionSupabase(getSupabaseAdmin()));
+  app.use(`${env.apiPrefix}/expediciones`, crearRutasRecorrido(new FachadaPlanExpedicion(
+    new ExpedicionDAOSupabase(getSupabaseAdmin()),
+    new RepositorioPuntosRuta(getSupabaseAdmin()),
+    servicioPreparacion,
+  )));
   app.use(`${env.apiPrefix}/expediciones`, crearRutasPreparacionExpedicion(servicioPreparacion));
   const creadorDesdeHistorial = new CreadorDesdeHistorial(
     new DAOContactosVigentesSupabase(getSupabaseAdmin()),
