@@ -28,6 +28,7 @@ import { PaginaExpedicionActiva } from '@/pages/PaginaExpedicionActiva';
 import { PaginaRetornoConfirmado } from '@/pages/PaginaRetornoConfirmado';
 import { PaginaPuntosRuta } from '@/pages/PaginaPuntosRuta';
 import { PaginaEquipoExpedicion } from '@/pages/PaginaEquipoExpedicion';
+import { PaginaRecorrido } from '@/pages/PaginaRecorrido';
 import { PaginaHistorialCambiosPlan } from '@/pages/PaginaHistorialCambiosPlan';
 
 function RedireccionRaiz() {
@@ -80,6 +81,7 @@ export function App() {
               <Route path="expedicion/confirmada" element={<PaginaRetornoConfirmado />} />
               <Route path="expedicion/nueva" element={<PaginaCrearExpedicion />} />
               <Route path="expedicion/:id/puntos" element={<PaginaPuntosRuta />} />
+              <Route path="expedicion/:id/recorrido" element={<PaginaRecorrido />} />
               <Route path="expedicion/:id/equipo" element={<PaginaEquipoExpedicion />} />
               <Route path="expedicion/:id/cambios" element={<PaginaHistorialCambiosPlan />} />
             </Route>
