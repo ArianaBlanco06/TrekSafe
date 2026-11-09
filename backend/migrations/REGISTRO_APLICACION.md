@@ -17,6 +17,7 @@ Solo se anotan aplicaciones reales sobre un entorno (DEV, producción u otro). L
 | `012_hu36_eventos_plan_solo_anexado.sql` | 012 | 2026-11-08 05:21 UTC | DEV | 0c5d540 | Ariana | OK |
 | `013_hu37_avisos.sql` | 013 | 2026-11-08 05:21 UTC | DEV | 3ed82f2 | Ariana | OK |
 | `014_hu38_minutos_recordatorio.sql` | 014 | 2026-11-08 05:33 UTC | DEV | 33debe3 | Ariana | OK |
+| `016_hu34_avances_expedicion.sql` | 016 | 2026-11-09 03:05 UTC | DEV | 03468a0 | Ariana | OK |
 
 HU-32: la estructura final está aplicada y verificada en Supabase DEV.
 El asiento administrativo 010 fue registrado correctamente en public.treksafe_migraciones el 2026-11-06 a las 05:23 UTC.
