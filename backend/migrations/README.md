@@ -44,8 +44,9 @@ Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos
 | `015` | **Reservada para HU-45** (outbox, PR #90). Aún no existe en el repositorio: no es un hueco, no usar este número | |
 | `016_hu34_avances_expedicion.sql` | Tabla `avances_expedicion` y RPC de registro idempotente y último avance. Aplicar una sola vez | `002` y `010` |
 | `017_hu39_asumir_coordinacion.sql` | Tabla `incidentes` (un incidente no cerrado por expedición) y RPC `treksafe_asumir_coordinacion`. Aplicar una sola vez | `002` |
+| `019_hu40_transferir_coordinacion.sql` | Relevo de la coordinación: tablas `relevos_coordinacion` (un solo pendiente por incidente) y `transferencias_coordinacion` (solo anexar), `UPDATE` de `service_role` limitado a `responsable_id`, `version` y `asumido_en` de `incidentes`, y RPC `treksafe_proponer_relevo` y `treksafe_aceptar_relevo`. Aplicar una sola vez. La 018 es de HU-27: puede haber un conflicto trivial de filas al hacer merge | `017` |
 
-Para nuevas migraciones, usar el siguiente número libre al momento del merge (hoy, `018`).
+Para nuevas migraciones, usar el siguiente número libre al momento del merge (hoy, `020`; la `018` es de HU-27).
 
 Las migraciones `002` a `007` y `012` son re-ejecutables. No dependen de
 `000_registro_migraciones.sql`: si la tabla `treksafe_migraciones` existe, registran
