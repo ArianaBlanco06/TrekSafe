@@ -44,8 +44,9 @@ Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos
 | `015` | **Reservada para HU-45** (outbox, PR #90). Aún no existe en el repositorio: no es un hueco, no usar este número | |
 | `016_hu34_avances_expedicion.sql` | Tabla `avances_expedicion` y RPC de registro idempotente y último avance. Aplicar una sola vez | `002` y `010` |
 | `017_hu39_asumir_coordinacion.sql` | Tabla `incidentes` (un incidente no cerrado por expedición) y RPC `treksafe_asumir_coordinacion`. Aplicar una sola vez | `002` |
+| `018_hu27_cancelar_salida_futura.sql` | Sustituye `treksafe_cancelar_expedicion` de la `005`: solo cancela una expedición programada con salida futura (`hora_inicio > clock_timestamp()` tomado tras el bloqueo de la fila, no `now()`; sin códigos de error nuevos). Re-ejecutable. **No ejecutar la `005` después de esta migración**: restauraría la función anterior | `005` |
 
-Para nuevas migraciones, usar el siguiente número libre al momento del merge (hoy, `018`).
+Para nuevas migraciones, usar el siguiente número libre al momento del merge (hoy, `019`).
 
 Las migraciones `002` a `007` y `012` son re-ejecutables. No dependen de
 `000_registro_migraciones.sql`: si la tabla `treksafe_migraciones` existe, registran
