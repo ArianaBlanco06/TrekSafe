@@ -104,6 +104,7 @@ Orden de validaciones (cada paso solo se evalúa si el anterior pasó):
 | 3 | La operación ya se usó en otro tipo de operación (`eventos_plan`, `incidentes`, `operacion_aceptacion_id`) | `DATOS_INVALIDOS` |
 | 4 | El actor tiene perfil en `perfiles_rescatista` | `NO_ES_RESCATISTA` |
 | 5 | **Bloqueo**: incidente no cerrado de la expedición, `FOR UPDATE`. Si no existe ninguno para esa expedición → `INCIDENTE_NO_ENCONTRADO`. Si solo hay cerrados → `INCIDENTE_CERRADO` | ver columna |
+| 5b | **Repetición tras el bloqueo.** Con el incidente ya bloqueado se vuelve a buscar la operación: si otra sesión registró el mismo `operacion_id` mientras esta esperaba (dos envíos simultáneos del mismo comando), es una repetición segura (`repetido: true`), no un relevo duplicado. Si la operación es de otro actor u otro incidente → `INCIDENTE_NO_ENCONTRADO`. Sin este paso, el segundo envío vería el pendiente del primero y recibiría `RELEVO_PENDIENTE` | `INCIDENTE_NO_ENCONTRADO` |
 | 6 | `incidentes.responsable_id = p_actor_id` | `NO_ES_RESPONSABLE` |
 | 7 | `p_destinatario_id <> p_actor_id` | `DESTINATARIO_INVALIDO` |
 | 8 | El destinatario tiene perfil en `perfiles_rescatista` | `DESTINATARIO_NO_VALIDADO` |
@@ -111,7 +112,7 @@ Orden de validaciones (cada paso solo se evalúa si el anterior pasó):
 | 10 | No hay un relevo `pendiente` del incidente. `DETAIL` lleva el relevo pendiente (id, destinatario, solicitado_en) | `RELEVO_PENDIENTE` |
 | 11 | `INSERT` del relevo con `version_incidente = incidentes.version`. Si salta `uq_relevo_pendiente_por_incidente` (otra vía sin bloqueo), se relee el pendiente y se responde `RELEVO_PENDIENTE`. Si colisiona `operacion_id`, se resuelve como en el paso 2 | resultado `repetido: false` |
 
-Decisiones de orden: la identidad del actor (4 y 6) va antes de validar al destinatario o la versión, para que quien no es responsable no obtenga información del caso. El 5 distingue "no existe" de "cerrado" porque el CA-03 pide expresamente rechazar relevos en casos cerrados.
+Decisiones de orden: el paso 2 resuelve las repeticiones que ya estaban confirmadas antes de empezar y el 5b las que se confirman mientras se espera el bloqueo; juntos cubren toda repetición idempotente. La identidad del actor (4 y 6) va antes de validar al destinatario o la versión, para que quien no es responsable no obtenga información del caso. El 5 distingue "no existe" de "cerrado" porque el CA-03 pide expresamente rechazar relevos en casos cerrados.
 
 ### 2.2 `treksafe_aceptar_relevo(p_expedicion_id, p_actor_id, p_relevo_id, p_operacion_id)`
 
