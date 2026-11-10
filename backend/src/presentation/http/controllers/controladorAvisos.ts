@@ -27,10 +27,6 @@ export async function listarAvisos(req: Request, res: Response): Promise<void> {
 
 export async function contarNoLeidos(req: Request, res: Response): Promise<void> {
   const usuarioId = obtenerUsuarioId(req);
-
-  // Reconsumo durable e idempotente de eventos huérfanos del plan
-  await avisador.reconstruirEventosPendientes(usuarioId);
-
   const conteo = await servicioBandeja.contarNoLeidos(usuarioId);
   res.status(200).json({ datos: conteo });
 }

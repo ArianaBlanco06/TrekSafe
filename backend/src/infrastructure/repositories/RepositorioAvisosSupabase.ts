@@ -110,10 +110,13 @@ export class RepositorioAvisosSupabase implements INotificacionDAO {
     motivo: string | null;
     cambios: Record<string, any>;
   }>> {
+    const desde = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     let query = this.supabase
       .from('eventos_plan')
       .select('id, expedicion_id, senderista_id, tipo, motivo, cambios')
-      .order('ocurrido_en', { ascending: true });
+      .gte('ocurrido_en', desde)
+      .order('ocurrido_en', { ascending: true })
+      .limit(50);
 
     if (senderistaId) {
       query = query.eq('senderista_id', senderistaId);
