@@ -13,7 +13,7 @@ const RESPUESTAS: Record<CodigoErrorCancelacionPlan, { estado: number; mensaje: 
   EXPEDICION_NO_ENCONTRADA: { estado: 404, mensaje: 'Expedición no encontrada' },
   PLAN_NO_CANCELABLE: {
     estado: 409,
-    mensaje: 'Solo puedes cancelar expediciones programadas que aún no inician',
+    mensaje: 'Solo se pueden cancelar expediciones programadas con hora de salida futura',
   },
   DATOS_INVALIDOS: { estado: 400, mensaje: 'Datos de entrada inválidos' },
 };
@@ -26,9 +26,9 @@ function traducir(codigo: CodigoErrorCancelacionPlan): ErrorAplicacion {
 /**
  * Ejecutor del comando `ComandoCancelarPlan` (HU-27).
  *
- * Valida antes de escribir con el reloj inyectado; la persistencia vuelve a comprobar
- * las reglas dentro de la transacción, con la fila bloqueada, por si el cron promovió
- * el plan entretanto. No envía correos: HU-37 leerá el evento `CANCELADA`.
+ * Valida antes de escribir con el reloj inyectado (plan programado y con salida futura); la
+ * persistencia vuelve a comprobar las reglas dentro de la transacción, con la fila bloqueada y el
+ * reloj de la base, por si el cron promovió el plan entretanto. No envía correos: HU-37 leerá el evento `CANCELADA`.
  *
  * Idempotente: un plan ya cancelado devuelve `{id, version, estado}` sin llamar a la
  * persistencia, sea la misma operación repetida u otra distinta.
