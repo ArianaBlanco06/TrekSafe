@@ -1,0 +1,27 @@
+# Matriz de trazabilidad
+
+Los números `DEP` identifican este conjunto técnico; los números `HU` son historias funcionales. Por ejemplo, **HU-45 corresponde a issue #47**, HU-46 a #48, HU-49 a #51 y HU-50 a #52. No confundir ambas numeraciones.
+
+## Requisito, componente y trabajo
+
+| Requisito | Componente / decisión | Issue responsable y dependencia | HU / antecedente relacionado | Prueba / evidencia de cierre |
+|---|---|---|---|---|
+| R1. Diseño con fuentes y estados diferenciados | Todos; D1–D6 | [DEP-01 #106](https://github.com/ArianaBlanco06/TrekSafe/issues/106), sin dependencia | [TECH #53](https://github.com/ArianaBlanco06/TrekSafe/issues/53), [#54](https://github.com/ArianaBlanco06/TrekSafe/issues/54), [#55](https://github.com/ArianaBlanco06/TrekSafe/issues/55), [#56](https://github.com/ArianaBlanco06/TrekSafe/issues/56), [#57](https://github.com/ArianaBlanco06/TrekSafe/issues/57) | Diagramas, fuentes, costos, enlaces, matriz y README; evidencia en este dossier |
+| R2. API/tareas independientes con contratos de negocio | API, worker y composición; D1/D2 | [DEP-03 #107](https://github.com/ArianaBlanco06/TrekSafe/issues/107) ← #106 | Motor [#14](https://github.com/ArianaBlanco06/TrekSafe/issues/14), alertas [#15](https://github.com/ArianaBlanco06/TrekSafe/issues/15)/[#16](https://github.com/ArianaBlanco06/TrekSafe/issues/16), HU-45/46/50 | V1; pruebas con reloj/repositorios/transporte sustituibles; regresión de autorización |
+| R3. Escrituras y avisos atómicos, esquema por entorno | PostgreSQL/RPC; D4/D5/D6 | [DEP-04 #108](https://github.com/ArianaBlanco06/TrekSafe/issues/108) ← #106 | Creación [#7](https://github.com/ArianaBlanco06/TrekSafe/issues/7)/[#8](https://github.com/ArianaBlanco06/TrekSafe/issues/8), HU-26 [#26](https://github.com/ArianaBlanco06/TrekSafe/issues/26), HU-27 [#27](https://github.com/ArianaBlanco06/TrekSafe/issues/27), HU-32 [#32](https://github.com/ArianaBlanco06/TrekSafe/issues/32), HU-35 [#36](https://github.com/ArianaBlanco06/TrekSafe/issues/36), HU-36 [#37](https://github.com/ArianaBlanco06/TrekSafe/issues/37), TECH-56 | V2/V3/V9; SQL desechable, actualización con datos ficticios y registro real por entorno |
+| R4. Recuperar plazos, avisos y envíos sin falsos éxitos | Worker/outbox/transporte; D2/D3/D4 | [DEP-02 #109](https://github.com/ArianaBlanco06/TrekSafe/issues/109) ← #106, #107, #108 | HU-37 [#38](https://github.com/ArianaBlanco06/TrekSafe/issues/38), HU-38 [#39](https://github.com/ArianaBlanco06/TrekSafe/issues/39), HU-44 [#46](https://github.com/ArianaBlanco06/TrekSafe/issues/46), HU-45 [#47](https://github.com/ArianaBlanco06/TrekSafe/issues/47), HU-46 [#48](https://github.com/ArianaBlanco06/TrekSafe/issues/48), motor/correo | V1/V3/V4/V5/V6/V8; integración de PR #90/#93/#94 con reservas, idempotencia y conciliación |
+| R5. Publicación reproducible, continuidad y supervisión | Fly/Vercel/DB/cuentas; D2/D3/D5/D6 | [DEP-05 #110](https://github.com/ArianaBlanco06/TrekSafe/issues/110) ← #106, #108, #109 | TECH #53–#57 | V1/V7/V8; cuentas, costos reales, versiones, consumo, salud y recuperación ensayada |
+| R6. PWA eficiente, offline coherente y privacidad | Cliente, autorización y correo; D5/D6 | [DEP-06 #111](https://github.com/ArianaBlanco06/TrekSafe/issues/111) ← #106, #107, #108 | Offline [#9](https://github.com/ArianaBlanco06/TrekSafe/issues/9), HU-32 [#32](https://github.com/ArianaBlanco06/TrekSafe/issues/32), HU-33 [#33](https://github.com/ArianaBlanco06/TrekSafe/issues/33), HU-34 [#35](https://github.com/ArianaBlanco06/TrekSafe/issues/35), HU-37/38, HU-49 [#51](https://github.com/ArianaBlanco06/TrekSafe/issues/51), HU-50 [#52](https://github.com/ArianaBlanco06/TrekSafe/issues/52), privacidad [#67](https://github.com/ArianaBlanco06/TrekSafe/issues/67) | V10/V11; PWA con SW activo, mediciones antes/después y ausencia de ficha en correos |
+| R7. Entorno académico apto para pruebas de la entrega | Sistema integrado | [DEP-07 #112](https://github.com/ArianaBlanco06/TrekSafe/issues/112) ← #106–#111 | 25 HU R2 requeridas y regresión R1 pertinente, incluidas coordinación HU-39/40 y rescate HU-41/42 | V1–V12 según alcance; matriz por HU, commit/esquema, recepción real, defectos y límites |
+
+## Regresiones de componentes ya validados
+
+| Cambio previsto | Antecedente | Verificación que debe repetirse |
+|---|---|---|
+| Separar arranque y tareas | TECH-55, motor y correo históricos | `CRON_ENABLED=false` no inicia tareas; API y worker arrancan independientemente; no enviar durante pruebas locales |
+| Transacciones/eventos y vencimientos | HU-26/27/35/36, PR #104 | Actor, versión, salida tras espera de bloqueo, no-op, idempotencia, rollback y orden del historial |
+| Migraciones / outbox | TECH-56 y PR #103; PR #90 pendiente | Inspección previa de objetos/asientos, numeración única, orden y compatibilidad; no repetir conciliación como DDL |
+| Nueva notificación y retorno | Alertas #15/#16, HU-44/45/46 | Pendiente ≠ enviado ≠ recibido; fallo intermedio, reintento manual y privacidad de contenido |
+| Offline y actualización PWA | Fix #67 y HU-28–HU-34 afectadas | Cambio de cuenta, logout, respuestas tardías, conflictos y SW activo; conservar pruebas vigentes |
+
+Las HU siguen enlazadas y conservan sus responsables originales. El PO asume los ajustes transversales de despliegue y sus regresiones en estas tareas técnicas. La aceptación anterior se conserva como antecedente, no como prueba de la nueva implementación.
