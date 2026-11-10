@@ -98,6 +98,57 @@ export class RepositorioAvisosSupabase implements INotificacionDAO {
     return data ? (data as { id: string }).id : null;
   }
 
+  /**
+   * Eventos del plan que no tienen aún aviso en avisos_usuario.
+   * Permite reconsumo durable tras fallos transitorios en la mutación RPC.
+   */
+  async buscarEventosPendientes(senderistaId?: string): Promise<Array<{
+    id: string;
+    expedicionId: string;
+    senderistaId: string;
+    tipo: 'EDITADA' | 'CANCELADA' | 'RETORNO_AMPLIADO';
+    motivo: string | null;
+    cambios: Record<string, any>;
+  }>> {
+    let query = this.supabase
+      .from('eventos_plan')
+      .select('id, expedicion_id, senderista_id, tipo, motivo, cambios')
+      .order('ocurrido_en', { ascending: true });
+
+    if (senderistaId) {
+      query = query.eq('senderista_id', senderistaId);
+    }
+
+    const { data: eventos, error: errEventos } = await query;
+    if (errEventos) {
+      throw new ErrorAplicacion(500, `Error al consultar eventos del plan: ${errEventos.message}`);
+    }
+    if (!eventos || eventos.length === 0) return [];
+
+    const claves = eventos.map((e: any) => e.id);
+    const { data: avisosExistentes, error: errAvisos } = await this.supabase
+      .from('avisos_usuario')
+      .select('clave_evento')
+      .in('clave_evento', claves);
+
+    if (errAvisos) {
+      throw new ErrorAplicacion(500, `Error al consultar avisos existentes: ${errAvisos.message}`);
+    }
+
+    const clavesConAviso = new Set((avisosExistentes || []).map((a: any) => a.clave_evento));
+
+    return eventos
+      .filter((e: any) => !clavesConAviso.has(e.id))
+      .map((e: any) => ({
+        id: e.id,
+        expedicionId: e.expedicion_id,
+        senderistaId: e.senderista_id,
+        tipo: e.tipo as 'EDITADA' | 'CANCELADA' | 'RETORNO_AMPLIADO',
+        motivo: e.motivo,
+        cambios: e.cambios ?? {},
+      }));
+  }
+
   async listarPorUsuario(usuarioId: string, soloNoLeidos = false): Promise<Aviso[]> {
     let query = this.supabase
       .from('avisos_usuario')
