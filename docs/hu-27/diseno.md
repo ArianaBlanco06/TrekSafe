@@ -12,7 +12,7 @@ Como senderista, quiero cancelar una expedición que todavía no inicia para evi
 
 **La regla se invierte respecto de la versión inicial de HU-27.** La primera implementación entendía "todavía no inicia" como "sigue en `programada`" y permitía cancelar aunque la hora de salida ya hubiera pasado, mientras el cron no lo hubiera promovido. Lo dejó explícito como decisión pendiente del PO (`CANCELAR_EXIGE_SALIDA_FUTURA = false` y un comentario en la migración 005).
 
-La confirmación del PO llegó por el mensaje de Marko (validación del equipo) y coincide con el CA-01 del issue #27: **solo se cancela un plan programado y futuro**. Se reprodujo el defecto: una expedición con salida pasada se cancelaba con 200 y quedaba `cancelada`.
+La regla está confirmada por el PO (Marko), ver issue #27, y coincide con el CA-01 del issue: **solo se cancela un plan programado y futuro**. Se reprodujo el defecto: una expedición con salida pasada se cancelaba con 200 y quedaba `cancelada`.
 
 | Condición | Resultado |
 |---|---|
