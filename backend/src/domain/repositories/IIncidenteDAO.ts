@@ -23,6 +23,72 @@ export type Coordinacion = {
   asumidoEn: string;
   /** `true` si el rescatista que consulta es el responsable. */
   esMia: boolean;
+  /**
+   * Relevo pendiente (HU-40). La clave solo existe mientras haya un relevo pendiente: sin
+   * relevo, la coordinación conserva exactamente la forma de HU-39.
+   */
+  relevoPendiente?: RelevoPendiente;
+};
+
+/**
+ * Relevo pendiente visto por quien consulta. Lo ve todo rescatista autorizado, sin datos
+ * médicos; el `motivo` (texto libre) solo lo reciben las dos partes del relevo.
+ */
+export type RelevoPendiente = {
+  relevoId: string;
+  destinatarioId: string;
+  nombreDestinatario: string;
+  solicitadoEn: string;
+  /** `true` si el rescatista que consulta es el destinatario. */
+  esParaMi: boolean;
+  motivo?: string;
+};
+
+export type EstadoRelevo = 'pendiente' | 'aceptado';
+
+/** Relevo completo: lo reciben solo quienes lo proponen o lo aceptan. */
+export type Relevo = {
+  id: string;
+  estado: EstadoRelevo;
+  responsableAnteriorId: string;
+  nombreResponsableAnterior: string;
+  destinatarioId: string;
+  nombreDestinatario: string;
+  motivo: string;
+  solicitadoEn: string;
+  /** Nulo mientras esté pendiente. */
+  resueltoEn: string | null;
+  /** Versión del incidente en la que se propuso (auditoría). */
+  versionIncidente: number;
+};
+
+/** Datos que la persistencia necesita para proponer un relevo. */
+export type SolicitudProponerRelevo = {
+  expedicionId: string;
+  /** Quien propone: el responsable vigente. */
+  rescatistaId: string;
+  destinatarioId: string;
+  motivo: string;
+  /** Versión del incidente que vio el cliente. */
+  versionIncidente: number;
+  operacionId: string;
+};
+
+/** Datos que la persistencia necesita para aceptar un relevo. Aceptar no lleva versión. */
+export type SolicitudAceptarRelevo = {
+  expedicionId: string;
+  /** Quien acepta: el destinatario del relevo. */
+  rescatistaId: string;
+  relevoId: string;
+  operacionId: string;
+};
+
+export type ResultadoRelevo = {
+  /** El incidente tal como queda tras la operación. */
+  incidente: Incidente;
+  relevo: Relevo;
+  /** `true` si no se escribió nada nuevo: la misma operación ya registrada. */
+  repetido: boolean;
 };
 
 /** Datos que la persistencia necesita para asumir una coordinación. */
@@ -55,4 +121,25 @@ export interface IIncidenteDAO {
     expedicionIds: readonly string[],
     rescatistaId: string,
   ): Promise<Map<string, Coordinacion>>;
+}
+
+/**
+ * Persistencia del relevo de la coordinación (HU-40). Interfaz aparte de `IIncidenteDAO`
+ * (segregación de interfaces): quien solo asume o lee coordinaciones no depende del relevo.
+ */
+export interface IRelevoDAO {
+  /**
+   * Propone el relevo de la coordinación (HU-40). No cambia el responsable ni la versión
+   * del incidente. A lo sumo hay un relevo pendiente por incidente.
+   * @throws ErrorCoordinacion<CodigoErrorRelevo> si alguna regla de negocio lo rechaza.
+   */
+  proponerRelevo(solicitud: SolicitudProponerRelevo): Promise<ResultadoRelevo>;
+
+  /**
+   * Acepta el relevo pendiente (HU-40): en una sola transacción pasa el responsable al
+   * destinatario, sube la versión del incidente, resuelve el relevo y registra la
+   * transferencia. No compara versión.
+   * @throws ErrorCoordinacion<CodigoErrorRelevo> si alguna regla de negocio lo rechaza.
+   */
+  aceptarRelevo(solicitud: SolicitudAceptarRelevo): Promise<ResultadoRelevo>;
 }
