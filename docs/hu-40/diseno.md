@@ -124,7 +124,8 @@ Decisiones de orden: la identidad del actor (4 y 6) va antes de validar al desti
 | 6 | **Bloqueo** del incidente `FOR UPDATE` y **relectura** del relevo (pudo cambiar mientras se esperaba el bloqueo) | — |
 | 7 | `destinatario_id = p_actor_id` | `NO_ES_DESTINATARIO` |
 | 8 | `estado = 'pendiente'` | `RELEVO_YA_RESUELTO` |
-| 9 | El incidente no está `cerrado` | `INCIDENTE_CERRADO` |
+| 9 | El incidente no está `cerrado`. Cubre el caso cerrado **después** de la propuesta: el relevo sigue `pendiente`, pero un caso cerrado no se transfiere | `INCIDENTE_CERRADO` |
+| 9b | El destinatario sigue siendo un rescatista validado (perfil vigente en `perfiles_rescatista`, releído con el incidente bloqueado, no el de la propuesta) | `DESTINATARIO_NO_VALIDADO` |
 | 10 | Aplica el relevo (sección 3) | resultado `repetido: false` |
 
 Decisiones de orden y de significado:
