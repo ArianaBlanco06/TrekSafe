@@ -162,8 +162,8 @@ sequenceDiagram
 2. **Propietario** (con la fila bloqueada con `FOR UPDATE`) y validez del motivo.
 3. **Ya cancelada:** mismo resultado, sin escribir.
 4. **Estado** distinto de `programada`: 409 `PLAN_NO_CANCELABLE`.
-5. **Salida** no futura (`hora_inicio <= now()`): 409 `PLAN_NO_CANCELABLE`.
-6. **`UPDATE`** condicionado a `estado = 'programada'` **y** `hora_inicio > now()`, como defensa si cambiara el bloqueo.
+5. **Salida** no futura (`hora_inicio <= v_ahora`, con `v_ahora := clock_timestamp()` tomado tras el bloqueo): 409 `PLAN_NO_CANCELABLE`.
+6. **`UPDATE`** condicionado a `estado = 'programada'` **y** `hora_inicio > v_ahora`, como defensa si cambiara el bloqueo.
 
 Por eso repetir una cancelación ya hecha sigue devolviendo lo mismo aunque la salida ya haya pasado, y un ajeno recibe 404 sin enterarse de la fecha. Una divergencia menor y ya existente: en el caso de uso la salida se evalúa antes de llegar a la RPC, así que un `operacionId` ya usado por una edición sobre un plan con salida pasada responde 409 y no 400. Ambos rechazan.
 
@@ -186,7 +186,25 @@ El caso de uso devuelve el resultado de un plan ya cancelado sin llamar a la RPC
 
 - Si gana la cancelación, el cron no actualiza ninguna fila. La función de alerta solo toca `en_progreso`, y el contexto de correo, solo `alerta`.
 - Si gana el cron, la cancelación responde 409 `PLAN_NO_CANCELABLE`.
-- Desde la migración 018 la salida también se compara con `now()` de la base, con la fila bloqueada: el reloj de la base decide, no el del servidor de la API.
+- Desde la migración 018 la salida también se compara con el reloj de la base, con la fila bloqueada: el reloj de la base decide, no el del servidor de la API.
+
+### Por qué `clock_timestamp()` después del bloqueo y no `now()`
+
+`now()` devuelve el instante de **inicio de la transacción** y no avanza mientras la RPC espera el `SELECT ... FOR UPDATE`. Si otra transacción retiene la fila y la salida pasa durante esa espera, `now()` seguiría siendo anterior a la salida: la comprobación y el `UPDATE` defensivo darían por futura una salida que ya ocurrió y el plan se cancelaría. Se reprodujo con dos conexiones reales (salida en ~2 s; A retiene la fila; B pide cancelar y espera; A suelta a los ~2,6 s): sin la corrección B cancelaba.
+
+Corrección: tras obtener el bloqueo, la RPC toma **una sola vez** `v_ahora := clock_timestamp()` y lo usa en la comprobación de salida (paso 5), en el `WHERE` del `UPDATE` (`estado = 'programada' AND hora_inicio > v_ahora`) y en `actualizado_en`. No queda ningún `now()` en la decisión. El orden de las reglas no cambia: la idempotencia (pasos 1 y 3) sigue evaluándose antes que la salida, así que repetir la cancelación de un plan ya cancelado devuelve lo mismo aunque la salida haya pasado.
+
+Pruebas de regresión:
+
+- **Una sesión** (`backend/migrations/tests/hu27_cancelar_salida_futura.test.sql`, caso 11): la salida pasa durante la transacción (`pg_sleep`) y la RPC debe responder `PLAN_NO_CANCELABLE` sin escribir nada. Se corre con `node backend/scripts/test-hu27-postgres.mjs`.
+- **Dos conexiones reales** (`backend/src/infrastructure/migraciones/cancelarSalidaFutura.concurrencia.test.ts`): reproduce el escenario anterior y comprueba `PLAN_NO_CANCELABLE`, estado `programada`, versión 1 y ningún evento. Solo corre contra un PostgreSQL local desechable (crea y elimina su propia base):
+
+  ```bash
+  TREKSAFE_PG_TEST_URL=postgres://postgres:<clave>@127.0.0.1:55432/treksafe_desechable     node --import tsx --test backend/src/infrastructure/migraciones/cancelarSalidaFutura.concurrencia.test.ts
+  ```
+
+  Sin `TREKSAFE_PG_TEST_URL` se omite y `npm test` sigue funcionando.
+- Las salidas "futuras cercanas" de la suite SQL se siembran con margen (30 s), porque con el reloj real un margen de 1 ms ya no es determinista.
 
 El código del cron no cambió. `cronFechaLimiteExpedicion.canceladas.test.ts` demuestra este comportamiento con un cliente Supabase en memoria.
 
