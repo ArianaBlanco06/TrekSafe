@@ -4,8 +4,9 @@
 -- (la 018 sustituye la función de la 005 y exige salida futura). Cada caso imprime un aviso "OK n: ..."; el primero que falla
 -- aborta el archivo con su mensaje.
 --
--- Todo corre en UNA transacción, así que now() es constante: permite probar el límite exacto
--- (hora_inicio = now()) sin carreras de reloj.
+-- Todo corre en UNA transacción, así que now() es constante, pero la RPC decide con clock_timestamp()
+-- (reloj real tomado tras el bloqueo de la fila): una salida igual a now() ya quedó atrás y se rechaza, y las
+-- salidas "futuras" se siembran con margen (no con 1 ms) para que la prueba no dependa de la velocidad.
 BEGIN;
 
 CREATE SCHEMA hu27_prueba;
@@ -38,7 +39,7 @@ FROM (VALUES
     ('b2700000-0000-4000-8000-000000000001'::uuid, 'programada', now() + interval '1 day'),           -- futura
     ('b2700000-0000-4000-8000-000000000002'::uuid, 'programada', now() - interval '1 hour'),          -- pasada
     ('b2700000-0000-4000-8000-000000000003'::uuid, 'programada', now()),                              -- exactamente ahora
-    ('b2700000-0000-4000-8000-000000000004'::uuid, 'programada', now() + interval '1 millisecond'),   -- 1 ms futura
+    ('b2700000-0000-4000-8000-000000000004'::uuid, 'programada', now() + interval '30 seconds'),      -- futura cercana
     ('b2700000-0000-4000-8000-000000000005'::uuid, 'programada', now() + interval '1 day'),           -- para idempotencia
     ('b2700000-0000-4000-8000-000000000006'::uuid, 'programada', now() - interval '2 hours'),         -- pasada, para propietario ajeno
     ('b2700000-0000-4000-8000-000000000007'::uuid, 'en_progreso', now() - interval '1 hour'),         -- estado antes que salida
@@ -83,7 +84,8 @@ BEGIN
     RAISE NOTICE 'OK 2: una salida pasada se rechaza con PLAN_NO_CANCELABLE y no escribe nada';
 END $$;
 
--- 3) LÍMITE: con la salida exactamente igual a now() tampoco se cancela (misma regla que HU-26: <= now()).
+-- 3) LÍMITE: con la salida igual a now() (instante de inicio de la transacción, ya pasado para el reloj real)
+--    tampoco se cancela (misma regla que HU-26: salida <= ahora ya inició).
 DO $$
 DECLARE r JSONB;
 BEGIN
@@ -92,17 +94,17 @@ BEGIN
     IF r->>'codigo' <> 'PLAN_NO_CANCELABLE' THEN
         RAISE EXCEPTION 'La salida igual a ahora debe responder PLAN_NO_CANCELABLE y llegó %', r;
     END IF;
-    RAISE NOTICE 'OK 3: la salida exactamente igual a now() no es futura y se rechaza';
+    RAISE NOTICE 'OK 3: una salida igual a now() ya no es futura para el reloj real y se rechaza';
 END $$;
 
--- 4) LÍMITE: 1 ms en el futuro sí se cancela.
+-- 4) Una salida futura cercana (30 s, con margen) sí se cancela.
 DO $$
 DECLARE r JSONB;
 BEGIN
     r := hu27_prueba.cancelar('b2700000-0000-4000-8000-000000000004', 'a2700000-0000-4000-8000-000000000001',
                               'c2700000-0000-4000-8000-000000000004');
-    IF r->>'codigo' <> 'OK' THEN RAISE EXCEPTION 'Una salida 1 ms futura debe cancelarse: %', r; END IF;
-    RAISE NOTICE 'OK 4: una salida 1 ms posterior a now() se cancela';
+    IF r->>'codigo' <> 'OK' THEN RAISE EXCEPTION 'Una salida futura cercana debe cancelarse: %', r; END IF;
+    RAISE NOTICE 'OK 4: una salida futura cercana se cancela';
 END $$;
 
 -- 5) ORDEN: la idempotencia va antes que la salida. Tras cancelar, la salida "pasa" y el reintento
@@ -189,7 +191,7 @@ BEGIN
     RAISE NOTICE 'OK 9: todos los códigos devueltos pertenecen al contrato de la cancelación';
 END $$;
 
--- 10) DEFENSA: el UPDATE condicionado (AND hora_inicio > now()) no cancela una salida pasada aunque la
+-- 10) DEFENSA: el UPDATE condicionado (AND hora_inicio > v_ahora) no cancela una salida pasada aunque la
 --     comprobación previa (paso e) se salte. Se prueba con copias de la función creadas a partir de su
 --     definición real en la base: una SIN la comprobación previa y otra SIN la comprobación previa NI la
 --     defensa (esta última demuestra que la prueba distingue: sin la defensa, la salida pasada se cancelaría).
@@ -208,11 +210,11 @@ BEGIN
     v_def := replace(
         pg_get_functiondef('public.treksafe_cancelar_expedicion(uuid,uuid,text,uuid)'::regprocedure),
         'public.treksafe_cancelar_expedicion(', 'hu27_prueba.NOMBRE_FN(');
-    v_sin_previa := replace(v_def, 'IF v_exp.hora_inicio <= now() THEN', 'IF false THEN');
+    v_sin_previa := replace(v_def, 'IF v_exp.hora_inicio <= v_ahora THEN', 'IF false THEN');
     IF v_sin_previa = v_def THEN
         RAISE EXCEPTION 'No se encontró la comprobación previa de la salida en la función';
     END IF;
-    v_sin_ambas := replace(v_sin_previa, 'AND hora_inicio > now()', '');
+    v_sin_ambas := replace(v_sin_previa, 'AND hora_inicio > v_ahora', '');
     IF v_sin_ambas = v_sin_previa THEN
         RAISE EXCEPTION 'No se encontró el UPDATE defensivo en la función';
     END IF;
@@ -246,7 +248,39 @@ BEGIN
     IF b->>'codigo' <> 'OK' OR v_estado_b <> 'cancelada' THEN
         RAISE EXCEPTION 'Sin la comprobación previa ni la defensa la salida pasada debería cancelarse (la prueba no distingue): % / %', b, v_estado_b;
     END IF;
-    RAISE NOTICE 'OK 10: el UPDATE defensivo (AND hora_inicio > now()) no cancela una salida pasada aunque se salte la comprobación previa';
+    RAISE NOTICE 'OK 10: el UPDATE defensivo (AND hora_inicio > v_ahora) no cancela una salida pasada aunque se salte la comprobación previa';
+END $$;
+
+-- 11) RELOJ (una sola sesión): la salida pasa DENTRO de la transacción de la RPC. now() queda fijo en el
+--     inicio de la transacción (salida aún "futura" para now()), pero el reloj real ya la rebasó:
+--     debe responder PLAN_NO_CANCELABLE y no escribir nada (ni estado, ni versión, ni evento).
+--     Con now() en la RPC (018 anterior a la corrección) este caso cancelaba el plan.
+RESET ROLE;
+DO $$
+DECLARE
+    r         JSONB;
+    v_estado  TEXT;
+    v_version INT;
+    v_exp CONSTANT UUID := 'b2700000-0000-4000-8000-00000000000c';
+BEGIN
+    INSERT INTO public.expediciones (id, senderista_id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada, estado)
+    VALUES (v_exp, 'a2700000-0000-4000-8000-000000000001', 'Inicio', 'Destino',
+            clock_timestamp() + interval '500 milliseconds', now() + interval '1 day', 'programada');
+    IF NOT (SELECT hora_inicio > now() FROM public.expediciones WHERE id = v_exp) THEN
+        RAISE EXCEPTION 'Preparación inválida: la salida debía ser posterior a now()';
+    END IF;
+    PERFORM pg_sleep(1);
+    SET LOCAL ROLE service_role;
+    r := hu27_prueba.cancelar(v_exp, 'a2700000-0000-4000-8000-000000000001', 'c2700000-0000-4000-8000-00000000000c');
+    RESET ROLE;
+    SELECT estado::TEXT, version INTO v_estado, v_version FROM public.expediciones WHERE id = v_exp;
+    IF r->>'codigo' <> 'PLAN_NO_CANCELABLE' THEN
+        RAISE EXCEPTION 'Una salida que pasó durante la transacción debe responder PLAN_NO_CANCELABLE y llegó %', r;
+    END IF;
+    IF v_estado <> 'programada' OR v_version <> 1 OR EXISTS (SELECT 1 FROM public.eventos_plan WHERE expedicion_id = v_exp) THEN
+        RAISE EXCEPTION 'El rechazo no debe escribir nada (estado %, versión %)', v_estado, v_version;
+    END IF;
+    RAISE NOTICE 'OK 11: la salida que pasa dentro de la transacción se rechaza (la decisión usa clock_timestamp, no now)';
 END $$;
 
 RESET ROLE;

@@ -75,8 +75,8 @@ try {
   try { await cliente.query(await readFile(path.join(root, 'backend/migrations/tests/hu27_cancelar_salida_futura.test.sql'), 'utf8')); } catch (e) { fallo = e; }
   for (const a of avisos) console.log(`OK   SQL ${a.slice(3)}`);
   if (fallo) console.log(`FAIL tras ${avisos.length} casos: ${fallo.message}`);
-  ok = !fallo && avisos.length === 10;
-  console.log(`\nResumen HU-27: ${avisos.length} de 10 casos OK${fallo ? ', 1 falló' : ''}`);
+  ok = !fallo && avisos.length === 11;
+  console.log(`\nResumen HU-27: ${avisos.length} de 11 casos OK${fallo ? ', 1 falló' : ''}`);
 } catch (e) {
   console.log('ERROR:', e.message);
 } finally {
