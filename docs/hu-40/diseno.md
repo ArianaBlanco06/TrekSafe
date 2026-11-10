@@ -73,7 +73,7 @@ Se mantienen las dos tablas porque tienen ciclos de vida distintos: el relevo pu
 
 ### 1.3 Cambios sobre `incidentes` (tabla de HU-39)
 
-- Permiso nuevo: `GRANT UPDATE (responsable_id, version, asumido_en) ON public.incidentes TO service_role`. Es a nivel de columna, no abre `estado` ni `cerrado_en` (eso es de HU-42).
+- Permiso nuevo: `GRANT UPDATE (responsable_id, version, asumido_en) ON public.incidentes TO service_role`. Es a nivel de columna: no abre `estado` ni `cerrado_en` (eso es de HU-42). `anon` y `authenticated` siguen sin ningún acceso (RLS con `treksafe_deny_anon_authenticated` y `REVOKE ALL` de HU-39); la migración no les concede nada y la suite SQL lo comprueba.
 - Sin columnas nuevas ni cambios de restricciones.
 - **Semántica de `asumido_en` (declarada):** pasa a significar "desde cuándo coordina el responsable actual". En la asunción de HU-39 vale lo mismo que antes (la hora en que asumió); tras un relevo se actualiza con la hora de aceptación. `abierto_en` conserva la apertura original. Así el "desde HH:MM" de la consola sigue siendo verdadero para el responsable actual.
 - **HU-39 no cambia:** es una aclaración de significado, no de esquema ni de código. Los tests de HU-39 (SQL, backend y frontend) deben pasar sin modificarlos; se comprueba en la verificación (sección 10).
