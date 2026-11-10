@@ -4,6 +4,8 @@ import { AsignarResponsable } from '../../../application/use-cases/AsignarRespon
 import { ProponerRelevo } from '../../../application/use-cases/ProponerRelevo.js';
 import { getSupabaseAdmin } from '../../../infrastructure/database/supabase.js';
 import { IncidenteDAOSupabase } from '../../../infrastructure/repositories/IncidenteDAOSupabase.js';
+import { RescatistasDAOSupabase } from '../../../infrastructure/repositories/RescatistasDAOSupabase.js';
+import type { IRescatistasDAO } from '../../../domain/repositories/IRescatistasDAO.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { middlewareAutenticacion, requerirRol } from '../middleware/middlewareAutenticacion.js';
 import {
@@ -16,6 +18,7 @@ import {
 } from '../controllers/controladorRescate.js';
 import { crearControladorCoordinacion } from '../controllers/controladorCoordinacion.js';
 import { crearControladorRelevo } from '../controllers/controladorRelevo.js';
+import { crearControladorRescatistas } from '../controllers/controladorRescatistas.js';
 
 export type DependenciasRutasRescate = {
   /** Ejecutor de HU-39. Por defecto, con el DAO de Supabase; las pruebas inyectan uno propio. */
@@ -23,6 +26,8 @@ export type DependenciasRutasRescate = {
   /** Ejecutores de HU-40. Por defecto, con el mismo DAO de Supabase; las pruebas inyectan los suyos. */
   proponerRelevo?: ProponerRelevo;
   aceptarRelevo?: AceptarRelevo;
+  /** Catálogo de rescatistas validados para elegir destinatario (HU-40). */
+  rescatistas?: IRescatistasDAO;
 };
 
 export function crearRutasRescate(dependencias: DependenciasRutasRescate = {}): Router {
@@ -39,6 +44,10 @@ export function crearRutasRescate(dependencias: DependenciasRutasRescate = {}): 
     dependencias.aceptarRelevo ?? new AceptarRelevo(dao!),
   );
 
+  const rescatistas = crearControladorRescatistas(
+    dependencias.rescatistas ?? new RescatistasDAOSupabase(getSupabaseAdmin()),
+  );
+
   router.use(middlewareAutenticacion, requerirRol('rescatista'));
 
   router.get('/expediciones', asyncHandler(listarExpediciones));
@@ -50,6 +59,8 @@ export function crearRutasRescate(dependencias: DependenciasRutasRescate = {}): 
   // HU-39: coordinación (incidente), separada de la recepción histórica de HU-14.
   router.post('/alertas/:expedicionId/coordinacion', asyncHandler(coordinacion.asumir));
   // HU-40: relevo de la coordinación (proponer y aceptar).
+  // HU-40: rescatistas validados para elegir destinatario (solo id y nombre).
+  router.get('/rescatistas', asyncHandler(rescatistas.listar));
   router.post('/alertas/:expedicionId/coordinacion/relevos', asyncHandler(relevo.proponer));
   router.post('/alertas/:expedicionId/coordinacion/relevos/:relevoId/aceptar', asyncHandler(relevo.aceptar));
 
