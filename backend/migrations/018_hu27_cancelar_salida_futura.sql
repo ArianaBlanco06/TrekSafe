@@ -10,8 +10,9 @@
 --
 -- Cambio de regla (confirmado por el Product Owner; ver docs/hu-27/diseno.md): la 005 permitía
 -- cancelar mientras el estado fuera 'programada', aunque la hora de salida ya hubiera pasado. Ahora
--- también se exige salida futura: hora_inicio > now(). La comparación es estricta (salida igual a
--- now() no es futura), como en la edición de HU-26 (hora_inicio <= now() ya inició).
+-- también se exige salida futura: hora_inicio > v_ahora, con v_ahora = clock_timestamp() tomado UNA vez
+-- DESPUÉS de obtener el bloqueo de la fila (ver abajo). La comparación es estricta (salida igual a
+-- v_ahora no es futura), como en la edición de HU-26 (hora_inicio <= ahora ya inició).
 --
 -- Errores de negocio: RAISE EXCEPTION con el código en MESSAGE. Sin códigos nuevos.
 --   EXPEDICION_NO_ENCONTRADA, PLAN_NO_CANCELABLE (estado distinto de programada O salida no futura),
@@ -24,8 +25,14 @@
 --   b) motivo válido, bloqueo de la fila y propietario
 --   c) plan ya cancelado (por esta u otra operación): mismo resultado, sin escribir
 --   d) estado distinto de programada: PLAN_NO_CANCELABLE
---   e) salida no futura (hora_inicio <= now()): PLAN_NO_CANCELABLE
+--   e) salida no futura (hora_inicio <= v_ahora): PLAN_NO_CANCELABLE
 --   f) UPDATE condicionado a estado Y a salida futura (defensa si cambiara el bloqueo)
+--
+-- Reloj: now() es el instante de INICIO de la transacción y no avanza mientras se espera el FOR UPDATE.
+-- Si la salida pasa durante esa espera, now() seguiría "antes de la salida" y se cancelaría un plan que ya
+-- inició. Por eso la decisión usa v_ahora := clock_timestamp() tomado tras el bloqueo; no queda ningún now()
+-- en la decisión de cancelar. Regresión: tests/hu27_cancelar_salida_futura.test.sql (caso 11, una sesión) y
+-- src/infrastructure/migraciones/cancelarSalidaFutura.concurrencia.test.ts (dos conexiones reales).
 --
 -- Carrera con el cron: la fila se bloquea con FOR UPDATE y el UPDATE exige estado = 'programada';
 -- la promoción del cron también filtra por estado = 'programada', así que solo una de las dos gana.
@@ -48,6 +55,7 @@ DECLARE
     v_evento         public.eventos_plan%ROWTYPE;
     v_motivo         TEXT := NULLIF(btrim(p_motivo), '');
     v_version_nueva  INTEGER;
+    v_ahora          TIMESTAMPTZ;
 BEGIN
     -- a) Operación ya registrada: se devuelve su resultado sin aplicar nada.
     --    Un operacion_id de otro plan u otro senderista no revela nada ajeno.
@@ -81,6 +89,9 @@ BEGIN
         RAISE EXCEPTION 'EXPEDICION_NO_ENCONTRADA';
     END IF;
 
+    -- Reloj real de la base, tomado una sola vez y DESPUÉS del bloqueo (now() sería el de antes de esperarlo).
+    v_ahora := clock_timestamp();
+
     -- c) Ya cancelada (por esta u otra operación): mismo resultado, sin escribir.
     --    Cubre también un reintento simultáneo confirmado mientras se esperaba el bloqueo.
     --    Va antes que la comprobación de la salida: repetir una cancelación ya hecha no depende de la hora.
@@ -93,8 +104,8 @@ BEGIN
         RAISE EXCEPTION 'PLAN_NO_CANCELABLE';
     END IF;
 
-    -- e) ... y la salida, que debe ser futura (HU-27 CA-01). Estricto: salida = now() no es futura.
-    IF v_exp.hora_inicio <= now() THEN
+    -- e) ... y la salida, que debe ser futura (HU-27 CA-01). Estricto: salida = v_ahora no es futura.
+    IF v_exp.hora_inicio <= v_ahora THEN
         RAISE EXCEPTION 'PLAN_NO_CANCELABLE';
     END IF;
 
@@ -102,10 +113,10 @@ BEGIN
     UPDATE public.expediciones
     SET estado = 'cancelada'::public.estado_expedicion_enum,
         version = version + 1,
-        actualizado_en = now()
+        actualizado_en = v_ahora
     WHERE id = p_expedicion_id
       AND estado = 'programada'::public.estado_expedicion_enum
-      AND hora_inicio > now()
+      AND hora_inicio > v_ahora
     RETURNING version INTO v_version_nueva;
 
     IF NOT FOUND THEN
