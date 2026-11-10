@@ -13,6 +13,7 @@ import {
   type ExpedicionRescate,
   type NivelRiesgoRescate,
 } from '@/services/rescate';
+import { BloqueCoordinacion } from '@/components/rescate/BloqueCoordinacion';
 import type { PuntoMapaExpedicionRescate } from '@/components/maps/RescueExpeditionsMap';
 import { RescueExpeditionsMapLazy } from '@/components/maps/RescueExpeditionsMapLazy';
 
@@ -213,7 +214,7 @@ export function PaginaConsolaRescate() {
       ) : (
         <div className="space-y-3">
           {expediciones.map((exp) => (
-            <TarjetaExpedicion key={exp.expedicionId} expedicion={exp} />
+            <TarjetaExpedicion key={exp.expedicionId} expedicion={exp} alActualizarCoordinacion={cargarExpediciones} />
           ))}
         </div>
       )}
@@ -221,7 +222,13 @@ export function PaginaConsolaRescate() {
   );
 }
 
-function TarjetaExpedicion({ expedicion }: { expedicion: ExpedicionRescate }) {
+function TarjetaExpedicion({
+  expedicion,
+  alActualizarCoordinacion,
+}: {
+  expedicion: ExpedicionRescate;
+  alActualizarCoordinacion: () => void;
+}) {
   const meta = RIESGO_META[expedicion.nivelRiesgo];
 
   return (
@@ -256,6 +263,14 @@ function TarjetaExpedicion({ expedicion }: { expedicion: ExpedicionRescate }) {
         </p>
         <p className="text-xs">Límite: {formatDt(expedicion.fechaLimite)}</p>
       </div>
+
+      {/* HU-39: solo una alerta ofrece asumir; el bloque no pinta nada en una expedición en curso. */}
+      <BloqueCoordinacion
+        expedicionId={expedicion.expedicionId}
+        estado={expedicion.estado}
+        coordinacion={expedicion.coordinacion}
+        alActualizar={alActualizarCoordinacion}
+      />
 
       {expedicion.nivelRiesgo === 'rojo' && (
         <Link

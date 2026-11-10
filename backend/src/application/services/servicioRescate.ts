@@ -10,6 +10,9 @@ import { RepositorioRescate } from '../../infrastructure/repositories/Repositori
 import { RepositorioUsuario } from '../../infrastructure/repositories/RepositorioUsuario.js';
 import { RepositorioAuditoriaAccesoMedico } from '../../infrastructure/repositories/RepositorioAuditoriaAccesoMedico.js';
 import type { NivelRiesgoExpedicion } from '../../domain/value-objects/enums.js';
+import type { Coordinacion, IIncidenteDAO } from '../../domain/repositories/IIncidenteDAO.js';
+import { getSupabaseAdmin } from '../../infrastructure/database/supabase.js';
+import { IncidenteDAOSupabase } from '../../infrastructure/repositories/IncidenteDAOSupabase.js';
 
 const UMBRAL_URGENCIA_MS = 30 * 60_000;
 
@@ -26,6 +29,8 @@ export type ItemAlertaRescate = {
   confirmadoPorMi: boolean;
   confirmadoEn: string | null;
   estadoRescate: string | null;
+  /** Responsable vigente (HU-39) o `null` si no hay incidente. Sin datos médicos. */
+  coordinacion: Coordinacion | null;
 };
 
 export type ItemExpedicionRescate = {
@@ -47,6 +52,7 @@ export type ItemExpedicionRescate = {
   confirmadoPorMi: boolean;
   confirmadoEn: string | null;
   estadoRescate: string | null;
+  coordinacion: Coordinacion | null;
 };
 
 const ORDEN_RIESGO: Record<NivelRiesgoExpedicion, number> = {
@@ -114,6 +120,7 @@ export type DetalleAlertaRescate = {
     notas: string | null;
     actualizadoEn: string;
   } | null;
+  coordinacion: Coordinacion | null;
 };
 
 export type ItemHistorialRescatista = {
@@ -137,6 +144,7 @@ export class ServicioRescate {
     private readonly repoAlerta = new RepositorioAlerta(),
     private readonly repoUsuario = new RepositorioUsuario(),
     private readonly repoAuditoria = new RepositorioAuditoriaAccesoMedico(),
+    private readonly incidentes: IIncidenteDAO = new IncidenteDAOSupabase(getSupabaseAdmin()),
   ) {}
 
   async listarExpediciones(
@@ -146,10 +154,12 @@ export class ServicioRescate {
     await this.repo.verificarEsRescatista(rescatistaId);
 
     const expediciones = await this.repo.listarExpedicionesMonitor(consulta.zona);
-    const confirmaciones = await this.repo.buscarConfirmacionesPorExpediciones(
-      expediciones.map((fila) => fila.id),
-      rescatistaId,
-    );
+    const ids = expediciones.map((fila) => fila.id);
+    // Una sola lectura de coordinaciones por lista (sin N+1).
+    const [confirmaciones, coordinaciones] = await Promise.all([
+      this.repo.buscarConfirmacionesPorExpediciones(ids, rescatistaId),
+      this.incidentes.leerCoordinaciones(ids, rescatistaId),
+    ]);
 
     const items: ItemExpedicionRescate[] = [];
 
@@ -185,6 +195,7 @@ export class ServicioRescate {
         confirmadoPorMi: confirmacion !== null,
         confirmadoEn: confirmacion?.actualizado_en ?? null,
         estadoRescate: confirmacion?.estado_rescate ?? null,
+        coordinacion: coordinaciones.get(fila.id) ?? null,
       });
     }
 
@@ -199,10 +210,11 @@ export class ServicioRescate {
     await this.repo.verificarEsRescatista(rescatistaId);
 
     const expediciones = await this.repo.listarExpedicionesEnAlerta();
-    const confirmaciones = await this.repo.buscarConfirmacionesPorExpediciones(
-      expediciones.map((fila) => fila.id),
-      rescatistaId,
-    );
+    const ids = expediciones.map((fila) => fila.id);
+    const [confirmaciones, coordinaciones] = await Promise.all([
+      this.repo.buscarConfirmacionesPorExpediciones(ids, rescatistaId),
+      this.incidentes.leerCoordinaciones(ids, rescatistaId),
+    ]);
 
     const items: ItemAlertaRescate[] = [];
 
@@ -227,6 +239,7 @@ export class ServicioRescate {
         confirmadoPorMi: confirmacion !== null,
         confirmadoEn: confirmacion?.actualizado_en ?? null,
         estadoRescate: confirmacion?.estado_rescate ?? null,
+        coordinacion: coordinaciones.get(fila.id) ?? null,
       });
     }
 
@@ -254,6 +267,7 @@ export class ServicioRescate {
 
     const confirmacion = await this.repo.buscarConfirmacion(expedicionId, rescatistaId);
     const expedicion = await this.repo.buscarExpedicionEnAlerta(expedicionId);
+    const coordinaciones = await this.incidentes.leerCoordinaciones([expedicionId], rescatistaId);
 
     return {
       expedicionId: contexto.expedicionId,
@@ -291,6 +305,7 @@ export class ServicioRescate {
             actualizadoEn: confirmacion.actualizado_en,
           }
         : null,
+      coordinacion: coordinaciones.get(expedicionId) ?? null,
     };
   }
 

@@ -2,6 +2,19 @@ import { api } from './clienteApi';
 
 export type NivelRiesgoRescate = 'verde' | 'amarillo' | 'rojo';
 
+/**
+ * Responsable vigente de una alerta (HU-39). Lo ven todos los rescatistas autorizados y
+ * no incluye datos médicos. `esMia` indica si quien consulta es el responsable.
+ */
+export type Coordinacion = {
+  incidenteId: string;
+  version: number;
+  responsableId: string;
+  nombreResponsable: string;
+  asumidoEn: string;
+  esMia: boolean;
+};
+
 export type ExpedicionRescate = {
   expedicionId: string;
   estado: 'en_progreso' | 'alerta';
@@ -21,6 +34,7 @@ export type ExpedicionRescate = {
   confirmadoPorMi: boolean;
   confirmadoEn: string | null;
   estadoRescate: string | null;
+  coordinacion: Coordinacion | null;
 };
 
 export type AlertaRescate = {
@@ -36,6 +50,7 @@ export type AlertaRescate = {
   confirmadoPorMi: boolean;
   confirmadoEn: string | null;
   estadoRescate: string | null;
+  coordinacion: Coordinacion | null;
 };
 
 export function obtenerExpedicionesRescate(zona?: string) {
@@ -79,6 +94,18 @@ export function confirmarAlertaRescate(expedicionId: string, notas?: string) {
   }>(`/rescate/alertas/${expedicionId}/confirmar`, notas ? { notas } : {}, true);
 }
 
+/**
+ * Asume la coordinación de la alerta (HU-39). `operacionId` identifica el intento: el mismo
+ * valor en un reintento no crea otro incidente. Es independiente de `confirmarAlertaRescate`.
+ */
+export function asumirCoordinacion(expedicionId: string, operacionId: string) {
+  return api.post<{ coordinacion: Coordinacion }>(
+    `/rescate/alertas/${expedicionId}/coordinacion`,
+    { operacionId },
+    true,
+  );
+}
+
 export type DetalleAlertaRescate = {
   expedicionId: string;
   nombreCompletoSenderista: string;
@@ -111,6 +138,7 @@ export type DetalleAlertaRescate = {
     notas: string | null;
     actualizadoEn: string;
   } | null;
+  coordinacion: Coordinacion | null;
 };
 
 export type EstadoRescate = 'en_busqueda' | 'localizados' | 'cerrado';
