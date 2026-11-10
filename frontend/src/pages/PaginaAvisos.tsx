@@ -3,11 +3,23 @@ import { Link } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import { useEstadoEnLinea } from '@/hooks/useEstadoEnLinea';
 import {
-  listarAvisos,
-  marcarAvisoLeido,
-  marcarTodosLosAvisosLeidos,
+  listarAvisos as listarAvisosApi,
+  marcarAvisoLeido as marcarAvisoLeidoApi,
+  marcarTodosLosAvisosLeidos as marcarTodosLosAvisosLeidosApi,
   type Aviso,
 } from '@/services/avisos';
+
+export type FuentesAvisos = {
+  listarAvisos: () => Promise<{ datos: Aviso[] }>;
+  marcarAvisoLeido: (id: string) => Promise<{ datos: Aviso }>;
+  marcarTodosLosAvisosLeidos: () => Promise<{ datos: { actualizados: number } }>;
+};
+
+export const fuentesAvisosPorDefecto: FuentesAvisos = {
+  listarAvisos: listarAvisosApi,
+  marcarAvisoLeido: marcarAvisoLeidoApi,
+  marcarTodosLosAvisosLeidos: marcarTodosLosAvisosLeidosApi,
+};
 
 function formatDt(iso: string): string {
   return new Date(iso).toLocaleString('es-PE', {
@@ -19,7 +31,11 @@ function formatDt(iso: string): string {
 }
 
 /** HU-37: bandeja de avisos del senderista. Solo online; no se guarda offline. */
-export function PaginaAvisos() {
+export function PaginaAvisos({
+  fuentes = fuentesAvisosPorDefecto,
+}: {
+  fuentes?: FuentesAvisos;
+} = {}) {
   const enLinea = useEstadoEnLinea();
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -27,16 +43,17 @@ export function PaginaAvisos() {
 
   useEffect(() => {
     let activo = true;
-    listarAvisos()
+    fuentes
+      .listarAvisos()
       .then((r) => { if (activo) setAvisos(r.datos); })
       .catch((e) => { if (activo) setError(e instanceof Error ? e.message : 'Error al cargar avisos'); })
       .finally(() => { if (activo) setCargando(false); });
     return () => { activo = false; };
-  }, []);
+  }, [fuentes]);
 
   const marcarUno = async (id: string) => {
     try {
-      const r = await marcarAvisoLeido(id);
+      const r = await fuentes.marcarAvisoLeido(id);
       setAvisos((prev) => prev.map((a) => (a.id === id ? r.datos : a)));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo marcar el aviso');
@@ -45,7 +62,7 @@ export function PaginaAvisos() {
 
   const marcarTodos = async () => {
     try {
-      await marcarTodosLosAvisosLeidos();
+      await fuentes.marcarTodosLosAvisosLeidos();
       setAvisos((prev) => prev.map((a) => ({ ...a, leido: true })));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudieron marcar los avisos');
@@ -86,11 +103,26 @@ export function PaginaAvisos() {
               <p className="font-semibold">{a.titulo}</p>
               <p className="text-sm mt-1">{a.mensaje}</p>
               <p className="text-xs text-muted-foreground mt-2">{formatDt(a.creadoEn)}</p>
-              <div className="flex gap-4 mt-2 text-sm">
+              <div className="flex flex-wrap gap-4 mt-2 text-sm">
                 {a.expedicionId && (
-                  <Link className="text-primary" to={`/expediciones/${a.expedicionId}/editar`}>
-                    Ver plan
-                  </Link>
+                  <>
+                    <Link
+                      className="text-primary"
+                      to={`/senderista/expedicion/${encodeURIComponent(a.expedicionId)}/cambios`}
+                    >
+                      Ver cambios
+                    </Link>
+                    {a.tipo === 'edicion' && (
+                      <Link className="text-primary" to={`/expediciones/${a.expedicionId}/editar`}>
+                        Editar plan
+                      </Link>
+                    )}
+                    {a.tipo === 'recordatorio' && (
+                      <Link className="text-primary" to="/senderista/expedicion/activa">
+                        Ver expedición activa
+                      </Link>
+                    )}
+                  </>
                 )}
                 {!a.leido && (
                   <button type="button" className="text-primary" onClick={() => marcarUno(a.id)} disabled={!enLinea}>

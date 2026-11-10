@@ -237,9 +237,31 @@ export function PaginaEditarExpedicion() {
       <div className="px-6 py-6">
         {enlaceVolver}
         <h2 className="text-xl font-bold mb-2">Esta expedición ya no se puede editar</h2>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground mb-4">
           Solo puedes modificar expediciones programadas cuya salida todavía no ha pasado.
         </p>
+        <div className="flex flex-wrap gap-4 text-sm font-semibold">
+          <Link
+            to={`/senderista/expedicion/${encodeURIComponent(plan.id)}/cambios`}
+            className="text-primary underline inline-flex items-center min-h-11"
+          >
+            Ver historial de cambios
+          </Link>
+          {(plan.estado === 'en_progreso' || plan.estado === 'alerta') && (
+            <Link
+              to="/senderista/expedicion/activa"
+              className="text-primary underline inline-flex items-center min-h-11"
+            >
+              Ver expedición activa
+            </Link>
+          )}
+          <Link
+            to="/senderista/expedicion"
+            className="text-muted-foreground underline inline-flex items-center min-h-11"
+          >
+            Ir a mis expediciones
+          </Link>
+        </div>
       </div>
     );
   }
