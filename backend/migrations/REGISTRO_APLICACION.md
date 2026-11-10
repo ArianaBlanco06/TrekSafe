@@ -18,7 +18,16 @@ Solo se anotan aplicaciones reales sobre un entorno (DEV, producción u otro). L
 | `013_hu37_avisos.sql` | 013 | 2026-11-08 05:21 UTC | DEV | 3ed82f2 | Ariana | OK |
 | `014_hu38_minutos_recordatorio.sql` | 014 | 2026-11-08 05:33 UTC | DEV | 33debe3 | Ariana | OK |
 | `016_hu34_avances_expedicion.sql` | 016 | 2026-11-09 03:05 UTC | DEV | 03468a0 | Ariana | OK |
+| `002_hu26_version_y_eventos_plan.sql` | 002 | entre 2026-11-02 03:19 y 2026-11-06 01:27 UTC (hora exacta no registrada) · asiento conciliado 2026-11-10 14:12 UTC | DEV | 4860b99 | Ariana | OK (TECH-56) |
+| `003_hu26_rpc_editar_expedicion.sql` | 003 | entre 2026-11-02 19:52 y 2026-11-06 01:27 UTC (hora exacta no registrada) · asiento conciliado 2026-11-10 14:12 UTC | DEV | 525163f | Ariana | OK (TECH-56) |
+| `20261101_hu30_listas_equipo.sql` | hu30_listas | entre 2026-11-02 03:19 y 2026-11-04 00:07 UTC (hora exacta no registrada) · asiento conciliado 2026-11-10 14:12 UTC | DEV | 6dbd632 | Ariana | OK (TECH-56) |
+| `20261101_hu30_operaciones_equipo.sql` | hu30_operaciones | entre 2026-11-02 03:19 y 2026-11-04 00:07 UTC (hora exacta no registrada) · asiento conciliado 2026-11-10 14:12 UTC | DEV | 6dbd632 | Ariana | OK (TECH-56) |
 
 HU-32: la estructura final está aplicada y verificada en Supabase DEV.
 El asiento administrativo 010 fue registrado correctamente en public.treksafe_migraciones el 2026-11-06 a las 05:23 UTC.
 No volver a ejecutar el DDL completo de HU-32 en DEV.
+
+TECH-56 (conciliación del 2026-11-10): 002, 003 y las dos migraciones de HU-30 se aplicaron en DEV antes de que existiera el registro 000, por eso no dejaron asiento.
+Se verificó con consultas de solo lectura que las tablas y columnas coinciden con los archivos y que las funciones son idénticas a su commit salvo los saltos de línea de Windows (\r) con que se pegaron.
+HU-30 está en DEV en la versión 6dbd632; la versión actual del archivo (2a633b6) solo elimina una línea de comentario, sin cambio funcional.
+Solo se insertaron los 4 asientos (ON CONFLICT DO NOTHING). No volver a ejecutar estos DDL en DEV.
