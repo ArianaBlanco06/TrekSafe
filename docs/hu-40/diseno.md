@@ -206,11 +206,11 @@ Solo la falta de token o un token inválido responden 401 (lo interpreta el fron
 
 ### 4.4 Cambio en `coordinacion` de las lecturas
 
-`GET /rescate/expediciones`, `/alertas` y `/alertas/:expedicionId` agregan a `coordinacion` el campo `relevoPendiente`: el objeto de arriba, o `null` si no hay relevo pendiente. Cambio aditivo y retrocompatible.
+`GET /rescate/expediciones`, `/alertas` y `/alertas/:expedicionId` agregan a `coordinacion` el campo `relevoPendiente`: el objeto de arriba. **La clave solo existe mientras haya un relevo pendiente** (sin relevo no aparece, en lugar de ir en `null`): así la forma de `coordinacion` sin relevo es exactamente la de HU-39 y sus pruebas, que comprueban el conjunto exacto de claves, siguen pasando sin modificarse. Cambio aditivo y retrocompatible. El frontend trata la ausencia de la clave como "sin relevo pendiente".
 
 - Lo ve todo rescatista autorizado, igual que el responsable (HU-39 CA-03): `relevoId`, `destinatarioId`, `nombreDestinatario`, `solicitadoEn` y `esParaMi` (si quien consulta es el destinatario).
 - `motivo` solo se incluye si quien consulta es el responsable (`esMia`) o el destinatario (`esParaMi`). Es texto libre y podría contener información sensible; los demás rescatistas no lo necesitan.
-- Una lectura adicional por lista: los relevos pendientes de todos los incidentes de la página, con el nombre del destinatario, en una sola consulta (sin N+1), igual que `leerCoordinaciones`.
+- Sin lecturas adicionales: los relevos van embebidos en la misma consulta de `incidentes` que ya hace `leerCoordinaciones` (una por lista, sin N+1). Como `relevos_coordinacion` tiene dos claves foráneas a `perfiles_rescatista`, el embebido del destinatario lleva la pista `perfiles_rescatista!fk_relevos_destinatario`. Pendiente de la prueba manual contra Supabase real, como el embebido de HU-39.
 - No se expone ningún dato médico en ningún camino. Una prueba lo comprueba, como en HU-39.
 
 ## 5. Concurrencia
@@ -235,9 +235,11 @@ Sin interbloqueos: cada RPC mantiene un único bloqueo de fila (el incidente). L
 | `ComandoProponerRelevo` | Inmutable: valida con zod y `Object.freeze`. Lleva `operacionId`, `destinatarioId`, `motivo`, `versionIncidente` (del cuerpo) y `rescatistaId`, `expedicionId` (JWT y ruta). |
 | `ComandoAceptarRelevo` | Igual, sin versión: `operacionId` (cuerpo), `relevoId`, `expedicionId` (ruta), `rescatistaId` (JWT). |
 | `ProponerRelevo`, `AceptarRelevo` | Implementan `IEjecutorComando`. Solo delegan en el DAO y traducen `ErrorCoordinacion` a `ErrorAplicacion` (sin 401). No repiten reglas de la RPC. |
-| `IIncidenteDAO` | Se amplía con `proponerRelevo` y `aceptarRelevo`, y `leerCoordinaciones` devuelve `relevoPendiente`. Las reglas siguen en la RPC. |
-| `IncidenteDAOSupabase` / `IncidenteDAOMemoria` | Adaptador de la RPC por constructor (DIP) y DAO en memoria que replica las reglas para las pruebas de caso de uso y HTTP. |
-| `ErrorCoordinacion` | Se reutiliza ampliando el conjunto de códigos y los datos de detalle (`versionActual`, `relevoPendiente`). La tabla HTTP de HU-39 (`RESPUESTAS_COORDINACION`) se conserva; los códigos nuevos tienen su propia tabla para no romper su tipado. |
+| `IRelevoDAO` | Interfaz nueva, junto a `IIncidenteDAO`, con `proponerRelevo` y `aceptarRelevo`. `IIncidenteDAO` no cambia (segregación de interfaces): quien solo asume o lee coordinaciones no depende del relevo, y no se rompe ningún implementador ni prueba de HU-39. `leerCoordinaciones`, que sigue en `IIncidenteDAO`, devuelve `relevoPendiente`. Las reglas siguen en la RPC. |
+| `IncidenteDAOSupabase` / `IncidenteDAOMemoria` | Ambos implementan `IIncidenteDAO` e `IRelevoDAO`. El de Supabase es el adaptador de la RPC por constructor (DIP); el de memoria replica las reglas para las pruebas de caso de uso y HTTP. |
+| `controladorRelevo`, `coordinacionDesdeRelevo` | El controlador solo adapta HTTP (201/200 al proponer, 200 al aceptar). El mapeo de la respuesta (la coordinación vista por quien actúa, con el motivo porque es parte del relevo) está aparte, en una función pura. |
+| `RESPUESTAS_RELEVO` | Definición única del estado HTTP y el mensaje de cada código; la usan `ProponerRelevo` y `AceptarRelevo`. |
+| `ErrorCoordinacion` | Se reutiliza haciéndola genérica en el tipo del código (`ErrorCoordinacion<C extends string = CodigoErrorCoordinacion>`): HU-39 sigue usando el tipo por defecto sin cambios y HU-40 usa `ErrorCoordinacion<CodigoErrorRelevo>`, con un campo `detalle` (`versionActual`, `relevoPendiente`). La tabla HTTP de HU-39 (`RESPUESTAS_COORDINACION`) se conserva; los códigos nuevos tienen su propia tabla. |
 | `controladorCoordinacion` | Se agregan dos manejadores finos. `crearRutasRescate` sigue siendo el único sitio que construye DAO y casos de uso. |
 
 ## 7. Contrato para HU-41 y HU-50 (Sebastian)
