@@ -13,6 +13,22 @@ export type Coordinacion = {
   nombreResponsable: string;
   asumidoEn: string;
   esMia: boolean;
+  /**
+   * Relevo pendiente (HU-40). La clave solo existe mientras haya un relevo pendiente: su
+   * ausencia significa "sin relevo". Lo ve todo rescatista autorizado; `motivo` solo llega al
+   * responsable y al destinatario.
+   */
+  relevoPendiente?: RelevoPendiente;
+};
+
+export type RelevoPendiente = {
+  relevoId: string;
+  destinatarioId: string;
+  nombreDestinatario: string;
+  solicitadoEn: string;
+  /** `true` si quien consulta es el destinatario. */
+  esParaMi: boolean;
+  motivo?: string;
 };
 
 export type ExpedicionRescate = {
@@ -101,6 +117,38 @@ export function confirmarAlertaRescate(expedicionId: string, notas?: string) {
 export function asumirCoordinacion(expedicionId: string, operacionId: string) {
   return api.post<{ coordinacion: Coordinacion }>(
     `/rescate/alertas/${expedicionId}/coordinacion`,
+    { operacionId },
+    true,
+  );
+}
+
+/** Rescatista validado al que se puede proponer un relevo (HU-40). Solo identidad. */
+export type RescatistaElegible = { id: string; nombreCompleto: string };
+
+export function obtenerRescatistasElegibles() {
+  return api.get<{ rescatistas: RescatistaElegible[] }>('/rescate/rescatistas', true);
+}
+
+export type DatosProponerRelevo = {
+  destinatarioId: string;
+  motivo: string;
+  /** Versión de la coordinación que vio el cliente (`coordinacion.version`). */
+  versionIncidente: number;
+};
+
+/** Propone el relevo de la coordinación (HU-40). `operacionId` identifica el intento. */
+export function proponerRelevo(expedicionId: string, datos: DatosProponerRelevo, operacionId: string) {
+  return api.post<{ coordinacion: Coordinacion }>(
+    `/rescate/alertas/${expedicionId}/coordinacion/relevos`,
+    { operacionId, ...datos },
+    true,
+  );
+}
+
+/** Acepta el relevo dirigido al rescatista (HU-40). Sin versión: solo la operación. */
+export function aceptarRelevo(expedicionId: string, relevoId: string, operacionId: string) {
+  return api.post<{ coordinacion: Coordinacion }>(
+    `/rescate/alertas/${expedicionId}/coordinacion/relevos/${relevoId}/aceptar`,
     { operacionId },
     true,
   );

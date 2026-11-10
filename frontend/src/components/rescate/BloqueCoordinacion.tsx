@@ -14,6 +14,7 @@ import {
 } from '@/lib/coordinacionRescate';
 import { generarUuid } from '@/lib/uuid';
 import { asumirCoordinacion, type Coordinacion } from '@/services/rescate';
+import { BloqueRelevo, type BloqueRelevoProps } from './BloqueRelevo';
 
 export type BloqueCoordinacionProps = {
   expedicionId: string;
@@ -26,6 +27,8 @@ export type BloqueCoordinacionProps = {
   asumir?: AsumirCoordinacion;
   /** Solo para pruebas. */
   generarId?: () => string;
+  /** Solo para pruebas: dependencias del relevo (HU-40). */
+  relevo?: Pick<BloqueRelevoProps, 'proponer' | 'aceptar' | 'listarRescatistas'>;
 };
 
 type Local =
@@ -45,6 +48,7 @@ export function BloqueCoordinacion({
   alActualizar,
   asumir = asumirCoordinacion,
   generarId = generarUuid,
+  relevo,
 }: BloqueCoordinacionProps) {
   const [enviando, setEnviando] = useState(false);
   const [local, setLocal] = useState<Local>(null);
@@ -80,6 +84,16 @@ export function BloqueCoordinacion({
           <UserCheck size={14} className="flex-shrink-0" />
           <span>{texto}</span>
         </p>
+        {/* HU-40: solo con datos del servidor; el relevo no aplica a lo que acabamos de asumir. */}
+        {coordinacion && (
+          <BloqueRelevo
+            expedicionId={expedicionId}
+            coordinacion={coordinacion}
+            alActualizar={alActualizar}
+            generarId={generarId}
+            {...relevo}
+          />
+        )}
       </div>
     );
   }
