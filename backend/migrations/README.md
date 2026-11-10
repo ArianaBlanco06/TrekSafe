@@ -41,9 +41,11 @@ Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos
 | `012_hu36_eventos_plan_solo_anexado.sql` | `eventos_plan` solo anexado: lista blanca de `cambios`, `ocurrido_en` del servidor, sin UPDATE salvo anonimización ARCO, sin DELETE salvo la cascada (detectada porque la expedición ya no existe), sin TRUNCATE | `002` y `006` |
 | `013_hu37_avisos.sql` | Tabla `avisos_usuario` (bandeja in-app) con `clave_evento` única por usuario | `002` |
 | `014_hu38_minutos_recordatorio.sql` | Columna `expediciones.minutos_recordatorio` (15, 30 o 60; por defecto 30) | Esquema inicial |
+| `015` | **Reservada para HU-45** (outbox, PR #90). Aún no existe en el repositorio: no es un hueco, no usar este número | |
 | `016_hu34_avances_expedicion.sql` | Tabla `avances_expedicion` y RPC de registro idempotente y último avance. Aplicar una sola vez | `002` y `010` |
+| `017_hu39_asumir_coordinacion.sql` | Tabla `incidentes` (un incidente no cerrado por expedición) y RPC `treksafe_asumir_coordinacion`. Aplicar una sola vez | `002` |
 
-`015` está reservada para HU-45 (outbox, PR #90). Para nuevas migraciones, usar el siguiente número libre al momento del merge.
+Para nuevas migraciones, usar el siguiente número libre al momento del merge (hoy, `018`).
 
 Las migraciones `002` a `007` y `012` son re-ejecutables. No dependen de
 `000_registro_migraciones.sql`: si la tabla `treksafe_migraciones` existe, registran
