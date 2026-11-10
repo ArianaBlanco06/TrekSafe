@@ -1,5 +1,7 @@
 import { Router } from 'express';
+import { AceptarRelevo } from '../../../application/use-cases/AceptarRelevo.js';
 import { AsignarResponsable } from '../../../application/use-cases/AsignarResponsable.js';
+import { ProponerRelevo } from '../../../application/use-cases/ProponerRelevo.js';
 import { getSupabaseAdmin } from '../../../infrastructure/database/supabase.js';
 import { IncidenteDAOSupabase } from '../../../infrastructure/repositories/IncidenteDAOSupabase.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
@@ -13,17 +15,28 @@ import {
   confirmarAlerta,
 } from '../controllers/controladorRescate.js';
 import { crearControladorCoordinacion } from '../controllers/controladorCoordinacion.js';
+import { crearControladorRelevo } from '../controllers/controladorRelevo.js';
 
 export type DependenciasRutasRescate = {
   /** Ejecutor de HU-39. Por defecto, con el DAO de Supabase; las pruebas inyectan uno propio. */
   asignarResponsable?: AsignarResponsable;
+  /** Ejecutores de HU-40. Por defecto, con el mismo DAO de Supabase; las pruebas inyectan los suyos. */
+  proponerRelevo?: ProponerRelevo;
+  aceptarRelevo?: AceptarRelevo;
 };
 
 export function crearRutasRescate(dependencias: DependenciasRutasRescate = {}): Router {
   const router = Router();
-  // Ensamblaje: las clases concretas se crean solo aquí.
+  // Ensamblaje: las clases concretas se crean solo aquí. El DAO de Supabase se crea una sola
+  // vez y solo si alguna dependencia no se inyectó.
+  const necesitaDao = !dependencias.asignarResponsable || !dependencias.proponerRelevo || !dependencias.aceptarRelevo;
+  const dao = necesitaDao ? new IncidenteDAOSupabase(getSupabaseAdmin()) : null;
   const coordinacion = crearControladorCoordinacion(
-    dependencias.asignarResponsable ?? new AsignarResponsable(new IncidenteDAOSupabase(getSupabaseAdmin())),
+    dependencias.asignarResponsable ?? new AsignarResponsable(dao!),
+  );
+  const relevo = crearControladorRelevo(
+    dependencias.proponerRelevo ?? new ProponerRelevo(dao!),
+    dependencias.aceptarRelevo ?? new AceptarRelevo(dao!),
   );
 
   router.use(middlewareAutenticacion, requerirRol('rescatista'));
@@ -36,6 +49,9 @@ export function crearRutasRescate(dependencias: DependenciasRutasRescate = {}): 
   router.post('/alertas/:expedicionId/confirmar', asyncHandler(confirmarAlerta));
   // HU-39: coordinación (incidente), separada de la recepción histórica de HU-14.
   router.post('/alertas/:expedicionId/coordinacion', asyncHandler(coordinacion.asumir));
+  // HU-40: relevo de la coordinación (proponer y aceptar).
+  router.post('/alertas/:expedicionId/coordinacion/relevos', asyncHandler(relevo.proponer));
+  router.post('/alertas/:expedicionId/coordinacion/relevos/:relevoId/aceptar', asyncHandler(relevo.aceptar));
 
   return router;
 }
