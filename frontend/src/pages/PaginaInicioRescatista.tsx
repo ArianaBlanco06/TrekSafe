@@ -8,6 +8,7 @@ import {
   Phone,
   User,
 } from 'lucide-react';
+import { BloqueCoordinacion } from '@/components/rescate/BloqueCoordinacion';
 import { confirmarAlertaRescate, obtenerAlertasRescate, type AlertaRescate } from '@/services/rescate';
 
 const ETIQUETA_ESTADO_RESCATE: Record<string, string> = {
@@ -107,6 +108,7 @@ export function PaginaInicioRescatista() {
                     alerta={alerta}
                     confirmando={confirmandoId === alerta.expedicionId}
                     onConfirmar={() => handleConfirmar(alerta.expedicionId)}
+                    alActualizarCoordinacion={cargarAlertas}
                   />
                 ))}
               </div>
@@ -120,7 +122,12 @@ export function PaginaInicioRescatista() {
               </h2>
               <div className="space-y-3">
                 {confirmadas.map((alerta) => (
-                  <TarjetaAlerta key={alerta.expedicionId} alerta={alerta} confirmada />
+                  <TarjetaAlerta
+                    key={alerta.expedicionId}
+                    alerta={alerta}
+                    confirmada
+                    alActualizarCoordinacion={cargarAlertas}
+                  />
                 ))}
               </div>
             </section>
@@ -136,11 +143,13 @@ function TarjetaAlerta({
   confirmada,
   confirmando,
   onConfirmar,
+  alActualizarCoordinacion,
 }: {
   alerta: AlertaRescate;
   confirmada?: boolean;
   confirmando?: boolean;
   onConfirmar?: () => void;
+  alActualizarCoordinacion: () => void;
 }) {
   return (
     <div
@@ -178,6 +187,14 @@ function TarjetaAlerta({
         </p>
         <p className="text-xs">Límite declarado: {formatDt(alerta.fechaLimite)}</p>
       </div>
+
+      {/* HU-39: coordinación, independiente de la confirmación de recepción (HU-14). */}
+      <BloqueCoordinacion
+        expedicionId={alerta.expedicionId}
+        estado="alerta"
+        coordinacion={alerta.coordinacion}
+        alActualizar={alActualizarCoordinacion}
+      />
 
       {confirmada && alerta.confirmadoEn && (
         <p className="text-xs text-primary font-medium mb-2">
