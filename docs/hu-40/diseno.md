@@ -21,7 +21,7 @@ Este documento es la Fase 1 (solo diseño). No hay código ni migraciones todav�
 | Cuándo se aplica | Solo cuando el destinatario acepta. En esa misma transacción cambia el responsable y sube la versión. |
 | Un solo relevo | Índice único parcial: a lo sumo un relevo `pendiente` por incidente (CA-03). |
 | Caso cerrado | No se propone ni se acepta sobre un incidente `cerrado`. |
-| Control optimista | Ambos comandos llevan `versionIncidente`, la que vio el cliente. Si no coincide con la vigente: `VERSION_DESACTUALIZADA`. |
+| Control optimista | **Regla de versión:** proponer compara la `versionIncidente` del cliente con la del incidente (`VERSION_DESACTUALIZADA`, 409); aceptar no compara versión, solo exige que el relevo siga pendiente y que quien acepta sea el destinatario. Justificación en 2.2. |
 | Idempotencia | `operacionId` (UUID del cliente, uno por intento) en cada comando, igual que HU-39. |
 | Bloqueo | `SELECT … FOR UPDATE` sobre la fila de `incidentes`. Cada RPC toma **un solo** bloqueo, así no hay interbloqueos. |
 | Datos médicos | Ninguno en tabla, RPC, lecturas ni respuestas. El motivo es texto libre y solo lo ven las dos partes (ver API). |
@@ -112,7 +112,7 @@ Orden de validaciones (cada paso solo se evalúa si el anterior pasó):
 
 Decisiones de orden: la identidad del actor (4 y 6) va antes de validar al destinatario o la versión, para que quien no es responsable no obtenga información del caso. El 5 distingue "no existe" de "cerrado" porque el CA-03 pide expresamente rechazar relevos en casos cerrados.
 
-### 2.2 `treksafe_aceptar_relevo(p_expedicion_id, p_actor_id, p_relevo_id, p_version_incidente, p_operacion_id)`
+### 2.2 `treksafe_aceptar_relevo(p_expedicion_id, p_actor_id, p_relevo_id, p_operacion_id)`
 
 | # | Paso | Falla con |
 |---|---|---|
@@ -125,14 +125,14 @@ Decisiones de orden: la identidad del actor (4 y 6) va antes de validar al desti
 | 7 | `destinatario_id = p_actor_id` | `NO_ES_DESTINATARIO` |
 | 8 | `estado = 'pendiente'` | `RELEVO_YA_RESUELTO` |
 | 9 | El incidente no está `cerrado` | `INCIDENTE_CERRADO` |
-| 10 | `p_version_incidente = incidentes.version`; `DETAIL` lleva `{"versionActual": n}` | `VERSION_DESACTUALIZADA` |
-| 11 | Aplica el relevo (sección 3) | resultado `repetido: false` |
+| 10 | Aplica el relevo (sección 3) | resultado `repetido: false` |
 
 Decisiones de orden y de significado:
 
 - El 7 va antes que el 8: un tercero no averigua si el relevo ya se resolvió.
 - `RELEVO_YA_RESUELTO` también responde cuando el destinatario reenvía con **otra** `operacionId` un relevo ya aceptado. A diferencia de HU-39 (mismo responsable con otra operación = 200), aquí es una transición de estado con consecuencias sobre el responsable, y se prefiere no confirmar en silencio con una operación distinta. Con la misma `operacionId` sigue siendo 200 idempotente.
-- La versión que se compara al aceptar es la **vigente del incidente**, no `relevos.version_incidente`. Esa columna queda para auditoría ("en qué estado se propuso"). Si se exigiera igualdad con ella, cualquier cambio de versión posterior a la propuesta (por ejemplo, un `localizado` de HU-42) dejaría un relevo imposible de aceptar y, con un solo pendiente por incidente, bloquearía el caso. Con el control contra la versión vigente, el destinatario relee, ve el estado actual y vuelve a aceptar con la versión nueva.
+- **Regla de versión (una frase):** proponer compara la versión del cliente con la del incidente (`VERSION_DESACTUALIZADA`, 409); aceptar no compara versión, solo que el relevo siga pendiente y que quien acepta sea el destinatario.
+- **Por qué, frente a la orientación del backlog** ("modelar ProponerRelevo y AceptarRelevo con la versión del incidente"): la versión sigue siendo el eje de ambos comandos, pero actúa donde protege. Al proponer, la versión evita que el responsable decida sobre un estado que ya no ve. Al aceptar, el destinatario no decide sobre el estado del incidente sino sobre una propuesta concreta (`relevoId`), cuya vigencia ya garantizan el estado `pendiente` y el bloqueo de la fila; la versión en la que se propuso queda guardada (`relevos_coordinacion.version_incidente`) y la que resulta queda en el evento (`version_nueva`). Exigir una versión al aceptar dejaría un relevo imposible de aceptar si el incidente cambia de versión después de la propuesta (por ejemplo, un `localizado` de HU-42) y, con un solo pendiente por incidente, bloquearía el caso. Aceptar sigue subiendo la versión, y eso es lo que fuerza el control optimista de HU-41, HU-42 y HU-50.
 
 ## 3. Aplicación del relevo (todo en una transacción)
 
@@ -178,7 +178,7 @@ Respuesta `201` (se creó) o `200` (repetición):
 
 ### 4.2 `POST /api/rescate/alertas/:expedicionId/coordinacion/relevos/:relevoId/aceptar` (aceptar)
 
-Cuerpo: `{ "operacionId": "<uuid>", "versionIncidente": 1 }`. Respuesta `200` (aplicado o repetición) con `{ "coordinacion": {…} }`: el responsable ya es quien aceptó (`esMia: true`), la `version` subió y `relevoPendiente` es `null`.
+Cuerpo: `{ "operacionId": "<uuid>" }` (sin versión). Respuesta `200` (aplicado o repetición) con `{ "coordinacion": {…} }`: el responsable ya es quien aceptó (`esMia: true`), la `version` subió y `relevoPendiente` es `null`.
 
 ### 4.3 Códigos de error
 
@@ -196,7 +196,7 @@ Cuerpo: `{ "operacionId": "<uuid>", "versionIncidente": 1 }`. Respuesta `200` (a
 | 404 | `RELEVO_NO_ENCONTRADO` | El relevo no existe, no es de esa expedición, o la operación es ajena |
 | 409 | `INCIDENTE_CERRADO` | El caso está cerrado |
 | 409 | `RELEVO_PENDIENTE` | Ya hay un relevo pendiente. El cuerpo incluye `relevoPendiente` (sin motivo) |
-| 409 | `VERSION_DESACTUALIZADA` | El cuerpo incluye `versionActual` |
+| 409 | `VERSION_DESACTUALIZADA` | Solo al proponer. El cuerpo incluye `versionActual` |
 | 409 | `RELEVO_YA_RESUELTO` | El relevo ya fue aceptado y la operación es distinta |
 
 Solo la falta de token o un token inválido responden 401 (lo interpreta el frontend como sesión vencida).
@@ -230,7 +230,7 @@ Sin interbloqueos: cada RPC mantiene un único bloqueo de fila (el incidente). L
 | Pieza | Responsabilidad |
 |---|---|
 | `ComandoProponerRelevo` | Inmutable: valida con zod y `Object.freeze`. Lleva `operacionId`, `destinatarioId`, `motivo`, `versionIncidente` (del cuerpo) y `rescatistaId`, `expedicionId` (JWT y ruta). |
-| `ComandoAceptarRelevo` | Igual: `operacionId`, `versionIncidente` (cuerpo), `relevoId`, `expedicionId` (ruta), `rescatistaId` (JWT). |
+| `ComandoAceptarRelevo` | Igual, sin versión: `operacionId` (cuerpo), `relevoId`, `expedicionId` (ruta), `rescatistaId` (JWT). |
 | `ProponerRelevo`, `AceptarRelevo` | Implementan `IEjecutorComando`. Solo delegan en el DAO y traducen `ErrorCoordinacion` a `ErrorAplicacion` (sin 401). No repiten reglas de la RPC. |
 | `IIncidenteDAO` | Se amplía con `proponerRelevo` y `aceptarRelevo`, y `leerCoordinaciones` devuelve `relevoPendiente`. Las reglas siguen en la RPC. |
 | `IncidenteDAOSupabase` / `IncidenteDAOMemoria` | Adaptador de la RPC por constructor (DIP) y DAO en memoria que replica las reglas para las pruebas de caso de uso y HTTP. |
@@ -259,7 +259,7 @@ Dentro del alcance, porque sin interfaz el relevo no se puede usar ni demostrar.
 - **Responsable con relevo pendiente:** "Relevo pendiente a <nombre> desde HH:MM. Sigues coordinando tú". Sin acción (cancelar queda como pendiente del PO).
 - **Destinatario (`esParaMi`):** "<responsable> te propone relevarlo: <motivo>" con botón "Aceptar relevo". Tras aceptar, la pantalla se relee y muestra "Tú coordinas esta alerta".
 - **Otros rescatistas:** ven "Relevo pendiente a <nombre>", sin motivo.
-- **Lógica fuera del componente** (SRP), en `lib/coordinacionRescate.ts`: textos, reglas de visibilidad y el `operacionId` por intento con `generarUuid()`. Se reutiliza hasta tener un resultado definitivo, como en HU-39. Ante `VERSION_DESACTUALIZADA`, `RELEVO_PENDIENTE` o `NO_ES_RESPONSABLE` se muestra el motivo y se relee la pantalla.
+- **Lógica fuera del componente** (SRP), en `lib/coordinacionRescate.ts`: textos, reglas de visibilidad y el `operacionId` por intento con `generarUuid()`. Se reutiliza hasta tener un resultado definitivo, como en HU-39. Ante `VERSION_DESACTUALIZADA` (al proponer), `RELEVO_PENDIENTE` o `NO_ES_RESPONSABLE` se muestra el motivo y se relee la pantalla.
 - **Necesita un endpoint de apoyo:** `GET /api/rescate/rescatistas` con `{id, nombreCompleto}` de los rescatistas validados (excluye al que consulta), para elegir destinatario. Solo nombre, sin datos médicos ni de contacto. Se implementaría en la Fase 2 junto con las otras rutas; no existe hoy.
 
 Queda fuera: notificaciones o avisos al destinatario (hoy se entera al abrir la consola), cancelar o rechazar, y pantalla de historial de transferencias.
@@ -288,6 +288,6 @@ Queda fuera: notificaciones o avisos al destinatario (hoy se entera al abrir la 
 3. **¿Se exige `alerta` para relevar?** Se decidió solo "no cerrado", porque HU-39 deja pendiente quién cierra el incidente cuando la expedición sale de `alerta`. Si el PO prefiere exigir `alerta`, es un paso más de la RPC.
 4. **Motivo.** ¿Obligatorio (como está) y con máximo de 280 caracteres? ¿Se muestra solo a las dos partes (propuesta) o a todos?
 5. **Aviso al destinatario.** Hoy se entera al abrir la consola. ¿Se necesita notificarlo (fuera de este alcance)?
-6. **Versión al aceptar.** Se compara con la versión vigente, no con la del momento de la propuesta (razón en 2.2). Confirmar con Sebastian y HU-42 que todo cambio relevante del incidente (por ejemplo `localizado`) sube `version`.
+6. **Versión.** Decidido: proponer la compara; aceptar no (razón en 2.2). Confirmar con Sebastian y HU-42 que todo cambio relevante del incidente (por ejemplo `localizado`) sube `version`, para que la comparación al proponer sea útil.
 7. **Nombre y alcance de `transferencias_coordinacion`.** Confirmar con Sebastian que HU-41 no define una bitácora propia que deba absorberla.
 8. **Operaciones entre tablas.** Se mantiene la nota de HU-39: la unicidad de `operacion_id` es por tabla. Las RPC nuevas revisan `eventos_plan` e `incidentes`; las RPC antiguas no revisan las tablas nuevas.
