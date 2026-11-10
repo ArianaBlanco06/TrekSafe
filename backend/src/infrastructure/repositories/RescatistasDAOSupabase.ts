@@ -4,7 +4,13 @@ import { ErrorAplicacion } from '../../shared/errors/ErrorAplicacion.js';
 
 type FilaPerfil = { usuario_id: unknown; nombre_completo: unknown };
 
-/** Lista a los rescatistas validados (fila en `perfiles_rescatista`). Columnas explícitas: solo id y nombre. */
+/**
+ * Lista a los rescatistas validados. "Validado" significa lo mismo que en las RPC de relevo
+ * (019): existe una fila en `perfiles_rescatista` (`treksafe_proponer_relevo`, paso 8, y
+ * `treksafe_aceptar_relevo`, paso 9b, usan `EXISTS` sobre esa tabla; `validado_en` es NOT NULL,
+ * así que no hay otro estado que filtrar). "Elegible" = validado y distinto del actor
+ * (`DESTINATARIO_INVALIDO`). Columnas explícitas: solo id y nombre.
+ */
 export class RescatistasDAOSupabase implements IRescatistasDAO {
   constructor(private readonly cliente: Pick<SupabaseClient, 'from'>) {}
 
