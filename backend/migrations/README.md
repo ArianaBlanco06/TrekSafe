@@ -42,6 +42,7 @@ Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos
 | `013_hu37_avisos.sql` | Tabla `avisos_usuario` (bandeja in-app) con `clave_evento` única por usuario | `002` |
 | `014_hu38_minutos_recordatorio.sql` | Columna `expediciones.minutos_recordatorio` (15, 30 o 60; por defecto 30) | Esquema inicial |
 | `016_hu34_avances_expedicion.sql` | Tabla `avances_expedicion` y RPC de registro idempotente y último avance. Aplicar una sola vez | `002` y `010` |
+| `018_hu27_cancelar_salida_futura.sql` | Sustituye `treksafe_cancelar_expedicion` de la `005`: solo cancela una expedición programada con salida futura (`hora_inicio > now()`; sin códigos de error nuevos). Re-ejecutable. **No ejecutar la `005` después de esta migración**: restauraría la función anterior | `005` |
 
 `015` está reservada para HU-45 (outbox, PR #90). Para nuevas migraciones, usar el siguiente número libre al momento del merge.
 
