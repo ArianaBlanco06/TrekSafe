@@ -75,7 +75,8 @@ Se mantienen las dos tablas porque tienen ciclos de vida distintos: el relevo pu
 
 - Permiso nuevo: `GRANT UPDATE (responsable_id, version, asumido_en) ON public.incidentes TO service_role`. Es a nivel de columna, no abre `estado` ni `cerrado_en` (eso es de HU-42).
 - Sin columnas nuevas ni cambios de restricciones.
-- Semántica de `asumido_en` tras un relevo: pasa a ser "el responsable vigente coordina desde". Se actualiza con la hora de aceptación. `abierto_en` conserva la apertura original. Así el "desde HH:MM" de la consola sigue siendo verdadero para el responsable actual.
+- **Semántica de `asumido_en` (declarada):** pasa a significar "desde cuándo coordina el responsable actual". En la asunción de HU-39 vale lo mismo que antes (la hora en que asumió); tras un relevo se actualiza con la hora de aceptación. `abierto_en` conserva la apertura original. Así el "desde HH:MM" de la consola sigue siendo verdadero para el responsable actual.
+- **HU-39 no cambia:** es una aclaración de significado, no de esquema ni de código. Los tests de HU-39 (SQL, backend y frontend) deben pasar sin modificarlos; se comprueba en la verificación (sección 10).
 
 ### 1.4 Cómo se cumple "se registran ambos responsables, el motivo y la hora"
 
@@ -277,6 +278,7 @@ Queda fuera: notificaciones o avisos al destinatario (hoy se entera al abrir la 
 
 ## 10. Plan de verificación (Fase 2)
 
+- **Regresión de HU-39:** sus pruebas (suite SQL, concurrencia, backend y frontend) se ejecutan sin modificarlas.
 - **Pruebas automáticas:** comandos, `ProponerRelevo`, `AceptarRelevo`, `IncidenteDAOMemoria`, `IncidenteDAOSupabase` (cliente simulado), `coordinacion.relevoPendiente` en las lecturas, HTTP con JWT real y frontend (lógica y bloque).
 - **Suite SQL** en PostgreSQL desechable (Docker `postgres:18`, puerto 55432, solo `127.0.0.1`/`localhost` y base con "desechable" en el nombre), con las migraciones hasta la 019. Casos: aceptación feliz y atómica; rechazo por actor incorrecto (propone un no responsable, acepta un no destinatario); destinatario igual al actor o sin perfil; incidente inexistente y cerrado; relevo duplicado; versión desactualizada; relevo ya resuelto; idempotencia de ambas RPC; evento de transferencia inmutable; rollback si falla un paso.
 - **Concurrencia con sesiones reales** (como `test-hu39-postgres.mjs`): dos propuestas, proponer contra aceptar, aceptar dos veces, con barrera de bloqueo y rondas repetidas.
