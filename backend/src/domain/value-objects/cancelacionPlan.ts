@@ -7,23 +7,20 @@ export const MAX_MOTIVO_CANCELACION = 200;
 export const ESTADO_CANCELABLE: EstadoExpedicion = 'programada';
 
 /**
- * Regla de HU-27: "todavía no inicia" significa que el plan sigue en `programada`.
+ * Regla de HU-27 (CA-01): solo se cancela un plan `programada` cuya hora de salida es futura.
  *
- * Con `false`, se puede cancelar aunque la hora de salida ya haya pasado, mientras el
- * cron no lo haya promovido a `en_progreso`. Así se evita que un plan que el senderista
- * ya no usará termine en una alerta falsa.
+ * La comparación es estricta: una salida igual a "ahora" no es futura. Es la misma regla que HU-26
+ * aplica al editar (`hora_inicio <= now()` ya inició) y coincide con el cron, que promueve a
+ * `en_progreso` cuando `hora_inicio <= ahora`. La RPC `treksafe_cancelar_expedicion` (migración 018)
+ * repite la regla con el reloj de la base, con la fila bloqueada.
  *
- * PENDIENTE: el Product Owner debe confirmar esta regla. Si decide exigir salida futura,
- * cambia esta constante a `true` y agrega la misma comprobación en
- * `treksafe_cancelar_expedicion` (migración 005), que hoy no compara la hora.
+ * Un plan con la salida ya pasada que el cron aún no promovió (o que no puede promover porque el
+ * senderista tiene otra expedición activa) ya no se cancela.
  */
-export const CANCELAR_EXIGE_SALIDA_FUTURA: boolean = false;
-
 export function esCancelable(
   plan: { estado: string; horaInicio: string },
   ahora: Date,
 ): boolean {
   if (plan.estado !== ESTADO_CANCELABLE) return false;
-  if (!CANCELAR_EXIGE_SALIDA_FUTURA) return true;
   return new Date(plan.horaInicio).getTime() > ahora.getTime();
 }
