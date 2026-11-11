@@ -8,7 +8,7 @@ Como rescatista responsable quiero solicitar y confirmar el relevo por otro resc
 2. **CA-02 Aceptación explícita:** el relevo se aplica cuando el destinatario lo acepta. Mientras esté pendiente, el responsable anterior conserva el caso.
 3. **CA-03 Registro y bloqueo:** guarda ambos responsables, el motivo y la hora. Impide relevos simultáneos y relevos en casos cerrados.
 
-Este documento es la Fase 1 (solo diseño). No hay código ni migraciones todavía. Parte de HU-39 (rama `feat/hu-39-asumir-coordinacion`, aún no está en `develop`): reutiliza `incidentes`, `IIncidenteDAO`, `ErrorCoordinacion`, el objeto `coordinacion` y `BloqueCoordinacion`.
+Este documento nació como diseño (Fase 1) y ahora también describe lo implementado: migración 019, RPC, DAO, casos de uso, rutas y frontend mínimo (estado en la sección 12). Parte de HU-39, que ya está en `develop` (migración 017): reutiliza `incidentes`, `IIncidenteDAO`, `ErrorCoordinacion`, el objeto `coordinacion` y `BloqueCoordinacion`.
 
 ## Reglas
 
@@ -240,6 +240,7 @@ Sin interbloqueos: cada RPC mantiene un único bloqueo de fila (el incidente). L
 | `controladorRelevo`, `coordinacionDesdeRelevo` | El controlador solo adapta HTTP (201/200 al proponer, 200 al aceptar). El mapeo de la respuesta (la coordinación vista por quien actúa, con el motivo porque es parte del relevo) está aparte, en una función pura. |
 | `RESPUESTAS_RELEVO` | Definición única del estado HTTP y el mensaje de cada código; la usan `ProponerRelevo` y `AceptarRelevo`. |
 | `ErrorCoordinacion` | Se reutiliza haciéndola genérica en el tipo del código (`ErrorCoordinacion<C extends string = CodigoErrorCoordinacion>`): HU-39 sigue usando el tipo por defecto sin cambios y HU-40 usa `ErrorCoordinacion<CodigoErrorRelevo>`, con un campo `detalle` (`versionActual`, `relevoPendiente`). La tabla HTTP de HU-39 (`RESPUESTAS_COORDINACION`) se conserva; los códigos nuevos tienen su propia tabla. |
+| `IRescatistasDAO`, `controladorRescatistas` | Catálogo de rescatistas validados para elegir destinatario (`GET /api/rescate/rescatistas`): solo `{id, nombreCompleto}`, sin el actor. Interfaz propia: no mezcla catálogo con coordinación. |
 | `controladorCoordinacion` | Se agregan dos manejadores finos. `crearRutasRescate` sigue siendo el único sitio que construye DAO y casos de uso. |
 
 ## 7. Contrato para HU-41 y HU-50 (Sebastian)
@@ -265,7 +266,7 @@ Dentro del alcance, porque sin interfaz el relevo no se puede usar ni demostrar.
 - **Destinatario (`esParaMi`):** "<responsable> te propone relevarlo: <motivo>" con botón "Aceptar relevo". Tras aceptar, la pantalla se relee y muestra "Tú coordinas esta alerta".
 - **Otros rescatistas:** ven "Relevo pendiente a <nombre>", sin motivo.
 - **Lógica fuera del componente** (SRP), en `lib/coordinacionRescate.ts`: textos, reglas de visibilidad y el `operacionId` por intento con `generarUuid()`. Se reutiliza hasta tener un resultado definitivo, como en HU-39. Ante `VERSION_DESACTUALIZADA` (al proponer), `RELEVO_PENDIENTE` o `NO_ES_RESPONSABLE` se muestra el motivo y se relee la pantalla.
-- **Necesita un endpoint de apoyo:** `GET /api/rescate/rescatistas` con `{id, nombreCompleto}` de los rescatistas validados (excluye al que consulta), para elegir destinatario. Solo nombre, sin datos médicos ni de contacto. Se implementaría en la Fase 2 junto con las otras rutas; no existe hoy.
+- **Necesita un endpoint de apoyo:** `GET /api/rescate/rescatistas` con `{id, nombreCompleto}` de los rescatistas validados (excluye al que consulta), para elegir destinatario. Solo nombre, sin datos médicos ni de contacto. Implementado: `RescatistasDAOSupabase` (interfaz `IRescatistasDAO`) consulta `perfiles_rescatista` con el mismo criterio de "validado" que las RPC (existe la fila) y excluye al actor; la ruta exige token de rescatista.
 
 Queda fuera: notificaciones o avisos al destinatario (hoy se entera al abrir la consola), cancelar o rechazar, y pantalla de historial de transferencias.
 
@@ -275,11 +276,11 @@ Queda fuera: notificaciones o avisos al destinatario (hoy se entera al abrir la 
 |---|---|
 | `019_hu40_transferir_coordinacion.sql` | `relevos_coordinacion`, `transferencias_coordinacion` y sus triggers de solo anexar, `GRANT UPDATE` por columna sobre `incidentes`, `treksafe_resultado_relevo`, `treksafe_proponer_relevo` y `treksafe_aceptar_relevo`. Requiere la 017 (e indirectamente la 002). Aplicar una sola vez; registra en `treksafe_migraciones` solo si existe. |
 
-- Se agrega la fila 019 en `backend/migrations/README.md`. Puede haber un conflicto trivial con la fila 018 de HU-27 al hacer merge.
+- La fila 019 está en `backend/migrations/README.md`, después de la 017 (HU-39) y la 018 (HU-27), ambas ya en `develop`.
 - No se editan migraciones existentes. La 015 sigue reservada para HU-45.
 - Ariana aplica la 019 en DEV antes del merge. No se vuelve a ejecutar `init_schema.sql` en DEV.
 
-## 10. Plan de verificación (Fase 2)
+## 10. Plan de verificación
 
 - **Regresión de HU-39:** sus pruebas (suite SQL, concurrencia, backend y frontend) se ejecutan sin modificarlas.
 - **Pruebas automáticas:** comandos, `ProponerRelevo`, `AceptarRelevo`, `IncidenteDAOMemoria`, `IncidenteDAOSupabase` (cliente simulado), `coordinacion.relevoPendiente` en las lecturas, HTTP con JWT real y frontend (lógica y bloque).
@@ -297,3 +298,19 @@ Queda fuera: notificaciones o avisos al destinatario (hoy se entera al abrir la 
 6. **Versión.** Decidido: proponer la compara; aceptar no (razón en 2.2). Confirmar con Sebastian y HU-42 que todo cambio relevante del incidente (por ejemplo `localizado`) sube `version`, para que la comparación al proponer sea útil.
 7. **Nombre y alcance de `transferencias_coordinacion`.** Confirmar con Sebastian que HU-41 no define una bitácora propia que deba absorberla.
 8. **Operaciones entre tablas.** Se mantiene la nota de HU-39: la unicidad de `operacion_id` es por tabla. Las RPC nuevas revisan `eventos_plan` e `incidentes`; las RPC antiguas no revisan las tablas nuevas.
+
+## 12. Estado de implementación
+
+| Parte | Estado | Dónde |
+|---|---|---|
+| Migración 019, RPC y suite SQL | Hecho; aún no aplicada en DEV (la aplica Ariana) | `backend/migrations/019_hu40_transferir_coordinacion.sql`, `backend/migrations/tests/hu40_transferir_coordinacion.test.sql` |
+| Concurrencia con sesiones reales | Hecho | `backend/scripts/test-hu40-postgres.mjs` |
+| DAO (memoria y Supabase), casos de uso y rutas de proponer y aceptar | Hecho | `backend/src/application/use-cases/`, `backend/src/infrastructure/repositories/`, `backend/src/presentation/http/` |
+| `relevoPendiente` en las lecturas | Hecho | `IncidenteDAOSupabase.leerCoordinaciones` |
+| `GET /api/rescate/rescatistas` | Hecho | `RescatistasDAOSupabase`, `controladorRescatistas` |
+| Frontend: transferir, relevo pendiente y aceptar | Hecho (mínimo viable, sección 8) | `frontend/src/components/rescate/BloqueRelevo.tsx`, `frontend/src/lib/coordinacionRescate.ts`, `frontend/src/services/rescate.ts` |
+| Prueba manual contra Supabase real | Pendiente | [`evidencias/prueba-manual.md`](evidencias/prueba-manual.md) |
+| Aplicar la 019 en DEV y registrarla | Pendiente (Ariana) | `backend/migrations/REGISTRO_APLICACION.md` |
+| Rechazar o cancelar un relevo, relevo y cierre del caso, aviso al destinatario | No implementado: esperan la decisión del PO (sección 11) | — |
+
+Cambio sobre HU-39: `BloqueCoordinacion` ahora incluye `BloqueRelevo`, así que el responsable ve "Transferir coordinación". La prueba de HU-39 "esMia muestra Tú coordinas…" exigía cero botones y se ajustó para exigir solo que no aparezca "Asumir coordinación". El resto de las pruebas de HU-39 no se modificó.

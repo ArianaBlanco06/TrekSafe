@@ -22,6 +22,20 @@ Los números `DEP` identifican este conjunto técnico; los números `HU` son his
 | Transacciones/eventos y vencimientos | HU-26/27/35/36, PR #104 | Actor, versión, salida tras espera de bloqueo, no-op, idempotencia, rollback y orden del historial |
 | Migraciones / outbox | TECH-56 y PR #103; PR #90 pendiente | Inspección previa de objetos/asientos, numeración única, orden y compatibilidad; no repetir conciliación como DDL |
 | Nueva notificación y retorno | Alertas #15/#16, HU-44/45/46 | Pendiente ≠ enviado ≠ recibido; fallo intermedio, reintento manual y privacidad de contenido |
+| Coordinación y relevo | HU-39 (017) y HU-40 (019) | Suites SQL de ambas con las dos migraciones aplicadas; `BloqueCoordinacion` conserva el comportamiento de HU-39 salvo el botón de transferir; HU-41, HU-42 y HU-50 leen `incidentes.responsable_id` y `version` sin leer `relevos_coordinacion` |
 | Offline y actualización PWA | Fix #67 y HU-28–HU-34 afectadas | Cambio de cuenta, logout, respuestas tardías, conflictos y SW activo; conservar pruebas vigentes |
+
+## HU-40: transferir la coordinación de una alerta
+
+Depende de HU-39 (migración 017, ya en `develop`). Diseño y estado en [docs/hu-40/diseno.md](../hu-40/diseno.md); la migración 019 aún no está aplicada en DEV y la prueba manual contra Supabase real está pendiente ([prueba-manual.md](../hu-40/evidencias/prueba-manual.md)).
+
+| Criterio | Componente | Evidencia |
+|---|---|---|
+| CA-01 Solo el responsable actual propone a un rescatista validado | RPC `treksafe_proponer_relevo` (019); `GET /api/rescate/rescatistas` para elegir destinatario; `BloqueRelevo` | Suite SQL `backend/migrations/tests/hu40_transferir_coordinacion.test.sql` (casos 5 y 8); `Relevo.test.ts`, `rutasRelevo.test.ts`, `rutasRescatistas.test.ts`; `BloqueRelevo.test.tsx` |
+| CA-02 El relevo se aplica solo al aceptar; mientras tanto el anterior conserva el caso | RPC `treksafe_aceptar_relevo`; `relevoPendiente` en las lecturas | Suite SQL (casos 3, 9 y 11); concurrencia `backend/scripts/test-hu40-postgres.mjs`; `IncidenteDAOMemoria.relevos.test.ts`; `BloqueRelevo.test.tsx` |
+| CA-03 Se registran ambos responsables, el motivo y la hora; sin relevos simultáneos ni en casos cerrados | `relevos_coordinacion` y `transferencias_coordinacion` (solo anexar); `uq_relevo_pendiente_por_incidente`; bloqueo `FOR UPDATE` del incidente | Suite SQL (casos 6, 7, 13 y 15); concurrencia (dos propuestas, proponer contra aceptar, aceptar dos veces) |
+| Sin datos médicos en tabla, RPC, lecturas ni respuestas | Columnas explícitas; el motivo solo llega a las dos partes | Suite SQL (caso 1); `rutasRelevo.test.ts`; `rutasRescatistas.test.ts` |
+
+Fuera de alcance hasta decisión del PO: rechazar o cancelar un relevo, relevo y cierre del caso (HU-42), aviso al destinatario.
 
 Las HU siguen enlazadas y conservan sus responsables originales. El PO asume los ajustes transversales de despliegue y sus regresiones en estas tareas técnicas. La aceptación anterior se conserva como antecedente, no como prueba de la nueva implementación.
