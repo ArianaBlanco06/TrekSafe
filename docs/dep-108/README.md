@@ -53,7 +53,7 @@ En Windows, incluir PostgreSQL bin en el PATH del proceso para `libpq`. El entor
 | Contratos/casos de uso SQL activos | **60 pruebas aprobadas**: HU-30 (9), HU-31 (27), HU-36 (9) y HU-41 (15). Cada suite debe informar casos ejecutados, sin fallos, cancelaciones ni omisiones; no se acredita un `skip` como aprobación |
 | Adaptador unitario | **11 pruebas aprobadas**; errores, RPC ausente sin fallback y respuesta inválida |
 | Tipos | `tsc --noEmit` aprobado |
-| Regresión completa y build | **611 pruebas aprobadas**, cero fallos; `tsc` de producción aprobado |
+| Regresión completa y build | **632 pruebas aprobadas** con #107 integrado, cero fallos; tipos y `tsc` de producción aprobados |
 | Fallo del ejecutable PostgREST | Ruta inexistente produce error controlado; `postmaster.pid` ausente, `pg_isready` sin respuesta y log PostgreSQL confirma apagado |
 
 El CI añade un job PostgreSQL 17/PostgREST 16.5 con checksum y artefacto de resultados. Su resultado remoto se consulta en el PR; disponer del job no acredita una ejecución remota aún no terminada.
@@ -74,9 +74,11 @@ El chequeo versionado en `backend/migrations/tests/dep108_dev_rollback.sql` pas�
 
 ## Validación conjunta con #107
 
-La unión local de `032317f` (#107) y `a988637` (#108), sobre `develop` `3b61042`, pasó con Node 22.23.4: **567 pruebas backend**, tipos y compilación de ambos componentes, **25 escenarios PostgreSQL/PostgREST**, **125 pruebas frontend** y **33 pruebas de navegador** (13 de interfaz y 20 de privacidad/PWA). Las dos pruebas frontend condicionadas a sus runners SQL particulares quedaron omitidas por ese comando; no se cuentan como aprobadas. Las regresiones SQL de esta entrega están descritas por separado. El ajuste posterior de limpieza del runner `4ac4e6d` no cambió SQL ni comportamiento de producto y volvió a pasar los 25 escenarios.
+La unión funcional `0cef504` incorpora #107 (`65264d0`) y #108 (`fa75daa`) sobre `develop` `a5c4ca4`, incluida HU-41. Conserva el contrato de negocio del repositorio inyectado y traduce el resultado de la nueva RPC en el adaptador. Con Node 22.23.4 pasó **632 pruebas backend**, tipos y compilación, **29 escenarios PostgreSQL/PostgREST** y **152 pruebas frontend**. Los escenarios incluyen las suites SQL HU-27/HU-39/HU-36/HU-41 antes y después de actualizar y **60 pruebas TypeScript activas** sobre PostgreSQL de HU-30/HU-31/HU-36/HU-41. Las dos pruebas frontend condicionadas a otros runners permanecen omitidas y no se cuentan como aprobadas.
 
-Tras integrar HU-41 desde `a5c4ca4`, la rama de persistencia volvió a pasar **611 pruebas backend**, tipos y compilación. El runner ampliado pasó **29 escenarios PostgreSQL/PostgREST**: incluye los 16 casos SQL de HU-41 antes y después de la actualización y **60 pruebas TypeScript activas** de HU-30/HU-31/HU-36/HU-41. Los archivos SQL ya aplicados a DEV (`015`, `022`, `023`, `024`) no cambiaron ni se reaplicaron.
+La interfaz con HU-41 pasó tipos/build y **33 pruebas de navegador** (13 UI y 20 privacidad/PWA). La normalización posterior del backend preservó los JSON mediante regresiones HTTP específicas. Los archivos SQL ya aplicados a DEV (`015`, `022`, `023`, `024`) no cambiaron ni se reaplicaron.
+
+Entrega en dos PR a `develop`: revisar/integrar primero [#119](https://github.com/ArianaBlanco06/TrekSafe/pull/119) (#107) y después [#120](https://github.com/ArianaBlanco06/TrekSafe/pull/120) (#108). La rama de #108 incorpora #107 para conciliar el adaptador compartido y ejecutar CI sobre la combinación; tras integrar #119, el diff de #120 se reduce a persistencia. No se fusiona ninguno automáticamente.
 
 Las nuevas migraciones son aditivas y de una sola aplicación. Una versión anterior puede conservar el esquema, pero no se debe activar simultáneamente envío legado y nuevo sin el corte/conciliación de #109. Preservar datos/pendientes ante un fallo; no usar `init_schema.sql`, `.down.sql` destructivos ni borrar asientos para forzar repetición. Una incompatibilidad requiere una migración correctiva ensayada.
 
