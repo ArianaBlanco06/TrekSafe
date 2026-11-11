@@ -115,7 +115,7 @@ describe('BloqueRelevo (HU-40): responsable', () => {
 
     assert.deepEqual(llamadas, [['exp-1', { destinatarioId: 'dest-1', motivo: 'Cambio de turno', versionIncidente: 4 }, 'op-1']]);
     assert.match(textoDe(arbol), /Relevo pendiente a Luis Relevo desde \d{2}:\d{2}\. Sigues coordinando tú/);
-    assert.deepEqual(botones(arbol), []);
+    assert.deepEqual(botones(arbol), ['Cancelar relevo'], 'quien propuso puede cancelar, no transferir de nuevo');
     assert.equal(actualizaciones.n, 1);
   });
 
@@ -176,9 +176,9 @@ describe('BloqueRelevo (HU-40): responsable', () => {
     assert.equal(actualizaciones.n, 1);
   });
 
-  it('con relevo pendiente propio no ofrece transferir de nuevo', async () => {
+  it('con relevo pendiente propio no ofrece transferir de nuevo, sino cancelar', async () => {
     const { arbol } = await montar({ coordinacion: coordinacion({ esMia: true, relevoPendiente: relevoPendiente() }) });
-    assert.deepEqual(botones(arbol), []);
+    assert.deepEqual(botones(arbol), ['Cancelar relevo']);
     assert.match(textoDe(arbol), /Sigues coordinando tú/);
   });
 });
@@ -186,10 +186,10 @@ describe('BloqueRelevo (HU-40): responsable', () => {
 describe('BloqueRelevo (HU-40): destinatario y otros', () => {
   const paraMi = () => coordinacion({ relevoPendiente: relevoPendiente({ esParaMi: true, motivo: 'Cambio de turno' }) });
 
-  it('el destinatario ve quién propone y el motivo, con "Aceptar relevo"', async () => {
+  it('el destinatario ve quién propone y el motivo, con "Aceptar relevo" y "Rechazar"', async () => {
     const { arbol } = await montar({ coordinacion: paraMi() });
     assert.match(textoDe(arbol), /Ana Rescate te propone relevarlo: Cambio de turno/);
-    assert.deepEqual(botones(arbol), ['Aceptar relevo']);
+    assert.deepEqual(botones(arbol), ['Aceptar relevo', 'Rechazar']);
   });
 
   it('aceptar envía el relevo y la operación, se deshabilita al enviar y relee la pantalla', async () => {
@@ -266,5 +266,203 @@ describe('BloqueRelevo (HU-40): destinatario y otros', () => {
   it('ningún texto del bloque contiene datos médicos', async () => {
     const { arbol } = await montar({ coordinacion: paraMi() });
     assert.doesNotMatch(textoDe(arbol), /sangre|alergi|medicament|ficha|salud/i);
+  });
+});
+
+describe('BloqueRelevo (HU-40): rechazar (destinatario)', () => {
+  const paraMi = () => coordinacion({ relevoPendiente: relevoPendiente({ esParaMi: true, motivo: 'Cambio de turno' }) });
+
+  it('"Rechazar" pide confirmación y "No, volver" no envía nada', async () => {
+    let enviadas = 0;
+    const { arbol, actualizaciones } = await montar({
+      coordinacion: paraMi(),
+      relevo: { rechazar: async () => void (enviadas += 1) as never },
+    });
+    await pulsar(arbol, 'Rechazar');
+    assert.match(textoDe(arbol), /¿Rechazar el relevo\? Seguirá coordinando quien lo propuso/);
+    assert.deepEqual(botones(arbol), ['Sí, rechazar', 'No, volver']);
+    await pulsar(arbol, 'No, volver');
+    assert.deepEqual(botones(arbol), ['Aceptar relevo', 'Rechazar']);
+    assert.equal(enviadas, 0);
+    assert.equal(actualizaciones.n, 0);
+  });
+
+  it('confirmar envía solo el relevo y la operación, avisa y relee la pantalla', async () => {
+    const llamadas: unknown[][] = [];
+    const { arbol, actualizaciones } = await montar({
+      coordinacion: paraMi(),
+      relevo: {
+        rechazar: async (...args) => {
+          llamadas.push(args);
+          return { coordinacion: coordinacion({ esMia: false }) };
+        },
+      },
+    });
+    await pulsar(arbol, 'Rechazar');
+    await pulsar(arbol, 'Sí, rechazar');
+    assert.deepEqual(llamadas, [['exp-1', 'rel-1', 'op-1']]);
+    assert.match(textoDe(arbol), /Rechazaste el relevo\. Sigue coordinando quien lo propuso/);
+    assert.deepEqual(botones(arbol), [], 'ya no hay relevo pendiente');
+    assert.equal(actualizaciones.n, 1);
+    assert.equal(arbol.root.findAllByProps({ role: 'alert' }).length, 0, 'el aviso de éxito no es un error');
+  });
+
+  it('se deshabilita al enviar y un segundo clic no repite la solicitud', async () => {
+    let resolver!: (v: { coordinacion: Coordinacion }) => void;
+    let llamadas = 0;
+    const { arbol } = await montar({
+      coordinacion: paraMi(),
+      relevo: {
+        rechazar: () => {
+          llamadas += 1;
+          return new Promise((resuelve) => void (resolver = resuelve));
+        },
+      },
+    });
+    await pulsar(arbol, 'Rechazar');
+    await pulsar(arbol, 'Sí, rechazar');
+    assert.equal(botonCon(arbol, 'Rechazando…').props.disabled, true);
+    await pulsar(arbol, 'Rechazando…');
+    assert.equal(llamadas, 1);
+    await act(async () => resolver({ coordinacion: coordinacion() }));
+  });
+
+  it('si otro ya lo canceló, dice cómo quedó el relevo y relee la pantalla', async () => {
+    const { arbol, actualizaciones } = await montar({
+      coordinacion: paraMi(),
+      relevo: {
+        rechazar: async () => {
+          throw new ErrorClienteApi('El relevo ya fue resuelto', 409, 'RELEVO_YA_RESUELTO', undefined, { estadoRelevo: 'cancelado' });
+        },
+      },
+    });
+    await pulsar(arbol, 'Rechazar');
+    await pulsar(arbol, 'Sí, rechazar');
+    assert.match(textoDe(arbol), /El relevo ya fue cancelado\./);
+    assert.equal(actualizaciones.n, 1);
+    assert.equal(arbol.root.findAllByProps({ role: 'alert' }).length > 0, true);
+  });
+
+  it('caso cerrado: muestra el mensaje y relee la pantalla', async () => {
+    const { arbol, actualizaciones } = await montar({
+      coordinacion: paraMi(),
+      relevo: {
+        rechazar: async () => {
+          throw new ErrorClienteApi('El caso está cerrado y no admite relevos', 409, 'INCIDENTE_CERRADO');
+        },
+      },
+    });
+    await pulsar(arbol, 'Rechazar');
+    await pulsar(arbol, 'Sí, rechazar');
+    assert.match(textoDe(arbol), /El caso está cerrado/);
+    assert.equal(actualizaciones.n, 1);
+  });
+
+  it('un error de red conserva el operacionId en el reintento', async () => {
+    const usados: string[] = [];
+    const { arbol } = await montar({
+      coordinacion: paraMi(),
+      relevo: {
+        rechazar: async (_e, _r, operacion) => {
+          usados.push(operacion);
+          throw new ErrorClienteApi('No se pudo conectar con el servidor.', 0);
+        },
+      },
+    });
+    await pulsar(arbol, 'Rechazar');
+    await pulsar(arbol, 'Sí, rechazar');
+    assert.match(textoDe(arbol), /No se pudo conectar/);
+    await pulsar(arbol, 'Rechazar');
+    await pulsar(arbol, 'Sí, rechazar');
+    assert.deepEqual(usados, ['op-1', 'op-1']);
+  });
+});
+
+describe('BloqueRelevo (HU-40): cancelar (quien propuso)', () => {
+  const propio = () => coordinacion({ esMia: true, relevoPendiente: relevoPendiente({ motivo: 'Cambio de turno' }) });
+
+  it('"Cancelar relevo" pide confirmación y "No, volver" no envía nada', async () => {
+    let enviadas = 0;
+    const { arbol } = await montar({
+      coordinacion: propio(),
+      relevo: { cancelar: async () => void (enviadas += 1) as never },
+    });
+    await pulsar(arbol, 'Cancelar relevo');
+    assert.match(textoDe(arbol), /¿Cancelar el relevo\? Seguirás coordinando tú y podrás proponer otro/);
+    assert.deepEqual(botones(arbol), ['Sí, cancelar relevo', 'No, volver']);
+    await pulsar(arbol, 'No, volver');
+    assert.deepEqual(botones(arbol), ['Cancelar relevo']);
+    assert.equal(enviadas, 0);
+  });
+
+  it('confirmar envía solo el relevo y la operación; después se puede transferir de nuevo', async () => {
+    const llamadas: unknown[][] = [];
+    const { arbol, actualizaciones } = await montar({
+      coordinacion: propio(),
+      relevo: {
+        cancelar: async (...args) => {
+          llamadas.push(args);
+          return { coordinacion: coordinacion({ esMia: true }) };
+        },
+      },
+    });
+    await pulsar(arbol, 'Cancelar relevo');
+    await pulsar(arbol, 'Sí, cancelar relevo');
+    assert.deepEqual(llamadas, [['exp-1', 'rel-1', 'op-1']]);
+    assert.match(textoDe(arbol), /Cancelaste el relevo\. Sigues coordinando tú y puedes proponer otro/);
+    assert.deepEqual(botones(arbol), ['Transferir coordinación']);
+    assert.equal(actualizaciones.n, 1);
+  });
+
+  it('si el destinatario ya lo aceptó, dice que ya fue aceptado y relee la pantalla', async () => {
+    const { arbol, actualizaciones } = await montar({
+      coordinacion: propio(),
+      relevo: {
+        cancelar: async () => {
+          throw new ErrorClienteApi('El relevo ya fue resuelto', 409, 'RELEVO_YA_RESUELTO', undefined, { estadoRelevo: 'aceptado' });
+        },
+      },
+    });
+    await pulsar(arbol, 'Cancelar relevo');
+    await pulsar(arbol, 'Sí, cancelar relevo');
+    assert.match(textoDe(arbol), /El relevo ya fue aceptado\./);
+    assert.equal(actualizaciones.n, 1);
+  });
+
+  it('se deshabilita al enviar y un segundo clic no repite la solicitud', async () => {
+    let resolver!: (v: { coordinacion: Coordinacion }) => void;
+    let llamadas = 0;
+    const { arbol } = await montar({
+      coordinacion: propio(),
+      relevo: {
+        cancelar: () => {
+          llamadas += 1;
+          return new Promise((resuelve) => void (resolver = resuelve));
+        },
+      },
+    });
+    await pulsar(arbol, 'Cancelar relevo');
+    await pulsar(arbol, 'Sí, cancelar relevo');
+    assert.equal(botonCon(arbol, 'Cancelando…').props.disabled, true);
+    await pulsar(arbol, 'Cancelando…');
+    assert.equal(llamadas, 1);
+    await act(async () => resolver({ coordinacion: coordinacion({ esMia: true }) }));
+  });
+
+  it('otro rescatista (ni destinatario ni quien propuso) no ve ninguno de los botones', async () => {
+    const { arbol } = await montar({ coordinacion: coordinacion({ relevoPendiente: relevoPendiente() }) });
+    assert.deepEqual(botones(arbol), []);
+  });
+
+  it('sin vencimiento: el mismo relevo pendiente sigue mostrando sus botones tras una lectura nueva', async () => {
+    let arbol!: ReactTestRenderer;
+    const props = { expedicionId: 'exp-1', estado: 'alerta' as const, alActualizar: () => undefined };
+    await act(async () => {
+      arbol = create(<BloqueCoordinacion {...props} coordinacion={propio()} />);
+    });
+    await act(async () => {
+      arbol.update(<BloqueCoordinacion {...props} coordinacion={{ ...propio(), relevoPendiente: relevoPendiente({ solicitadoEn: '2020-01-01T00:00:00.000Z' }) }} />);
+    });
+    assert.deepEqual(botones(arbol), ['Cancelar relevo']);
   });
 });

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { it } from 'node:test';
-import { aceptarRelevo, obtenerRescatistasElegibles, proponerRelevo } from './rescate';
+import { aceptarRelevo, cancelarRelevo, obtenerRescatistasElegibles, proponerRelevo, rechazarRelevo } from './rescate';
 import { guardarSesion } from '../lib/sesion';
 
 it('HU-40: las llamadas del relevo usan método, URL, JWT y cuerpo correctos', async (t) => {
@@ -34,8 +34,10 @@ it('HU-40: las llamadas del relevo usan método, URL, JWT y cuerpo correctos', a
     'op-1',
   );
   await aceptarRelevo('exp-1', 'rel-1', 'op-2');
+  await rechazarRelevo('exp-1', 'rel-1', 'op-3');
+  await cancelarRelevo('exp-1', 'rel-1', 'op-4');
 
-  assert.equal(llamadas.length, 3);
+  assert.equal(llamadas.length, 5);
   for (const llamada of llamadas) {
     const cabeceras = llamada.opciones?.headers as Record<string, string>;
     assert.equal(cabeceras.Authorization, 'Bearer token-fixture');
@@ -60,4 +62,12 @@ it('HU-40: las llamadas del relevo usan método, URL, JWT y cuerpo correctos', a
   assert.equal(llamadas[2].opciones?.method, 'POST');
   // Aceptar no lleva versión: solo la operación.
   assert.deepEqual(JSON.parse(String(llamadas[2].opciones?.body)), { operacionId: 'op-2' });
+
+  // Rechazar y cancelar: solo la operación, sin motivo ni versión.
+  assert.equal(llamadas[3].url, '/api/rescate/alertas/exp-1/coordinacion/relevos/rel-1/rechazar');
+  assert.equal(llamadas[3].opciones?.method, 'POST');
+  assert.deepEqual(JSON.parse(String(llamadas[3].opciones?.body)), { operacionId: 'op-3' });
+  assert.equal(llamadas[4].url, '/api/rescate/alertas/exp-1/coordinacion/relevos/rel-1/cancelar');
+  assert.equal(llamadas[4].opciones?.method, 'POST');
+  assert.deepEqual(JSON.parse(String(llamadas[4].opciones?.body)), { operacionId: 'op-4' });
 });
