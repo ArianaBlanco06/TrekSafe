@@ -1,9 +1,9 @@
-import { buildCorreoAlertaRescate } from '../../infrastructure/email/templates/rescueAlertEmail.js';
-import { ServicioCorreo } from '../../infrastructure/email/ServicioCorreo.js';
-import { RepositorioAlerta } from '../../infrastructure/repositories/RepositorioAlerta.js';
-import { RepositorioDespachoCorreo } from '../../infrastructure/repositories/RepositorioDespachoCorreo.js';
-import { RepositorioRescate } from '../../infrastructure/repositories/RepositorioRescate.js';
-import { RepositorioUsuario } from '../../infrastructure/repositories/RepositorioUsuario.js';
+import { buildCorreoAlertaRescate } from '../mensajes/rescueAlertEmail.js';
+import type { ICorreo } from '../ports/correo.js';
+import type { IRepositorioAlerta } from '../ports/RepositorioAlerta.js';
+import type { IRepositorioDespachoCorreo } from '../ports/RepositorioDespachoCorreo.js';
+import type { IRepositorioRescate } from '../ports/RepositorioRescate.js';
+import type { IRepositorioUsuario } from '../ports/RepositorioUsuario.js';
 
 export type ResultadoAlertaRescate = {
   expedicionId: string;
@@ -15,11 +15,11 @@ export type ResultadoAlertaRescate = {
 
 export class ServicioAlertaRescate {
   constructor(
-    private readonly repoAlerta = new RepositorioAlerta(),
-    private readonly repoRescate = new RepositorioRescate(),
-    private readonly repoUsuario = new RepositorioUsuario(),
-    private readonly correo = new ServicioCorreo(),
-    private readonly repoDespacho = new RepositorioDespachoCorreo(),
+    private readonly repoAlerta: IRepositorioAlerta,
+    private readonly repoRescate: IRepositorioRescate,
+    private readonly repoUsuario: IRepositorioUsuario,
+    private readonly correo: ICorreo,
+    private readonly repoDespacho: IRepositorioDespachoCorreo,
   ) {}
 
   async notificarEquiposRescate(expedicionId: string): Promise<ResultadoAlertaRescate> {

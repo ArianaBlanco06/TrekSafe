@@ -1,12 +1,14 @@
 import { Router } from 'express';
 import { asyncHandler } from '../middleware/asyncHandler.js';
-import {
-  iniciarSesion,
-  registrarRescatista,
-  registrarSenderista,
-} from '../controllers/controladorAutenticacion.js';
+import { crearControladorAutenticacion } from '../controllers/controladorAutenticacion.js';
+import { crearServicioAutenticacion } from '../../../infrastructure/composicion/servicios.js';
+import type { ServicioAutenticacion } from '../../../application/services/servicioAutenticacion.js';
 
-export function crearRutasAutenticacion(): Router {
+export function crearRutasAutenticacion(
+  servicio: ServicioAutenticacion = crearServicioAutenticacion(),
+): Router {
+  const { iniciarSesion, registrarRescatista, registrarSenderista } =
+    crearControladorAutenticacion(servicio);
   const router = Router();
 
   router.post('/registrar-senderista', asyncHandler(registrarSenderista));
