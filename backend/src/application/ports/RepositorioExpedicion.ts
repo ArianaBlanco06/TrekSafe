@@ -1,33 +1,22 @@
-/** Contrato de aplicación para el adaptador histórico; conserva las formas existentes. */
+/** Lecturas de negocio independientes de tablas, columnas y relaciones del proveedor. */
 import { calcularFechaLimite } from '../../domain/entities/Expedicion.js';
 export { calcularFechaLimite };
-export type FilaExpedicion = {
+export type ExpedicionLeida = {
   id: string;
-  lugar_inicio: string;
-  lugar_fin: string;
-  hora_inicio: string;
-  hora_retorno_estimada: string;
-  minutos_tolerancia: number;
-  minutos_recordatorio?: number;
+  lugarInicio: string;
+  lugarFin: string;
+  horaInicio: string;
+  horaRetornoEstimada: string;
+  minutosTolerancia: number;
   estado: string;
   version: number;
-  creado_en?: string;
-  actualizado_en?: string;
+  creadoEn?: string;
+  actualizadoEn?: string;
 };
-type FilaExpedicionActiva = FilaExpedicion & {
-  acompanantes_expedicion: {
-    nombre_acompanante: string;
-  }[];
-  vinculos_expedicion_contacto: {
-    contactos_emergencia: {
-      nombre_completo: string;
-      correo_electronico: string;
-    } | null;
-  }[];
-  /** HU-35: solo el tipo, para contar las ampliaciones del retorno. */
-  eventos_plan?: {
-    tipo: string;
-  }[];
+export type ExpedicionActivaLeida = ExpedicionLeida & {
+  acompanantes: string[];
+  contactos: { nombreCompleto: string; correoElectronico: string }[];
+  cantidadAmpliaciones: number;
 };
 export interface IRepositorioExpedicion {
   tieneExpedicionBloqueante(senderistaId: string): Promise<boolean>;
@@ -50,24 +39,24 @@ export interface IRepositorioExpedicion {
       idsContactos: string[];
       nombresAcompanantes: string[];
     },
-  ): Promise<FilaExpedicion>;
+  ): Promise<ExpedicionLeida>;
   listarExpedicionesCompletadas(
     senderistaId: string,
-  ): Promise<FilaExpedicion[]>;
-  listarExpediciones(senderistaId: string): Promise<FilaExpedicion[]>;
+  ): Promise<ExpedicionLeida[]>;
+  listarExpediciones(senderistaId: string): Promise<ExpedicionLeida[]>;
   buscarActivaPorSenderista(
     senderistaId: string,
-  ): Promise<FilaExpedicionActiva | null>;
+  ): Promise<ExpedicionActivaLeida | null>;
   buscarPorIdParaSenderista(
     expedicionId: string,
     senderistaId: string,
-  ): Promise<FilaExpedicion | null>;
+  ): Promise<ExpedicionLeida | null>;
   promoverProgramadasListas(): Promise<number>;
   marcarEnProgresoExpiradaComoAlerta(): Promise<string[]>;
   completarConfirmacionRetorno(
     expedicionId: string,
     senderistaId: string,
-  ): Promise<FilaExpedicion>;
+  ): Promise<ExpedicionLeida>;
   buscarEnProgresoParaRecordatorio(): Promise<
     Array<{
       id: string;

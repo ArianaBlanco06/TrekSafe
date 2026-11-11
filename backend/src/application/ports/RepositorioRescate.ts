@@ -1,87 +1,54 @@
-/** Contrato de aplicación para el adaptador histórico; conserva las formas existentes. */
+/** Lecturas de rescate sin columnas ni relaciones de persistencia. */
 export type DestinatarioRescatista = {
   correoElectronico: string;
   nombreCompleto: string;
 };
-export type FilaExpedicionAlerta = {
+export type ExpedicionAlertaLeida = {
   id: string;
-  lugar_inicio: string;
-  lugar_fin: string;
-  hora_inicio: string;
-  hora_retorno_estimada: string;
-  minutos_tolerancia: number;
-  actualizado_en: string;
-  perfiles_senderista:
-    | {
-        nombre_completo: string;
-        telefono: string;
-      }
-    | {
-        nombre_completo: string;
-        telefono: string;
-      }[]
-    | null;
+  lugarInicio: string;
+  lugarFin: string;
+  horaInicio: string;
+  horaRetornoEstimada: string;
+  minutosTolerancia: number;
+  actualizadoEn: string;
+  senderista: { nombreCompleto: string; telefono: string } | null;
 };
-export type FilaExpedicionMonitor = FilaExpedicionAlerta & {
+export type ExpedicionMonitorLeida = ExpedicionAlertaLeida & {
   estado: 'en_progreso' | 'alerta';
-  coordenadas_inicio: string | null;
-  coordenadas_fin: string | null;
+  coordenadasInicio: string | null;
+  coordenadasFin: string | null;
 };
-export type FilaBitacoraRescate = {
+export type BitacoraRescateLeida = {
   id: string;
-  expedicion_id: string;
-  estado_rescate: string;
-  actualizado_en: string;
+  expedicionId: string;
+  estadoRescate: string;
+  actualizadoEn: string;
   notas: string | null;
 };
-export type FilaHistorialRescatista = {
-  id: string;
-  expedicion_id: string;
-  estado_rescate: string;
-  actualizado_en: string;
-  notas: string | null;
-  expediciones: {
-    id: string;
-    estado: string;
-    lugar_inicio: string;
-    lugar_fin: string;
-    hora_inicio: string;
-    hora_retorno_estimada: string;
-    minutos_tolerancia: number;
-    actualizado_en: string;
-    perfiles_senderista:
-      | {
-          nombre_completo: string;
-          telefono: string;
-        }
-      | {
-          nombre_completo: string;
-          telefono: string;
-        }[]
-      | null;
-  };
+export type HistorialRescatistaLeido = BitacoraRescateLeida & {
+  expedicion: (ExpedicionAlertaLeida & { estado: string }) | null;
 };
 export interface IRepositorioRescate {
   verificarEsRescatista(rescatistaId: string): Promise<void>;
   listarCorreosRescatistasValidados(): Promise<DestinatarioRescatista[]>;
-  listarExpedicionesMonitor(zona?: string): Promise<FilaExpedicionMonitor[]>;
+  listarExpedicionesMonitor(zona?: string): Promise<ExpedicionMonitorLeida[]>;
   buscarConfirmacionesPorExpediciones(
     expedicionIds: string[],
     rescatistaId: string,
-  ): Promise<Map<string, FilaBitacoraRescate>>;
-  listarExpedicionesEnAlerta(): Promise<FilaExpedicionAlerta[]>;
+  ): Promise<Map<string, BitacoraRescateLeida>>;
+  listarExpedicionesEnAlerta(): Promise<ExpedicionAlertaLeida[]>;
   buscarConfirmacion(
     expedicionId: string,
     rescatistaId: string,
-  ): Promise<FilaBitacoraRescate | null>;
+  ): Promise<BitacoraRescateLeida | null>;
   buscarExpedicionEnAlerta(
     expedicionId: string,
-  ): Promise<FilaExpedicionAlerta | null>;
+  ): Promise<ExpedicionAlertaLeida | null>;
   crearConfirmacion(
     expedicionId: string,
     rescatistaId: string,
     notas?: string,
-  ): Promise<FilaBitacoraRescate>;
+  ): Promise<BitacoraRescateLeida>;
   actualizarBitacoraRescate(
     expedicionId: string,
     rescatistaId: string,
@@ -89,8 +56,8 @@ export interface IRepositorioRescate {
       estadoRescate?: string;
       notas?: string;
     },
-  ): Promise<FilaBitacoraRescate>;
+  ): Promise<BitacoraRescateLeida>;
   listarHistorialCompletadas(
     rescatistaId: string,
-  ): Promise<FilaHistorialRescatista[]>;
+  ): Promise<HistorialRescatistaLeido[]>;
 }

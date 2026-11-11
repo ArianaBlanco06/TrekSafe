@@ -20,7 +20,7 @@ flowchart TB
 
 - `infrastructure/composicion` es la única convención de ensamblaje; se retiró `infrastructure/composition/puntosRuta.ts` y se actualizaron sus consumidores.
 - Los servicios históricos de autenticación, usuario, expediciones, rescate, alertas, bandeja y recordatorios reciben puertos. Aplicación y dominio no importan Supabase, Express, correo o implementaciones de infraestructura.
-- Los puertos de aplicación conservan las formas históricas necesarias para la compatibilidad, incluidas filas de lectura de expediciones y rescate. Las operaciones nuevas no deben usar los adaptadores concretos como contratos.
+- Los puertos de aplicación entregan lecturas de negocio en camelCase. Los adaptadores de expediciones, rescate y autenticación traducen columnas y relaciones SQL, resuelven perfiles y contactos y cuentan eventos de ampliación; los servicios no conocen las filas ni los joins del proveedor. Los contratos HTTP conservan sus campos y respuestas vigentes.
 - Los controladores son fábricas y las rutas permiten inyectar servicios. `createApp(dependencias)` acepta configuración, routers y lector de salud, sin ensamblar Supabase o correo cuando se proporcionan dependencias.
 - El módulo de rescate incorpora los casos de uso HU-41. Un único adaptador de bitácora se comparte entre lectura y escritura y se construye solo si falta uno de esos casos; se conservan los casos inyectados y las rutas de coordinación/bitácora de incidentes.
 - Los formateadores de mensajes son funciones puras de aplicación; sus rutas de importación históricas se conservan mediante reexportaciones.
@@ -67,11 +67,11 @@ npm run build --prefix backend
 | Compatibilidad y regresión | Suite backend existente, roles/JWT, coordinación HU-39 y rutas/casos de bitácora HU-41; compilación y verificaciones pertinentes |
 | Módulos, deuda y comandos documentados | Este documento, archivos de composición y pruebas reproducibles |
 
-Pruebas específicas: `infrastructure/ejecucion/arranque.test.ts`, `importaciones.test.ts`, `jobs/cronFechaLimiteExpedicion.test.ts`, `application/services/desacoplamiento.test.ts` y `presentation/http/composicionInyectada.test.ts`.
+Pruebas específicas: `infrastructure/ejecucion/arranque.test.ts`, `importaciones.test.ts`, `jobs/cronFechaLimiteExpedicion.test.ts`, `application/services/desacoplamiento.test.ts`, `infrastructure/repositories/lecturasNormalizadas.test.ts` y `presentation/http/composicionInyectada.test.ts`.
 
 Los tests de importación se ejecutan en un proceso sin credenciales e instrumentan lectura de `.env`, conexiones HTTP, temporizadores y señales. Las pruebas de arranque cubren apagado desactivado, fallos previos a la escucha, puerto ocupado, parada repetida y trabajo pendiente. Los tests HTTP usan datos ficticios y loopback. Los tests de transporte no envían correos.
 
-Resultado local del 2026-11-11 con **Node 22.23.4**: verificación de tipos y build aprobados; **556 pruebas aprobadas** antes de la incorporación de HU-41 y **616 aprobadas** después de resolver su composición y rutas. El diagrama Mermaid se renderizó. Las suites PostgreSQL condicionadas a variables de integración no se activan por este comando; la validación SQL y conjunta con #108 se registra por separado. La ejecución usó acceso a servidores locales de prueba, sin cron contra DEV ni correo real.
+Resultado local del 2026-11-11 con **Node 22.23.4**: verificación de tipos y build aprobados; **556 pruebas aprobadas** antes de la incorporación de HU-41, **616** después de resolver su composición y rutas y **621** al completar la normalización de lecturas. Las nuevas pruebas cubren perfiles objeto/array/null, contactos ausentes, recuento de ampliaciones y JSON HTTP exacto de listado, expedición activa, retorno y login. El diagrama Mermaid se renderizó. Las suites PostgreSQL condicionadas a variables de integración no se activan por este comando; la validación SQL y conjunta con #108 se registra por separado. La ejecución usó acceso a servidores locales de prueba, sin cron contra DEV ni correo real.
 
 ## Validación conjunta con #108
 
@@ -79,4 +79,4 @@ La unión local de `032317f` (#107) y `a988637` (#108), sobre `develop` `3b61042
 
 ## Límites y trabajo siguiente
 
-Los recursos de Fly y sus comandos ejecutables siguen con la configuración anterior hasta #110. #108 cambia la creación del adaptador a RPC sobre esta misma firma. #109 integrará reclamación, reservas, reintentos y resultado incierto de outbox. #110 añadirá señales persistentes entre procesos; #112 acreditará la versión publicada. Esta entrega no declara esas tareas terminadas ni aplica migraciones a DEV.
+Los recursos de Fly y sus comandos ejecutables siguen con la configuración anterior hasta #110. #108 cambia la creación del adaptador a RPC sobre esta misma firma; su fila de resultado debe atravesar `mapearExpedicionPersistida` antes de salir del adaptador. #109 integrará reclamación, reservas, reintentos y resultado incierto de outbox. #110 añadirá señales persistentes entre procesos; #112 acreditará la versión publicada. Esta entrega no declara esas tareas terminadas ni aplica migraciones a DEV.

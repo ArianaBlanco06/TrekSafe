@@ -47,7 +47,7 @@ export class ServicioAutenticacion {
       token,
       usuario: {
         id: usuario.id,
-        correoElectronico: usuario.correo_electronico,
+        correoElectronico: usuario.correoElectronico,
         rol: usuario.rol,
         nombreCompleto: entrada.nombreCompleto,
       },
@@ -60,7 +60,7 @@ export class ServicioAutenticacion {
       throw new ErrorAplicacion(401, 'Credenciales inválidas', 'CREDENCIALES_INVALIDAS');
     }
 
-    const valida = await this.seguridad.verificarContrasena(entrada.contrasena, usuario.hash_contrasena);
+    const valida = await this.seguridad.verificarContrasena(entrada.contrasena, usuario.hashContrasena);
     if (!valida) {
       throw new ErrorAplicacion(401, 'Credenciales inválidas', 'CREDENCIALES_INVALIDAS');
     }
@@ -72,7 +72,7 @@ export class ServicioAutenticacion {
       token,
       usuario: {
         id: usuario.id,
-        correoElectronico: usuario.correo_electronico,
+        correoElectronico: usuario.correoElectronico,
         rol: usuario.rol,
         nombreCompleto,
       },
@@ -116,7 +116,7 @@ export class ServicioAutenticacion {
       token,
       usuario: {
         id: usuario.id,
-        correoElectronico: usuario.correo_electronico,
+        correoElectronico: usuario.correoElectronico,
         rol: usuario.rol,
         nombreCompleto: entrada.nombreCompleto,
       },

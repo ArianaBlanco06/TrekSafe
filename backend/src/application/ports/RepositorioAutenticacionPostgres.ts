@@ -1,20 +1,20 @@
-/** Contrato de aplicación para el adaptador histórico; conserva las formas existentes. */
-export type UsuarioBd = {
+/** Identidades de negocio; el adaptador conserva los detalles de persistencia. */
+export type UsuarioAutenticacion = {
   id: string;
-  correo_electronico: string;
-  hash_contrasena: string;
+  correoElectronico: string;
+  hashContrasena: string;
   rol: 'senderista' | 'rescatista';
 };
 export type CredencialInstitucional = {
   institucion: string;
-  numero_credencial: string;
-  nombre_completo: string;
-  fecha_nacimiento: string;
-  esta_activo: boolean;
+  numeroCredencial: string;
+  nombreCompleto: string;
+  fechaNacimiento: string;
+  estaActivo: boolean;
 };
 export interface IRepositorioAutenticacionPostgres {
-  buscarUsuarioPorCorreo(correo: string): Promise<UsuarioBd | null>;
-  buscarUsuarioPorId(usuarioId: string): Promise<UsuarioBd | null>;
+  buscarUsuarioPorCorreo(correo: string): Promise<UsuarioAutenticacion | null>;
+  buscarUsuarioPorId(usuarioId: string): Promise<UsuarioAutenticacion | null>;
   obtenerNombreCompletoPerfil(
     usuarioId: string,
     rol: 'senderista' | 'rescatista',
@@ -34,7 +34,7 @@ export interface IRepositorioAutenticacionPostgres {
     telefono: string;
   }): Promise<{
     id: string;
-    correo_electronico: string;
+    correoElectronico: string;
     rol: 'senderista';
   }>;
   registrarRescatista(datos: {
@@ -45,7 +45,7 @@ export interface IRepositorioAutenticacionPostgres {
     fechaNacimiento: string;
   }): Promise<{
     id: string;
-    correo_electronico: string;
+    correoElectronico: string;
     rol: 'rescatista';
   }>;
 }

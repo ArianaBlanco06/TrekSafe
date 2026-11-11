@@ -33,11 +33,11 @@ it('crear expedición usa actor y reloj inyectados sin importar persistencia o c
       estadoPersistido = input.estado;
       return {
         id: 'expedicion',
-        lugar_inicio: input.lugarInicio,
-        lugar_fin: input.lugarFin,
-        hora_inicio: input.horaInicio,
-        hora_retorno_estimada: input.horaRetornoEstimada,
-        minutos_tolerancia: input.minutosTolerancia,
+        lugarInicio: input.lugarInicio,
+        lugarFin: input.lugarFin,
+        horaInicio: input.horaInicio,
+        horaRetornoEstimada: input.horaRetornoEstimada,
+        minutosTolerancia: input.minutosTolerancia,
         estado: input.estado,
         version: 1,
       };
