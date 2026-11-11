@@ -6,15 +6,26 @@
 -- diferencias de esquema. Aplicar una sola vez por entorno.
 -- La 015 está reservada para HU-45, la 017 es de HU-39 y la 018 de HU-27.
 --
--- 1) public.relevos_coordinacion: estado del relevo (pendiente | aceptado). El índice
---    único parcial uq_relevo_pendiente_por_incidente impide dos relevos simultáneos.
+-- 1) public.relevos_coordinacion: estado del relevo (pendiente | aceptado | rechazado |
+--    cancelado) e historial de quién lo resolvió y cuándo. El índice único parcial
+--    uq_relevo_pendiente_por_incidente impide dos relevos pendientes a la vez; al
+--    rechazarse o cancelarse el relevo sale del índice y se puede proponer otro.
 -- 2) public.transferencias_coordinacion: evento de transferencia, solo anexar (una fila
 --    por relevo aplicado, con ambos responsables, motivo, versiones y hora).
 -- 3) incidentes: service_role recibe UPDATE únicamente sobre responsable_id, version y
 --    asumido_en. anon y authenticated siguen sin ningún acceso (RLS de la 017).
 --    asumido_en pasa a significar "desde cuándo coordina el responsable actual".
--- 4) treksafe_proponer_relevo y treksafe_aceptar_relevo: una transacción cada una, con la
---    fila del incidente bloqueada (FOR UPDATE), idempotentes por operacion_id.
+-- 4) treksafe_proponer_relevo, treksafe_aceptar_relevo, treksafe_rechazar_relevo y
+--    treksafe_cancelar_relevo: una transacción cada una, con la fila del incidente
+--    bloqueada (FOR UPDATE), idempotentes por operacion_id. Rechazar y cancelar comparten
+--    treksafe_resolver_relevo y no cambian ni el responsable ni la versión.
+--
+-- Rechazar lo hace solo el destinatario; cancelar, solo quien propuso. Ambos exigen que el
+-- relevo siga pendiente y el incidente no esté cerrado. Sin vencimiento automático.
+-- Al cerrar el incidente el relevo pendiente NO se escribe: queda inerte porque proponer,
+-- aceptar, rechazar y cancelar devuelven INCIDENTE_CERRADO (estado derivado; sin trigger,
+-- sin tocar el cierre de HU-42). Un caso reabierto haría revivir ese relevo pendiente: quien
+-- implemente reabrir debe decidirlo (ver docs/hu-40/diseno.md).
 --
 -- Regla de versión: proponer compara la versión del cliente con la del incidente
 -- (VERSION_DESACTUALIZADA); aceptar no compara versión: exige que el relevo siga
@@ -36,15 +47,18 @@
 --   DESTINATARIO_NO_VALIDADO  el destinatario no tiene perfil de rescatista
 --   VERSION_DESACTUALIZADA    solo al proponer; DETAIL {"versionActual": n}
 --   RELEVO_PENDIENTE          ya hay un relevo pendiente; DETAIL con el relevo (sin motivo)
---   NO_ES_DESTINATARIO        acepta alguien que no es el destinatario
---   RELEVO_YA_RESUELTO        el relevo ya fue aceptado y la operación es distinta
+--   NO_ES_DESTINATARIO        acepta o rechaza alguien que no es el destinatario
+--   NO_ES_PROPONENTE          cancela alguien que no propuso el relevo
+--   RELEVO_YA_RESUELTO        el relevo ya no está pendiente y la operación es distinta;
+--                             DETAIL {"estado": "aceptado" | "rechazado" | "cancelado"}
 -- Resultado JSONB: el de treksafe_resultado_coordinacion (id, expedicionId, estado,
 -- version, responsable, asumidoEn, repetido) más "relevo" con ambos responsables, motivo,
--- solicitadoEn, resueltoEn y versionIncidente. Ningún dato médico participa aquí.
+-- solicitadoEn, resueltoEn, resueltoPorId y versionIncidente. Ningún dato médico participa
+-- aquí.
 -- =============================================================================
 BEGIN;
 
--- 1) Estado del relevo.
+-- 1) Estado del relevo y su historial.
 CREATE TABLE public.relevos_coordinacion (
     id                       UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
     incidente_id             UUID         NOT NULL,
@@ -56,7 +70,8 @@ CREATE TABLE public.relevos_coordinacion (
     resuelto_en              TIMESTAMPTZ,
     version_incidente        INTEGER      NOT NULL,
     operacion_id             UUID         NOT NULL,
-    operacion_aceptacion_id  UUID,
+    resuelto_por_id          UUID,
+    operacion_resolucion_id  UUID,
 
     CONSTRAINT fk_relevos_incidente
         FOREIGN KEY (incidente_id) REFERENCES public.incidentes (id)
@@ -68,17 +83,27 @@ CREATE TABLE public.relevos_coordinacion (
         FOREIGN KEY (destinatario_id) REFERENCES public.perfiles_rescatista (usuario_id)
         ON DELETE RESTRICT,
     CONSTRAINT uq_relevos_operacion UNIQUE (operacion_id),
-    CONSTRAINT uq_relevos_operacion_aceptacion UNIQUE (operacion_aceptacion_id),
-    CONSTRAINT chk_relevos_estado CHECK (estado IN ('pendiente', 'aceptado')),
+    CONSTRAINT fk_relevos_resuelto_por
+        FOREIGN KEY (resuelto_por_id) REFERENCES public.perfiles_rescatista (usuario_id)
+        ON DELETE RESTRICT,
+    CONSTRAINT uq_relevos_operacion_resolucion UNIQUE (operacion_resolucion_id),
+    CONSTRAINT chk_relevos_estado CHECK (estado IN ('pendiente', 'aceptado', 'rechazado', 'cancelado')),
     CONSTRAINT chk_relevos_distintos CHECK (responsable_anterior_id <> destinatario_id),
     CONSTRAINT chk_relevos_motivo CHECK (char_length(btrim(motivo)) BETWEEN 1 AND 280),
     CONSTRAINT chk_relevos_version CHECK (version_incidente >= 1),
-    CONSTRAINT chk_relevos_resuelto_en CHECK ((estado = 'aceptado') = (resuelto_en IS NOT NULL)),
-    CONSTRAINT chk_relevos_op_aceptacion CHECK ((estado = 'aceptado') = (operacion_aceptacion_id IS NOT NULL))
+    CONSTRAINT chk_relevos_resuelto_en CHECK ((estado <> 'pendiente') = (resuelto_en IS NOT NULL)),
+    CONSTRAINT chk_relevos_resuelto_por CHECK ((estado <> 'pendiente') = (resuelto_por_id IS NOT NULL)),
+    CONSTRAINT chk_relevos_op_resolucion CHECK ((estado <> 'pendiente') = (operacion_resolucion_id IS NOT NULL)),
+    -- Quién resuelve: el destinatario acepta o rechaza; quien propuso cancela.
+    CONSTRAINT chk_relevos_quien_resuelve CHECK (
+        estado = 'pendiente'
+        OR (estado IN ('aceptado', 'rechazado') AND resuelto_por_id = destinatario_id)
+        OR (estado = 'cancelado' AND resuelto_por_id = responsable_anterior_id)
+    )
 );
 
 COMMENT ON TABLE public.relevos_coordinacion IS
-    'HU-40: relevo de la coordinación de un incidente. A lo sumo uno pendiente por incidente. Estado de trabajo, no contrato para otras HU.';
+    'HU-40: relevo de la coordinación de un incidente. A lo sumo uno pendiente por incidente. Las filas resueltas (aceptado, rechazado, cancelado) son el historial: quién resolvió y cuándo. Un relevo pendiente de un incidente cerrado es inerte (estado derivado). Estado de trabajo, no contrato para otras HU.';
 COMMENT ON COLUMN public.relevos_coordinacion.motivo IS
     'Texto libre de 1 a 280 caracteres. Solo lo ven el responsable y el destinatario. No debe contener datos médicos.';
 COMMENT ON COLUMN public.relevos_coordinacion.version_incidente IS
@@ -101,7 +126,8 @@ CREATE POLICY treksafe_deny_anon_authenticated ON public.relevos_coordinacion
 -- defecto a service_role. Después solo se concede lo necesario.
 REVOKE ALL ON public.relevos_coordinacion FROM PUBLIC, anon, authenticated, service_role;
 GRANT SELECT, INSERT ON public.relevos_coordinacion TO service_role;
-GRANT UPDATE (estado, resuelto_en, operacion_aceptacion_id) ON public.relevos_coordinacion TO service_role;
+GRANT UPDATE (estado, resuelto_en, resuelto_por_id, operacion_resolucion_id)
+    ON public.relevos_coordinacion TO service_role;
 
 -- 2) Evento de transferencia: solo anexar.
 CREATE TABLE public.transferencias_coordinacion (
@@ -244,6 +270,7 @@ AS $$
             'motivo', p_relevo.motivo,
             'solicitadoEn', p_relevo.solicitado_en,
             'resueltoEn', p_relevo.resuelto_en,
+            'resueltoPorId', p_relevo.resuelto_por_id,
             'versionIncidente', p_relevo.version_incidente
         )
     );
@@ -303,7 +330,7 @@ BEGIN
     -- 3) La operación ya se usó en otro tipo de operación.
     IF EXISTS (SELECT 1 FROM public.eventos_plan WHERE operacion_id = p_operacion_id)
        OR EXISTS (SELECT 1 FROM public.incidentes WHERE operacion_id = p_operacion_id)
-       OR EXISTS (SELECT 1 FROM public.relevos_coordinacion WHERE operacion_aceptacion_id = p_operacion_id) THEN
+       OR EXISTS (SELECT 1 FROM public.relevos_coordinacion WHERE operacion_resolucion_id = p_operacion_id) THEN
         RAISE EXCEPTION 'DATOS_INVALIDOS';
     END IF;
 
@@ -423,14 +450,18 @@ BEGIN
         RAISE EXCEPTION 'DATOS_INVALIDOS';
     END IF;
 
-    -- 2) Operación de aceptación ya registrada: mismo destinatario y relevo → mismo
-    --    resultado sin escribir. De otro actor o relevo → no se revela nada ajeno.
-    SELECT * INTO v_rel FROM public.relevos_coordinacion WHERE operacion_aceptacion_id = p_operacion_id;
+    -- 2) Operación de resolución ya registrada: mismo destinatario y relevo → mismo
+    --    resultado sin escribir. De otro actor o relevo → no se revela nada ajeno. Si la
+    --    operación resolvió el relevo de otra manera (rechazo), es de otro tipo.
+    SELECT * INTO v_rel FROM public.relevos_coordinacion WHERE operacion_resolucion_id = p_operacion_id;
     IF FOUND THEN
         SELECT * INTO v_inc FROM public.incidentes WHERE id = v_rel.incidente_id;
         IF v_rel.destinatario_id = p_actor_id AND v_rel.id = p_relevo_id
            AND v_inc.expedicion_id = p_expedicion_id THEN
-            RETURN public.treksafe_resultado_relevo(v_inc, v_rel, TRUE);
+            IF v_rel.estado = 'aceptado' THEN
+                RETURN public.treksafe_resultado_relevo(v_inc, v_rel, TRUE);
+            END IF;
+            RAISE EXCEPTION 'DATOS_INVALIDOS';
         END IF;
         RAISE EXCEPTION 'RELEVO_NO_ENCONTRADO';
     END IF;
@@ -469,13 +500,15 @@ BEGIN
         RAISE EXCEPTION 'NO_ES_DESTINATARIO';
     END IF;
 
-    -- 8) Relevo ya resuelto. La misma operación (otra sesión que ya aplicó) es una
-    --    repetición segura; cualquier otra no se confirma en silencio.
+    -- 8) Relevo ya resuelto (aceptado, rechazado o cancelado). La misma operación (otra
+    --    sesión que ya aplicó) es una repetición segura; cualquier otra no se confirma en
+    --    silencio y el DETAIL dice cómo quedó.
     IF v_rel.estado <> 'pendiente' THEN
-        IF v_rel.operacion_aceptacion_id = p_operacion_id THEN
+        IF v_rel.operacion_resolucion_id = p_operacion_id AND v_rel.estado = 'aceptado' THEN
             RETURN public.treksafe_resultado_relevo(v_inc, v_rel, TRUE);
         END IF;
-        RAISE EXCEPTION 'RELEVO_YA_RESUELTO';
+        RAISE EXCEPTION 'RELEVO_YA_RESUELTO'
+            USING DETAIL = jsonb_build_object('estado', v_rel.estado)::text;
     END IF;
 
     -- 9) Caso cerrado (también si se cerró después de la propuesta).
@@ -501,7 +534,8 @@ BEGIN
     UPDATE public.relevos_coordinacion
     SET estado = 'aceptado',
         resuelto_en = NOW(),
-        operacion_aceptacion_id = p_operacion_id
+        resuelto_por_id = p_actor_id,
+        operacion_resolucion_id = p_operacion_id
     WHERE id = v_rel.id
     RETURNING * INTO v_rel;
 
@@ -517,11 +551,167 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.treksafe_aceptar_relevo(UUID, UUID, UUID, UUID) IS
-    'HU-40: el destinatario acepta el relevo pendiente. Cambia el responsable, sube la versión, resuelve el relevo y registra la transferencia en una transacción. No compara versión.';
+    'HU-40: el destinatario acepta el relevo pendiente. Cambia el responsable, sube la versión, resuelve el relevo (quién y cuándo) y registra la transferencia en una transacción. No compara versión.';
 
 REVOKE ALL ON FUNCTION public.treksafe_aceptar_relevo(UUID, UUID, UUID, UUID)
     FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.treksafe_aceptar_relevo(UUID, UUID, UUID, UUID)
+    TO service_role;
+
+-- 7) Rechazar o cancelar un relevo pendiente. Una sola implementación; las dos RPC públicas
+--    solo fijan el estado final. No cambian el responsable ni la versión del incidente.
+CREATE OR REPLACE FUNCTION public.treksafe_resolver_relevo(
+    p_expedicion_id  UUID,
+    p_actor_id       UUID,
+    p_relevo_id      UUID,
+    p_operacion_id   UUID,
+    p_estado_final   TEXT
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = ''
+AS $$
+DECLARE
+    v_inc     public.incidentes%ROWTYPE;
+    v_rel     public.relevos_coordinacion%ROWTYPE;
+    v_inc_id  UUID;
+BEGIN
+    -- 1) Datos obligatorios.
+    IF p_expedicion_id IS NULL OR p_actor_id IS NULL OR p_relevo_id IS NULL
+       OR p_operacion_id IS NULL OR p_estado_final IS NULL
+       OR p_estado_final NOT IN ('rechazado', 'cancelado') THEN
+        RAISE EXCEPTION 'DATOS_INVALIDOS';
+    END IF;
+
+    -- 2) Operación de resolución ya registrada: mismo actor, relevo y tipo → mismo
+    --    resultado sin escribir. De otro actor o relevo → no se revela nada ajeno. De otro
+    --    tipo (la operación aceptó o resolvió de otra manera) → DATOS_INVALIDOS.
+    SELECT * INTO v_rel FROM public.relevos_coordinacion WHERE operacion_resolucion_id = p_operacion_id;
+    IF FOUND THEN
+        SELECT * INTO v_inc FROM public.incidentes WHERE id = v_rel.incidente_id;
+        IF v_rel.resuelto_por_id = p_actor_id AND v_rel.id = p_relevo_id
+           AND v_inc.expedicion_id = p_expedicion_id THEN
+            IF v_rel.estado = p_estado_final THEN
+                RETURN public.treksafe_resultado_relevo(v_inc, v_rel, TRUE);
+            END IF;
+            RAISE EXCEPTION 'DATOS_INVALIDOS';
+        END IF;
+        RAISE EXCEPTION 'RELEVO_NO_ENCONTRADO';
+    END IF;
+
+    -- 3) La operación ya se usó como propuesta o en otro tipo de operación.
+    IF EXISTS (SELECT 1 FROM public.eventos_plan WHERE operacion_id = p_operacion_id)
+       OR EXISTS (SELECT 1 FROM public.incidentes WHERE operacion_id = p_operacion_id)
+       OR EXISTS (SELECT 1 FROM public.relevos_coordinacion WHERE operacion_id = p_operacion_id) THEN
+        RAISE EXCEPTION 'DATOS_INVALIDOS';
+    END IF;
+
+    -- 4) El actor debe ser un rescatista validado.
+    IF NOT EXISTS (SELECT 1 FROM public.perfiles_rescatista WHERE usuario_id = p_actor_id) THEN
+        RAISE EXCEPTION 'NO_ES_RESCATISTA';
+    END IF;
+
+    -- 5) El relevo debe existir y ser de esa expedición (lectura sin bloqueo).
+    SELECT r.incidente_id INTO v_inc_id
+    FROM public.relevos_coordinacion r
+    JOIN public.incidentes i ON i.id = r.incidente_id
+    WHERE r.id = p_relevo_id AND i.expedicion_id = p_expedicion_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'RELEVO_NO_ENCONTRADO';
+    END IF;
+
+    -- 6) Bloqueo del incidente y relectura del relevo: pudo cambiar mientras se esperaba.
+    SELECT * INTO v_inc FROM public.incidentes WHERE id = v_inc_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'RELEVO_NO_ENCONTRADO';
+    END IF;
+    SELECT * INTO v_rel FROM public.relevos_coordinacion WHERE id = p_relevo_id;
+
+    -- 7) Quién puede: el destinatario rechaza; quien propuso cancela.
+    IF p_estado_final = 'rechazado' AND v_rel.destinatario_id <> p_actor_id THEN
+        RAISE EXCEPTION 'NO_ES_DESTINATARIO';
+    END IF;
+    IF p_estado_final = 'cancelado' AND v_rel.responsable_anterior_id <> p_actor_id THEN
+        RAISE EXCEPTION 'NO_ES_PROPONENTE';
+    END IF;
+
+    -- 8) Relevo ya resuelto por otra operación (aceptado, rechazado o cancelado). La misma
+    --    operación (otra sesión que ya aplicó) es una repetición segura.
+    IF v_rel.estado <> 'pendiente' THEN
+        IF v_rel.operacion_resolucion_id = p_operacion_id AND v_rel.estado = p_estado_final THEN
+            RETURN public.treksafe_resultado_relevo(v_inc, v_rel, TRUE);
+        END IF;
+        RAISE EXCEPTION 'RELEVO_YA_RESUELTO'
+            USING DETAIL = jsonb_build_object('estado', v_rel.estado)::text;
+    END IF;
+
+    -- 9) Caso cerrado: el relevo pendiente queda inerte, no se escribe nada.
+    IF v_inc.estado = 'cerrado' THEN
+        RAISE EXCEPTION 'INCIDENTE_CERRADO';
+    END IF;
+
+    -- 10) Resolución: solo el relevo; el incidente no cambia.
+    UPDATE public.relevos_coordinacion
+    SET estado = p_estado_final,
+        resuelto_en = NOW(),
+        resuelto_por_id = p_actor_id,
+        operacion_resolucion_id = p_operacion_id
+    WHERE id = v_rel.id
+    RETURNING * INTO v_rel;
+
+    RETURN public.treksafe_resultado_relevo(v_inc, v_rel, FALSE);
+END;
+$$;
+
+COMMENT ON FUNCTION public.treksafe_resolver_relevo(UUID, UUID, UUID, UUID, TEXT) IS
+    'HU-40: implementación común de rechazar y cancelar. Solo cambia el relevo pendiente; no cambia el responsable ni la versión. Una transacción, idempotente por operacion_id.';
+
+CREATE OR REPLACE FUNCTION public.treksafe_rechazar_relevo(
+    p_expedicion_id  UUID,
+    p_actor_id       UUID,
+    p_relevo_id      UUID,
+    p_operacion_id   UUID
+)
+RETURNS JSONB
+LANGUAGE sql
+SECURITY INVOKER
+SET search_path = ''
+AS $$
+    SELECT public.treksafe_resolver_relevo(p_expedicion_id, p_actor_id, p_relevo_id, p_operacion_id, 'rechazado');
+$$;
+
+COMMENT ON FUNCTION public.treksafe_rechazar_relevo(UUID, UUID, UUID, UUID) IS
+    'HU-40: el destinatario rechaza el relevo pendiente. El responsable actual conserva la coordinación y se puede proponer otro relevo.';
+
+CREATE OR REPLACE FUNCTION public.treksafe_cancelar_relevo(
+    p_expedicion_id  UUID,
+    p_actor_id       UUID,
+    p_relevo_id      UUID,
+    p_operacion_id   UUID
+)
+RETURNS JSONB
+LANGUAGE sql
+SECURITY INVOKER
+SET search_path = ''
+AS $$
+    SELECT public.treksafe_resolver_relevo(p_expedicion_id, p_actor_id, p_relevo_id, p_operacion_id, 'cancelado');
+$$;
+
+COMMENT ON FUNCTION public.treksafe_cancelar_relevo(UUID, UUID, UUID, UUID) IS
+    'HU-40: quien propuso cancela el relevo pendiente. Conserva la coordinación y se puede proponer otro relevo.';
+
+REVOKE ALL ON FUNCTION public.treksafe_resolver_relevo(UUID, UUID, UUID, UUID, TEXT)
+    FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.treksafe_resolver_relevo(UUID, UUID, UUID, UUID, TEXT)
+    TO service_role;
+REVOKE ALL ON FUNCTION public.treksafe_rechazar_relevo(UUID, UUID, UUID, UUID)
+    FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.treksafe_rechazar_relevo(UUID, UUID, UUID, UUID)
+    TO service_role;
+REVOKE ALL ON FUNCTION public.treksafe_cancelar_relevo(UUID, UUID, UUID, UUID)
+    FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.treksafe_cancelar_relevo(UUID, UUID, UUID, UUID)
     TO service_role;
 
 DO $$
