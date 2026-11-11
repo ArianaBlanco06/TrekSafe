@@ -22,7 +22,11 @@ const run = (file, argv) => new Promise((resolve, reject) => execFile(file, argv
   { env, windowsHide: true, maxBuffer: 16*1024*1024 }, (e,o,s) => e ? reject(new Error(String(s||o||e))) : resolve(o)));
 const control = argv => new Promise((resolve,reject) => {
   const child = spawn(exe('pg_ctl'), argv, { env, windowsHide: true, stdio: 'ignore' });
-  child.on('error',reject); child.on('exit',code => code === 0 ? resolve() : reject(new Error(`pg_ctl: ${code}; ${dir}`)));
+  child.on('error',reject); child.on('exit',async code => {
+    if (code === 0) return resolve();
+    const log=await readFile(path.join(dir,'postgres.log'),'utf8').catch(()=>'(sin log de PostgreSQL)');
+    reject(new Error(`pg_ctl: ${code}; ${dir}\n${log.slice(-6000)}`));
+  });
 });
 const port = await new Promise(resolve => {
   const s=net.createServer(); s.listen(0,'127.0.0.1',()=>{ const p=s.address().port; s.close(()=>resolve(p)); });
@@ -44,7 +48,10 @@ const invoke=async (id, datos, usuario=actor) => {
 const test=async (nombre,fn)=>{await fn();console.log(`OK ${++count}: ${nombre}`);};
 try {
   await run(exe('initdb'),['-D',`${dir}/data`,'-U','treksafe_hu49_desechable','--auth=trust','--encoding=UTF8','--locale=C']);
-  await control(['-D',`${dir}/data`,'-l',`${dir}/postgres.log`,'-w','start','-o',`-h 127.0.0.1 -p ${port} -c timezone=UTC`]);
+  // Linux necesita un socket en un directorio del usuario runner; el predeterminado
+  // /var/run/postgresql pertenece a postgres. Windows usa solo la conexión TCP.
+  const socket=process.platform === 'win32' ? '' : `-k ${dir}`;
+  await control(['-D',`${dir}/data`,'-l',`${dir}/postgres.log`,'-w','start','-o',`-h 127.0.0.1 -p ${port} -c timezone=UTC ${socket}`]);
   started=true; pool=new pg.Pool({host:'127.0.0.1',port,user:'treksafe_hu49_desechable',database:'postgres',max:6});
   await pool.query(`CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN; CREATE ROLE service_role NOLOGIN BYPASSRLS;
     GRANT USAGE ON SCHEMA public TO anon,authenticated,service_role;
