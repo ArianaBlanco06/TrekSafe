@@ -53,6 +53,7 @@ En Windows, incluir PostgreSQL bin en el PATH del proceso para `libpq`. El entor
 | Adaptador unitario | **11 pruebas aprobadas**; errores, RPC ausente sin fallback y respuesta inválida |
 | Tipos | `tsc --noEmit` aprobado |
 | Regresión completa y build | **551 pruebas aprobadas**, cero fallos; `tsc` de producción aprobado |
+| Fallo del ejecutable PostgREST | Ruta inexistente produce error controlado; `postmaster.pid` ausente, `pg_isready` sin respuesta y log PostgreSQL confirma apagado |
 
 El CI añade un job PostgreSQL 17/PostgREST 16.5 con checksum y artefacto de resultados. Su resultado remoto se consulta en el PR; disponer del job no acredita una ejecución remota aún no terminada.
 

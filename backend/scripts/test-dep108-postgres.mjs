@@ -87,6 +87,7 @@ try {
     await run(exe('initdb'), ['-D', data, '-U', 'postgres', '--auth=trust', '--encoding=UTF8', '--locale=C']);
     await control(['-D', data, '-l', path.join(workspace, 'postgres.log'), '-w', 'start', '-o', `-h 127.0.0.1 -p ${port} -c timezone=UTC -c max_connections=30`]);
     started = true;
+    console.log(`Clúster temporal: ${workspace}; puerto PostgreSQL ${port}`);
     const admin = new pg.Client({ ...config, database: 'postgres' });
     await admin.connect();
     await admin.query(`CREATE DATABASE ${database}`);
@@ -264,15 +265,23 @@ try {
     await writeFile(conf, `db-uri = "postgresql://postgres@127.0.0.1:${port}/${database}"\ndb-schemas = "public"\ndb-anon-role = "anon"\nserver-host = "127.0.0.1"\nserver-port = ${restPort}\n`);
     restChild = spawn(rest, [conf], { env: { ...env, PGRST_JWT_SECRET: key }, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
     let restLog = '';
+    let restSpawnError = null;
+    // ENOENT/EACCES arrive asynchronously. Capture them so the outer finally
+    // closes PostgreSQL instead of an unhandled EventEmitter error terminating Node.
+    restChild.on('error', error => { restSpawnError = error; });
     restChild.stderr.on('data', x => restLog += x);
     restChild.stdout.on('data', x => restLog += x);
     for (let i = 0;; i++) {
+        if (restSpawnError)
+            throw new Error(`No se pudo iniciar PostgREST: ${restSpawnError.message}`);
         try {
             const r = await fetch(`http://127.0.0.1:${restPort}/`);
             if (r.ok)
                 break;
         }
         catch { }
+        if (restSpawnError)
+            throw new Error(`No se pudo iniciar PostgREST: ${restSpawnError.message}`);
         if (restChild.exitCode !== null)
             throw new Error(`PostgREST terminó: ${restChild.exitCode}: ${restLog}`);
         if (i >= 600)
@@ -284,13 +293,19 @@ try {
     console.log(`Evidencia temporal: ${workspace}`);
 }
 finally {
-    if (restChild && restChild.exitCode === null) {
-        const stopped = new Promise(r => restChild.once('exit', r));
-        restChild.kill();
-        await stopped;
+    try {
+        if (restChild?.pid && restChild.exitCode === null && restChild.signalCode === null) {
+            const stopped = new Promise(resolve => restChild.once('exit', resolve));
+            restChild.kill();
+            await stopped;
+        }
     }
-    if (pool)
-        await pool.end();
-    if (started)
-        await control(['-D', data, '-m', 'fast', '-w', 'stop']);
+    finally {
+        if (pool)
+            await pool.end();
+        if (started) {
+            await control(['-D', data, '-m', 'fast', '-w', 'stop']);
+            console.log(`PostgreSQL temporal detenido: ${port}`);
+        }
+    }
 }
