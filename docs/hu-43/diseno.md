@@ -22,7 +22,7 @@ el criterio activo en la consola.
 
 El backlog deja abiertos el sentido del orden, la fecha de desempate y si el
 senderista cuenta como participante. Las reglas anteriores son las decisiones
-de implementación para revisar con Jhon y validar funcionalmente con Marko.
+de implementación para revisar con John y validar funcionalmente con Marko.
 
 ## Strategy y SOLID
 
@@ -142,7 +142,7 @@ acompañantes, coordinación vigente, permisos, filtro de zona y conservación d
 persistencia. El SDK utiliza un puente de pruebas hacia SQL local.
 
 Las cuatro consultas reales a Supabase DEV respondieron 200 con conjuntos vacíos
-en los dos criterios. Jhon eligió ejecutar los escenarios con datos en la base local
+en los dos criterios. John eligió ejecutar los escenarios con datos en la base local
 desechable. Queda pendiente la validación funcional del PO y, si el equipo la requiere,
 la ordenación con un conjunto ficticio preparado en DEV.
 

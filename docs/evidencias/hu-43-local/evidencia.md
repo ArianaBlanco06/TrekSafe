@@ -1,6 +1,6 @@
 # HU-43 · Evidencia de integración
 
-Verificado el 11 de noviembre de 2026. Responsable de la historia, Jhon / John.
+Verificado el 11 de noviembre de 2026. Responsable de la historia, John.
 Rama `feat/hu-43-priorizar-alertas`. Issue #44.
 
 ## Resultado
@@ -13,7 +13,7 @@ activas y la lista de alertas conserva las tres alertas abiertas.
 
 La conexión con Supabase DEV se comprobó mediante lecturas reales de la API local.
 DEV devolvió conjuntos vacíos para alertas y expediciones en curso. Por elección
-de Jhon, los escenarios con datos se ejecutaron en PostgreSQL local desechable.
+de John, los escenarios con datos se ejecutaron en PostgreSQL local desechable.
 
 | Criterio | Comprobación | Resultado |
 | --- | --- | --- |
