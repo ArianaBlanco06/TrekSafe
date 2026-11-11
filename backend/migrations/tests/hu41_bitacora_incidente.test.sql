@@ -66,6 +66,16 @@ INSERT INTO public.usuarios (id, correo_electronico, hash_contrasena, rol) VALUE
     ('b0000000-0000-4000-8000-000000000001', 'send1@example.invalid', 'fixture', 'senderista');
 INSERT INTO public.perfiles_senderista (usuario_id, nombre_completo, telefono, id_documento)
     VALUES ('b0000000-0000-4000-8000-000000000001', 'Senderista Ficticio', '999999999', '00000001');
+-- DEP-04 conserva una única expedición bloqueante por senderista. Cada incidente
+-- usa su propio propietario sin cambiar los actores/responsables de los casos.
+INSERT INTO public.usuarios (id, correo_electronico, hash_contrasena, rol)
+SELECT ('b0000000-0000-4000-8000-' || lpad(n::text, 12, '0'))::uuid,
+       'send' || n || '@example.invalid', 'fixture', 'senderista'
+FROM generate_series(2, 8) AS n;
+INSERT INTO public.perfiles_senderista (usuario_id, nombre_completo, telefono, id_documento)
+SELECT ('b0000000-0000-4000-8000-' || lpad(n::text, 12, '0'))::uuid,
+       'Senderista Ficticio ' || n, '999999999', lpad(n::text, 8, '0')
+FROM generate_series(2, 8) AS n;
 INSERT INTO public.registros_institucionales_rescatista
     (institucion, numero_credencial, nombre_completo, fecha_nacimiento) VALUES
     ('AGMP', 'CRED-1', 'Rescatista Uno', '1990-01-01'),
@@ -79,7 +89,7 @@ INSERT INTO public.perfiles_rescatista (usuario_id, numero_credencial, nombre_co
 INSERT INTO public.expediciones
     (id, senderista_id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada, estado)
 SELECT ('e0000000-0000-4000-8000-' || lpad(n::text, 12, '0'))::uuid,
-       'b0000000-0000-4000-8000-000000000001', 'Inicio', 'Destino',
+       ('b0000000-0000-4000-8000-' || lpad(n::text, 12, '0'))::uuid, 'Inicio', 'Destino',
        now() - interval '5 hours', now() - interval '2 hours', 'alerta'::public.estado_expedicion_enum
 FROM generate_series(1, 8) AS n;
 

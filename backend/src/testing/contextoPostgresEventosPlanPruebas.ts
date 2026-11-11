@@ -7,11 +7,12 @@ import { PropiedadExpedicionSupabase } from '../infrastructure/repositories/Prop
 import { clienteSupabaseLecturaPostgresPruebas } from './clienteSupabaseLecturaPostgresPruebas.js';
 import type { ContextoContratoLectorEventosPlan } from './contratoLectorEventosPlan.js';
 
-/** Solo una base local desechable llamada treksafe_hu36_test (ver test-hu36-postgres.ps1). */
+/** Solo las bases locales desechables de HU-36 o DEP-04. */
 export function crearPoolEventosPlanPruebas(conexion: string): pg.Pool {
   const url = new URL(conexion);
-  if (!['127.0.0.1', 'localhost'].includes(url.hostname) || url.pathname !== '/treksafe_hu36_test') {
-    throw new Error('Estas pruebas requieren una base local desechable llamada treksafe_hu36_test.');
+  if (!['127.0.0.1', 'localhost'].includes(url.hostname)
+      || !['/treksafe_hu36_test', '/treksafe_dep108_desechable'].includes(url.pathname)) {
+    throw new Error('Estas pruebas requieren una base local desechable llamada treksafe_hu36_test o treksafe_dep108_desechable.');
   }
   return new pg.Pool({ connectionString: conexion, max: 5 });
 }

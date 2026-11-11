@@ -6,8 +6,9 @@ import { clienteSupabasePostgresPruebas } from './clienteSupabasePostgresPruebas
 
 export function crearPoolEquipoPruebas(conexion: string): pg.Pool {
   const url = new URL(conexion);
-  if (!['127.0.0.1', 'localhost'].includes(url.hostname) || url.pathname !== '/treksafe_hu30_test') {
-    throw new Error('Estas pruebas requieren una base local desechable llamada treksafe_hu30_test.');
+  if (!['127.0.0.1', 'localhost'].includes(url.hostname)
+      || !['/treksafe_hu30_test', '/treksafe_dep108_desechable'].includes(url.pathname)) {
+    throw new Error('Estas pruebas requieren una base local desechable llamada treksafe_hu30_test o treksafe_dep108_desechable.');
   }
   return new pg.Pool({ connectionString: conexion, max: 5 });
 }
