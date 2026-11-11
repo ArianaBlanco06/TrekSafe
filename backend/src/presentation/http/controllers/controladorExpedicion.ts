@@ -4,44 +4,72 @@ import { crearExpedicionSchema } from '../../../application/dto/usuario.dto.js';
 import { ServicioExpedicion } from '../../../application/services/servicioExpedicion.js';
 import type { SolicitudAutenticada } from '../middleware/middlewareAutenticacion.js';
 
-const servicioExpedicion = new ServicioExpedicion();
+export function crearControladorExpedicion(
+  servicioExpedicion: ServicioExpedicion,
+) {
+  function solicitudAuth(req: Request): SolicitudAutenticada {
+    return req as SolicitudAutenticada;
+  }
 
-function solicitudAuth(req: Request): SolicitudAutenticada {
-  return req as SolicitudAutenticada;
-}
+  async function crearExpedicion(req: Request, res: Response): Promise<void> {
+    const entrada = crearExpedicionSchema.parse(req.body);
+    const expedicion = await servicioExpedicion.crearExpedicion(
+      solicitudAuth(req).user.id,
+      entrada,
+    );
+    res.status(201).json({ mensaje: 'Expedición registrada', expedicion });
+  }
 
-export async function crearExpedicion(req: Request, res: Response): Promise<void> {
-  const entrada = crearExpedicionSchema.parse(req.body);
-  const expedicion = await servicioExpedicion.crearExpedicion(solicitudAuth(req).user.id, entrada);
-  res.status(201).json({ mensaje: 'Expedición registrada', expedicion });
-}
+  async function listarExpediciones(
+    req: Request,
+    res: Response,
+  ): Promise<void> {
+    const expediciones = await servicioExpedicion.listarExpediciones(
+      solicitudAuth(req).user.id,
+    );
+    res.status(200).json({ expediciones });
+  }
 
-export async function listarExpediciones(req: Request, res: Response): Promise<void> {
-  const expediciones = await servicioExpedicion.listarExpediciones(solicitudAuth(req).user.id);
-  res.status(200).json({ expediciones });
-}
+  async function obtenerExpedicionActiva(
+    req: Request,
+    res: Response,
+  ): Promise<void> {
+    const expedicion = await servicioExpedicion.obtenerExpedicionActiva(
+      solicitudAuth(req).user.id,
+    );
+    res.status(200).json({ expedicion });
+  }
 
-export async function obtenerExpedicionActiva(req: Request, res: Response): Promise<void> {
-  const expedicion = await servicioExpedicion.obtenerExpedicionActiva(solicitudAuth(req).user.id);
-  res.status(200).json({ expedicion });
-}
+  async function obtenerHistorialExpediciones(
+    req: Request,
+    res: Response,
+  ): Promise<void> {
+    const historial = await servicioExpedicion.obtenerHistorialExpediciones(
+      solicitudAuth(req).user.id,
+    );
+    res.status(200).json(historial);
+  }
 
-export async function obtenerHistorialExpediciones(req: Request, res: Response): Promise<void> {
-  const historial = await servicioExpedicion.obtenerHistorialExpediciones(solicitudAuth(req).user.id);
-  res.status(200).json(historial);
-}
+  async function confirmarRetorno(req: Request, res: Response): Promise<void> {
+    const expedicionId = String(req.params.id);
+    const entrada = confirmarRetornoSchema.parse(req.body);
+    const resultado = await servicioExpedicion.confirmarRetorno(
+      solicitudAuth(req).user.id,
+      expedicionId,
+      entrada,
+    );
+    res.status(200).json({
+      mensaje: 'Retorno seguro registrado',
+      expedicion: resultado.expedicion,
+      confirmadoEn: resultado.confirmadoEn,
+    });
+  }
 
-export async function confirmarRetorno(req: Request, res: Response): Promise<void> {
-  const expedicionId = String(req.params.id);
-  const entrada = confirmarRetornoSchema.parse(req.body);
-  const resultado = await servicioExpedicion.confirmarRetorno(
-    solicitudAuth(req).user.id,
-    expedicionId,
-    entrada,
-  );
-  res.status(200).json({
-    mensaje: 'Retorno seguro registrado',
-    expedicion: resultado.expedicion,
-    confirmadoEn: resultado.confirmadoEn,
-  });
+  return {
+    crearExpedicion,
+    listarExpediciones,
+    obtenerExpedicionActiva,
+    obtenerHistorialExpediciones,
+    confirmarRetorno,
+  };
 }

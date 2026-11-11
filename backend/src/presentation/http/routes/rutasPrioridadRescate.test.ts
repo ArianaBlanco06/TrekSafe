@@ -3,7 +3,7 @@ import { after, before, describe, it } from 'node:test';
 import type { AddressInfo } from 'node:net';
 import express from 'express';
 import type { IIncidenteDAO, Coordinacion } from '../../../domain/repositories/IIncidenteDAO.js';
-import type { FilaExpedicionMonitor } from '../../../infrastructure/repositories/RepositorioRescate.js';
+import type { ExpedicionMonitorLeida } from '../../../application/ports/RepositorioRescate.js';
 import { ErrorAplicacion } from '../../../shared/errors/ErrorAplicacion.js';
 
 // Se carga la configuración histórica antes de sustituir el entorno que leen sus clientes.
@@ -32,21 +32,21 @@ const COORDINACION: Coordinacion = {
   esMia: true,
 };
 
-const ahora = Date.now();
-function fila(id: string, minutosHastaLimite: number, acompanantes: number): FilaExpedicionMonitor {
+const ahora = Date.parse('2030-01-15T12:00:00Z');
+function fila(id: string, minutosHastaLimite: number, acompanantes: number): ExpedicionMonitorLeida {
   return {
     id,
     estado: 'alerta',
-    lugar_inicio: 'Inicio ficticio',
-    lugar_fin: 'Destino ficticio',
-    coordenadas_inicio: null,
-    coordenadas_fin: null,
-    hora_inicio: new Date(ahora - 600 * 60_000).toISOString(),
-    hora_retorno_estimada: new Date(ahora + (minutosHastaLimite - 30) * 60_000).toISOString(),
-    minutos_tolerancia: 30,
-    actualizado_en: new Date(ahora - 30 * 60_000).toISOString(),
-    acompanantes_expedicion: [{ count: acompanantes }],
-    perfiles_senderista: { nombre_completo: 'Senderista de prueba', telefono: '900000000' },
+    lugarInicio: 'Inicio ficticio',
+    lugarFin: 'Destino ficticio',
+    coordenadasInicio: null,
+    coordenadasFin: null,
+    horaInicio: new Date(ahora - 600 * 60_000).toISOString(),
+    horaRetornoEstimada: new Date(ahora + (minutosHastaLimite - 30) * 60_000).toISOString(),
+    minutosTolerancia: 30,
+    actualizadoEn: new Date(ahora - 30 * 60_000).toISOString(),
+    numeroParticipantes: 1 + acompanantes,
+    senderista: { nombreCompleto: 'Senderista de prueba', telefono: '900000000' },
   };
 }
 
@@ -73,7 +73,10 @@ function crearContexto() {
     listarExpedicionesEnAlerta: async () => filas,
     buscarConfirmacionesPorExpediciones: async () => new Map(),
   };
-  const servicio = new ServicioRescate(repo as never, {} as never, {} as never, {} as never, incidentes);
+  const servicio = new ServicioRescate(
+    repo as never, {} as never, {} as never, {} as never, incidentes,
+    { ahora: () => new Date(ahora) },
+  );
   return { servicio, filas, enCurso, lecturas, zonas };
 }
 
@@ -91,9 +94,9 @@ describe('HU-43: prioridad en el servicio de rescate', () => {
     assert.equal(lecturas.length, 2, 'una lectura de coordinaciones por consulta');
   });
 
-  it('cuenta al senderista y sus acompañantes, incluido un viaje individual', async () => {
+  it('conserva el total normalizado de participantes, incluido un viaje individual', async () => {
     const { servicio, filas } = crearContexto();
-    filas[0]!.acompanantes_expedicion = [{ count: 0 }];
+    filas[0]!.numeroParticipantes = 1;
     const items = await servicio.listarAlertas(RESCATISTA);
     assert.equal(items.find((item) => item.expedicionId === 'c')?.numeroParticipantes, 1);
     assert.equal(items.find((item) => item.expedicionId === 'a')?.numeroParticipantes, 2);
@@ -106,6 +109,7 @@ describe('HU-43: prioridad en el servicio de rescate', () => {
     assert.deepEqual(items.map((item) => item.expedicionId), ['c', 'a', 'b', 'd']);
     assert.deepEqual(zonas, ['Destino']);
     assert.equal(items.at(-1)?.estado, 'en_progreso');
+    assert.equal(items[0]?.minutosExcedidos, 60, 'calcula los plazos con el reloj inyectado de DEP-107');
   });
 
   it('ordena sin modificar los datos persistidos de estados, plazos o participantes', async () => {
@@ -120,7 +124,7 @@ describe('HU-43: prioridad en el servicio de rescate', () => {
 
   it('el valor predeterminado coincide con tiempo excedido y admite fixtures anteriores sin conteo', async () => {
     const { servicio, filas } = crearContexto();
-    delete filas[0]!.acompanantes_expedicion;
+    delete filas[0]!.numeroParticipantes;
     const predeterminado = await servicio.listarAlertas(RESCATISTA);
     assert.deepEqual(predeterminado, await servicio.listarAlertas(RESCATISTA, { criterio: 'tiempo_excedido' }));
     assert.equal(predeterminado.find((item) => item.expedicionId === 'c')?.numeroParticipantes, 1);
@@ -137,7 +141,7 @@ describe('HU-43: GET /api/rescate/alertas y /expediciones', () => {
 
   before(async () => {
     const app = express();
-    app.use('/api/rescate', crearRutasRescate({ listadosRescate: contexto.servicio }));
+    app.use('/api/rescate', crearRutasRescate({ servicio: contexto.servicio }));
     app.use(errorHandler);
     servidor = app.listen(0, '127.0.0.1');
     await new Promise<void>((resolve) => servidor.once('listening', resolve));

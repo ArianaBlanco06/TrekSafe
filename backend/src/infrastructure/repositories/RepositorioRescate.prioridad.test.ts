@@ -28,7 +28,11 @@ describe('HU-43: conteo de participantes en las consultas de rescate', () => {
         ? await repo.listarExpedicionesMonitor('Destino')
         : await repo.listarExpedicionesEnAlerta();
 
-      assert.deepEqual(resultado, filas);
+      assert.deepEqual(resultado.map(({ id, numeroParticipantes }) => ({ id, numeroParticipantes })), [
+        { id: 'individual', numeroParticipantes: 1 },
+        { id: 'grupal', numeroParticipantes: 8 },
+      ]);
+      assert.ok(resultado.every((item) => !('acompanantes_expedicion' in item)));
       assert.equal(peticiones.length, 1, 'el conteo no añade lecturas por expedición');
       const consulta = peticiones[0]!;
       assert.equal(consulta.pathname, '/rest/v1/expediciones');

@@ -7,40 +7,44 @@ import {
 } from '../../../application/dto/aviso.dto.js';
 import type { SolicitudAutenticada } from '../middleware/middlewareAutenticacion.js';
 
-const servicioBandeja = new ServicioBandejaAvisos();
-const avisador = new AvisadorCambiosPlan();
+export function crearControladorAvisos(
+  servicioBandeja: ServicioBandejaAvisos,
+  avisador: AvisadorCambiosPlan,
+) {
+  function obtenerUsuarioId(req: Request): string {
+    return (req as SolicitudAutenticada).user.id;
+  }
 
-function obtenerUsuarioId(req: Request): string {
-  return (req as SolicitudAutenticada).user.id;
-}
+  async function listarAvisos(req: Request, res: Response): Promise<void> {
+    const usuarioId = obtenerUsuarioId(req);
+    const { soloNoLeidos } = consultaListarAvisosSchema.parse(req.query);
 
-export async function listarAvisos(req: Request, res: Response): Promise<void> {
-  const usuarioId = obtenerUsuarioId(req);
-  const { soloNoLeidos } = consultaListarAvisosSchema.parse(req.query);
+    // Reconsumo durable e idempotente de eventos huérfanos del plan
+    await avisador.reconstruirEventosPendientes(usuarioId);
 
-  // Reconsumo durable e idempotente de eventos huérfanos del plan
-  await avisador.reconstruirEventosPendientes(usuarioId);
+    const avisos = await servicioBandeja.listarAvisos(usuarioId, soloNoLeidos);
+    res.status(200).json({ datos: avisos });
+  }
 
-  const avisos = await servicioBandeja.listarAvisos(usuarioId, soloNoLeidos);
-  res.status(200).json({ datos: avisos });
-}
+  async function contarNoLeidos(req: Request, res: Response): Promise<void> {
+    const usuarioId = obtenerUsuarioId(req);
+    const conteo = await servicioBandeja.contarNoLeidos(usuarioId);
+    res.status(200).json({ datos: conteo });
+  }
 
-export async function contarNoLeidos(req: Request, res: Response): Promise<void> {
-  const usuarioId = obtenerUsuarioId(req);
-  const conteo = await servicioBandeja.contarNoLeidos(usuarioId);
-  res.status(200).json({ datos: conteo });
-}
+  async function marcarAvisoLeido(req: Request, res: Response): Promise<void> {
+    const usuarioId = obtenerUsuarioId(req);
+    const { id } = paramsAvisoIdSchema.parse(req.params);
 
-export async function marcarAvisoLeido(req: Request, res: Response): Promise<void> {
-  const usuarioId = obtenerUsuarioId(req);
-  const { id } = paramsAvisoIdSchema.parse(req.params);
+    const actualizado = await servicioBandeja.marcarComoLeido(id, usuarioId);
+    res.status(200).json({ datos: actualizado });
+  }
 
-  const actualizado = await servicioBandeja.marcarComoLeido(id, usuarioId);
-  res.status(200).json({ datos: actualizado });
-}
+  async function marcarTodosLeidos(req: Request, res: Response): Promise<void> {
+    const usuarioId = obtenerUsuarioId(req);
+    const resultado = await servicioBandeja.marcarTodosComoLeidos(usuarioId);
+    res.status(200).json({ datos: resultado });
+  }
 
-export async function marcarTodosLeidos(req: Request, res: Response): Promise<void> {
-  const usuarioId = obtenerUsuarioId(req);
-  const resultado = await servicioBandeja.marcarTodosComoLeidos(usuarioId);
-  res.status(200).json({ datos: resultado });
+  return { listarAvisos, contarNoLeidos, marcarAvisoLeido, marcarTodosLeidos };
 }

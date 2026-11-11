@@ -5,15 +5,14 @@ import type {
   ConsultaListarAlertas,
   EntradaActualizarBitacoraRescate,
 } from '../dto/rescate.dto.js';
-import { RepositorioAlerta } from '../../infrastructure/repositories/RepositorioAlerta.js';
-import { calcularFechaLimite } from '../../infrastructure/repositories/RepositorioExpedicion.js';
-import { RepositorioRescate } from '../../infrastructure/repositories/RepositorioRescate.js';
-import { RepositorioUsuario } from '../../infrastructure/repositories/RepositorioUsuario.js';
-import { RepositorioAuditoriaAccesoMedico } from '../../infrastructure/repositories/RepositorioAuditoriaAccesoMedico.js';
+import type { IRepositorioAlerta } from '../ports/RepositorioAlerta.js';
+import { calcularFechaLimite } from '../../domain/entities/Expedicion.js';
+import type { IReloj } from '../../domain/services/IReloj.js';
+import type { IRepositorioRescate } from '../ports/RepositorioRescate.js';
+import type { IRepositorioUsuario } from '../ports/RepositorioUsuario.js';
+import type { IRepositorioAuditoriaAccesoMedico } from '../ports/RepositorioAuditoriaAccesoMedico.js';
 import type { NivelRiesgoExpedicion } from '../../domain/value-objects/enums.js';
 import type { Coordinacion, IIncidenteDAO } from '../../domain/repositories/IIncidenteDAO.js';
-import { getSupabaseAdmin } from '../../infrastructure/database/supabase.js';
-import { IncidenteDAOSupabase } from '../../infrastructure/repositories/IncidenteDAOSupabase.js';
 import { OrdenadorAlertas } from '../../domain/services/OrdenadorAlertas.js';
 import {
   CRITERIO_PRIORIDAD_PREDETERMINADO,
@@ -156,11 +155,12 @@ export type ItemHistorialRescatista = {
 
 export class ServicioRescate {
   constructor(
-    private readonly repo = new RepositorioRescate(),
-    private readonly repoAlerta = new RepositorioAlerta(),
-    private readonly repoUsuario = new RepositorioUsuario(),
-    private readonly repoAuditoria = new RepositorioAuditoriaAccesoMedico(),
-    private readonly incidentes: IIncidenteDAO = new IncidenteDAOSupabase(getSupabaseAdmin()),
+    private readonly repo: IRepositorioRescate,
+    private readonly repoAlerta: IRepositorioAlerta,
+    private readonly repoUsuario: IRepositorioUsuario,
+    private readonly repoAuditoria: IRepositorioAuditoriaAccesoMedico,
+    private readonly incidentes: IIncidenteDAO,
+    private readonly reloj: IReloj = { ahora: () => new Date() },
     private readonly estrategiasPrioridad = ESTRATEGIAS_PRIORIDAD,
   ) {}
 
@@ -181,38 +181,37 @@ export class ServicioRescate {
     const items: ItemExpedicionRescate[] = [];
 
     for (const fila of expediciones) {
-      const senderista = Array.isArray(fila.perfiles_senderista)
-        ? fila.perfiles_senderista[0]
-        : fila.perfiles_senderista;
+      const senderista = fila.senderista;
       if (!senderista) continue;
 
-      const fechaLimite = calcularFechaLimite(fila.hora_retorno_estimada, fila.minutos_tolerancia);
+      const fechaLimite = calcularFechaLimite(fila.horaRetornoEstimada, fila.minutosTolerancia);
       const { nivelRiesgo, minutosRestantes, minutosExcedidos } = calcularNivelRiesgoExpedicion(
         fila.estado,
         fechaLimite,
+        this.reloj.ahora().getTime(),
       );
       const confirmacion = confirmaciones.get(fila.id) ?? null;
 
       items.push({
         expedicionId: fila.id,
-        numeroParticipantes: 1 + (fila.acompanantes_expedicion?.[0]?.count ?? 0),
+        numeroParticipantes: fila.numeroParticipantes ?? 1,
         estado: fila.estado,
         nivelRiesgo,
-        nombreCompletoSenderista: senderista.nombre_completo,
+        nombreCompletoSenderista: senderista.nombreCompleto,
         telefonoSenderista: senderista.telefono,
-        lugarInicio: fila.lugar_inicio,
-        lugarFin: fila.lugar_fin,
-        coordenadasInicio: fila.coordenadas_inicio ?? null,
-        coordenadasFin: fila.coordenadas_fin ?? null,
-        horaInicio: fila.hora_inicio,
-        horaRetornoEstimada: fila.hora_retorno_estimada,
+        lugarInicio: fila.lugarInicio,
+        lugarFin: fila.lugarFin,
+        coordenadasInicio: fila.coordenadasInicio ?? null,
+        coordenadasFin: fila.coordenadasFin ?? null,
+        horaInicio: fila.horaInicio,
+        horaRetornoEstimada: fila.horaRetornoEstimada,
         fechaLimite,
         minutosRestantes,
         minutosExcedidos,
-        enAlertaDesde: fila.estado === 'alerta' ? fila.actualizado_en : null,
+        enAlertaDesde: fila.estado === 'alerta' ? fila.actualizadoEn : null,
         confirmadoPorMi: confirmacion !== null,
-        confirmadoEn: confirmacion?.actualizado_en ?? null,
-        estadoRescate: confirmacion?.estado_rescate ?? null,
+        confirmadoEn: confirmacion?.actualizadoEn ?? null,
+        estadoRescate: confirmacion?.estadoRescate ?? null,
         coordinacion: coordinaciones.get(fila.id) ?? null,
       });
     }
@@ -238,27 +237,25 @@ export class ServicioRescate {
     const items: ItemAlertaRescate[] = [];
 
     for (const fila of expediciones) {
-      const senderista = Array.isArray(fila.perfiles_senderista)
-        ? fila.perfiles_senderista[0]
-        : fila.perfiles_senderista;
+      const senderista = fila.senderista;
       if (!senderista) continue;
 
       const confirmacion = confirmaciones.get(fila.id) ?? null;
 
       items.push({
         expedicionId: fila.id,
-        numeroParticipantes: 1 + (fila.acompanantes_expedicion?.[0]?.count ?? 0),
-        nombreCompletoSenderista: senderista.nombre_completo,
+        numeroParticipantes: fila.numeroParticipantes ?? 1,
+        nombreCompletoSenderista: senderista.nombreCompleto,
         telefonoSenderista: senderista.telefono,
-        lugarInicio: fila.lugar_inicio,
-        lugarFin: fila.lugar_fin,
-        horaInicio: fila.hora_inicio,
-        horaRetornoEstimada: fila.hora_retorno_estimada,
-        fechaLimite: calcularFechaLimite(fila.hora_retorno_estimada, fila.minutos_tolerancia),
-        enAlertaDesde: fila.actualizado_en,
+        lugarInicio: fila.lugarInicio,
+        lugarFin: fila.lugarFin,
+        horaInicio: fila.horaInicio,
+        horaRetornoEstimada: fila.horaRetornoEstimada,
+        fechaLimite: calcularFechaLimite(fila.horaRetornoEstimada, fila.minutosTolerancia),
+        enAlertaDesde: fila.actualizadoEn,
         confirmadoPorMi: confirmacion !== null,
-        confirmadoEn: confirmacion?.actualizado_en ?? null,
-        estadoRescate: confirmacion?.estado_rescate ?? null,
+        confirmadoEn: confirmacion?.actualizadoEn ?? null,
+        estadoRescate: confirmacion?.estadoRescate ?? null,
         coordinacion: coordinaciones.get(fila.id) ?? null,
       });
     }
@@ -302,7 +299,7 @@ export class ServicioRescate {
       horaRetornoEstimada: contexto.horaRetornoEstimada,
       minutosTolerancia: contexto.minutosTolerancia,
       fechaLimite: contexto.fechaLimite,
-      enAlertaDesde: expedicion?.actualizado_en ?? new Date().toISOString(),
+      enAlertaDesde: expedicion?.actualizadoEn ?? this.reloj.ahora().toISOString(),
       acompanantes: contexto.acompanantes,
       contactosEmergencia: contexto.contactos.map((c, i) => ({
         nombreCompleto: c.nombreCompleto,
@@ -321,9 +318,9 @@ export class ServicioRescate {
       bitacoraRescate: confirmacion
         ? {
             id: confirmacion.id,
-            estadoRescate: confirmacion.estado_rescate,
+            estadoRescate: confirmacion.estadoRescate,
             notas: confirmacion.notas,
-            actualizadoEn: confirmacion.actualizado_en,
+            actualizadoEn: confirmacion.actualizadoEn,
           }
         : null,
       coordinacion: coordinaciones.get(expedicionId) ?? null,
@@ -351,10 +348,10 @@ export class ServicioRescate {
       mensaje: 'Bitácora actualizada',
       bitacoraRescate: {
         id: bitacora.id,
-        expedicionId: bitacora.expedicion_id,
-        estadoRescate: bitacora.estado_rescate,
+        expedicionId: bitacora.expedicionId,
+        estadoRescate: bitacora.estadoRescate,
         notas: bitacora.notas,
-        actualizadoEn: bitacora.actualizado_en,
+        actualizadoEn: bitacora.actualizadoEn,
       },
     };
   }
@@ -382,9 +379,9 @@ export class ServicioRescate {
       mensaje: 'Recepción de alerta confirmada',
       confirmacion: {
         id: bitacora.id,
-        expedicionId: bitacora.expedicion_id,
-        estadoRescate: bitacora.estado_rescate,
-        confirmadoEn: bitacora.actualizado_en,
+        expedicionId: bitacora.expedicionId,
+        estadoRescate: bitacora.estadoRescate,
+        confirmadoEn: bitacora.actualizadoEn,
         notas: bitacora.notas,
       },
     };
@@ -397,26 +394,24 @@ export class ServicioRescate {
     const items: ItemHistorialRescatista[] = [];
 
     for (const fila of filas) {
-      const expedicion = fila.expediciones;
+      const expedicion = fila.expedicion;
       if (!expedicion) continue;
 
-      const senderista = Array.isArray(expedicion.perfiles_senderista)
-        ? expedicion.perfiles_senderista[0]
-        : expedicion.perfiles_senderista;
+      const senderista = expedicion.senderista;
       if (!senderista) continue;
 
       items.push({
         expedicionId: expedicion.id,
-        nombreCompletoSenderista: senderista.nombre_completo,
+        nombreCompletoSenderista: senderista.nombreCompleto,
         telefonoSenderista: senderista.telefono,
-        lugarInicio: expedicion.lugar_inicio,
-        lugarFin: expedicion.lugar_fin,
-        horaInicio: expedicion.hora_inicio,
-        horaRetornoEstimada: expedicion.hora_retorno_estimada,
-        fechaLimite: calcularFechaLimite(expedicion.hora_retorno_estimada, expedicion.minutos_tolerancia),
-        completadaEn: expedicion.actualizado_en,
-        estadoRescate: fila.estado_rescate,
-        confirmadoEn: fila.actualizado_en,
+        lugarInicio: expedicion.lugarInicio,
+        lugarFin: expedicion.lugarFin,
+        horaInicio: expedicion.horaInicio,
+        horaRetornoEstimada: expedicion.horaRetornoEstimada,
+        fechaLimite: calcularFechaLimite(expedicion.horaRetornoEstimada, expedicion.minutosTolerancia),
+        completadaEn: expedicion.actualizadoEn,
+        estadoRescate: fila.estadoRescate,
+        confirmadoEn: fila.actualizadoEn,
         notas: fila.notas,
       });
     }

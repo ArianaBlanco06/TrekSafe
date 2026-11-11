@@ -1,14 +1,15 @@
 import { Router } from 'express';
 import { asyncHandler } from '../middleware/asyncHandler.js';
-import { middlewareAutenticacion, requerirRol } from '../middleware/middlewareAutenticacion.js';
 import {
-  listarAvisos,
-  contarNoLeidos,
-  marcarAvisoLeido,
-  marcarTodosLeidos,
-} from '../controllers/controladorAvisos.js';
+  middlewareAutenticacion,
+  requerirRol,
+} from '../middleware/middlewareAutenticacion.js';
+import { crearControladorAvisos } from '../controllers/controladorAvisos.js';
+import { crearServiciosAvisos } from '../../../infrastructure/composicion/servicios.js';
 
-export function crearRutasAvisos(): Router {
+export function crearRutasAvisos(modulo = crearServiciosAvisos()): Router {
+  const { listarAvisos, contarNoLeidos, marcarAvisoLeido, marcarTodosLeidos } =
+    crearControladorAvisos(modulo.servicio, modulo.avisador);
   const router = Router();
 
   // HU-37: Seguridad estricta - solo el senderista autenticado puede consultar o mutar su bandeja
