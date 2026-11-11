@@ -86,9 +86,9 @@ interpretan como cero acompañantes. Esta fase utiliza tablas existentes.
 3. Integración y evidencia. Verificar el conteo embebido en Supabase DEV y el
    comportamiento de la consola, preparar evidencias del PR y validación del PO.
 
-Las pruebas HTTP de esta fase usan el servicio y middleware reales con repositorios
-sustituidos. La comprobación del conteo contra Supabase DEV queda pendiente para
-la fase de integración.
+Las pruebas HTTP de backend usan el servicio y middleware reales con repositorios
+sustituidos. La fase de integración amplía esa evidencia con PostgreSQL local
+desechable y consultas reales a Supabase DEV, cuyo conjunto de alertas está vacío.
 
 ## Resultado local de la fase de backend
 
@@ -107,3 +107,44 @@ Comandos ejecutados desde `backend` con Node.js 22 en el PATH.
 node node_modules/typescript/bin/tsc --noEmit
 node --import tsx --test "src/**/*.test.ts"
 ```
+
+## Frontend y resultado local
+
+La consola ofrece las opciones Tiempo excedido y Participantes declarados. El
+cliente envía `criterio` junto al filtro opcional de zona y cada tarjeta muestra
+el total declarado de participantes.
+
+`useConsolaRescate` reúne la lectura y el refresco periódico. La pantalla conserva
+la última lista válida durante una actualización y muestra el criterio que produjo
+esa lista. Una respuesta satisfactoria actualiza juntos la lista, el criterio y la
+zona aplicada. Ante un fallo, el reintento utiliza la selección solicitada.
+
+Las solicitudes llevan una secuencia para descartar respuestas de consultas
+anteriores. El refresco espera si hay una carga pendiente y se detiene al salir
+de la pantalla. La ordenación procede de las estrategias del backend.
+
+Verificado el 11 de noviembre de 2026 con Node.js 22.23.4.
+
+- Nueve pruebas nuevas aprobadas de cliente y consola con React y HTTP sustituido.
+- Suite de frontend con 161 pruebas aprobadas y dos integraciones PostgreSQL
+  omitidas por falta de conexión de pruebas.
+- Chequeo de tipos y compilación de producción de la PWA aprobados.
+- Consola compilada comprobada en Microsoft Edge mediante Playwright, con datos
+  ficticios y respuestas HTTP sustituidas. Se verificaron tres alertas, selección
+  del criterio, orden recibido, anchuras de 390 y 320 píxeles y ausencia de errores
+  JavaScript y desbordamiento horizontal.
+
+## Integración y evidencia
+
+Se completaron siete casos con PostgreSQL 18.1 local desechable, la API y la consola
+en navegador. Los escenarios cubren los dos criterios, empates, conteo real de
+acompañantes, coordinación vigente, permisos, filtro de zona y conservación de la
+persistencia. El SDK utiliza un puente de pruebas hacia SQL local.
+
+Las cuatro consultas reales a Supabase DEV respondieron 200 con conjuntos vacíos
+en los dos criterios. Jhon eligió ejecutar los escenarios con datos en la base local
+desechable. Queda pendiente la validación funcional del PO y, si el equipo la requiere,
+la ordenación con un conjunto ficticio preparado en DEV.
+
+Las capturas, el alcance y los resultados están en
+[la evidencia de integración](../evidencias/hu-43-local/evidencia.md).
