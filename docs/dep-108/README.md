@@ -78,6 +78,8 @@ La unión funcional `0cef504` incorpora #107 (`65264d0`) y #108 (`fa75daa`) sobr
 
 La interfaz con HU-41 pasó tipos/build y **33 pruebas de navegador** (13 UI y 20 privacidad/PWA). La normalización posterior del backend preservó los JSON mediante regresiones HTTP específicas. Los archivos SQL ya aplicados a DEV (`015`, `022`, `023`, `024`) no cambiaron ni se reaplicaron.
 
+Se entrecomillaron los patrones de `test:equipo` para que Node resuelva también archivos anidados en Linux: el shell de CI expandía los patrones antes de ejecutar el runner y solo encontraba 129 pruebas, frente a las 152 de Windows. Las dos pruebas condicionales siguen diferenciadas de las aprobadas.
+
 Entrega en dos PR a `develop`: revisar/integrar primero [#119](https://github.com/ArianaBlanco06/TrekSafe/pull/119) (#107) y después [#120](https://github.com/ArianaBlanco06/TrekSafe/pull/120) (#108). La rama de #108 incorpora #107 para conciliar el adaptador compartido y ejecutar CI sobre la combinación; tras integrar #119, el diff de #120 se reduce a persistencia. No se fusiona ninguno automáticamente.
 
 Las nuevas migraciones son aditivas y de una sola aplicación. Una versión anterior puede conservar el esquema, pero no se debe activar simultáneamente envío legado y nuevo sin el corte/conciliación de #109. Preservar datos/pendientes ante un fallo; no usar `init_schema.sql`, `.down.sql` destructivos ni borrar asientos para forzar repetición. Una incompatibilidad requiere una migración correctiva ensayada.
