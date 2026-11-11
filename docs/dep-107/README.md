@@ -72,6 +72,10 @@ Los tests de importación se ejecutan en un proceso sin credenciales e instrumen
 
 Resultado local del 2026-11-11 con **Node 22.23.4**: verificación de tipos aprobada, **556 pruebas aprobadas**, build aprobado y diagrama Mermaid renderizado. Las suites PostgreSQL condicionadas a variables de integración no se activan por este comando; la validación SQL y conjunta con #108 se registra por separado. La ejecución usó acceso a servidores locales de prueba, sin cron contra DEV ni correo real.
 
+## Validación conjunta con #108
+
+La unión local de `032317f` (#107) y `a988637` (#108), sobre `develop` `3b61042`, pasó con Node 22.23.4: **567 pruebas backend**, tipos y compilación de backend/frontend, **25 escenarios PostgreSQL/PostgREST**, **125 pruebas frontend** y **33 pruebas de navegador** (13 de interfaz y 20 de privacidad/PWA). Dos pruebas frontend condicionadas a sus runners SQL específicos se omitieron por ese comando y no se cuentan como aprobadas. Esta evidencia conjunta es local; la aplicación y prueba SQL reales de DEV están en el dossier de #108.
+
 ## Límites y trabajo siguiente
 
 Los recursos de Fly y sus comandos ejecutables siguen con la configuración anterior hasta #110. #108 cambia la creación del adaptador a RPC sobre esta misma firma. #109 integrará reclamación, reservas, reintentos y resultado incierto de outbox. #110 añadirá señales persistentes entre procesos; #112 acreditará la versión publicada. Esta entrega no declara esas tareas terminadas ni aplica migraciones a DEV.
