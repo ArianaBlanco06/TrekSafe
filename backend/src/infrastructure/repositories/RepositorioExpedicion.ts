@@ -1,3 +1,8 @@
+import type {
+  ExpedicionLeida,
+  ExpedicionActivaLeida,
+  IRepositorioExpedicion,
+} from '../../application/ports/RepositorioExpedicion.js';
 import { calcularFechaLimite } from '../../domain/entities/Expedicion.js';
 import { ErrorAplicacion } from '../../shared/errors/ErrorAplicacion.js';
 import { parseDecimalCoordinates } from '../../shared/utils/coordinates.js';
@@ -29,7 +34,38 @@ type FilaExpedicionActiva = FilaExpedicion & {
   eventos_plan?: { tipo: string }[];
 };
 
-export class RepositorioExpedicion {
+/** Traducción única de filas SQL a la lectura de negocio usada por los servicios. */
+export function mapearExpedicionPersistida(fila: FilaExpedicion): ExpedicionLeida {
+  return {
+    id: fila.id,
+    lugarInicio: fila.lugar_inicio,
+    lugarFin: fila.lugar_fin,
+    horaInicio: fila.hora_inicio,
+    horaRetornoEstimada: fila.hora_retorno_estimada,
+    minutosTolerancia: fila.minutos_tolerancia,
+    estado: fila.estado,
+    version: fila.version,
+    creadoEn: fila.creado_en,
+    actualizadoEn: fila.actualizado_en,
+  };
+}
+
+export function mapearExpedicionActivaPersistida(fila: FilaExpedicionActiva): ExpedicionActivaLeida {
+  return {
+    ...mapearExpedicionPersistida(fila),
+    acompanantes: fila.acompanantes_expedicion.map((a) => a.nombre_acompanante),
+    contactos: fila.vinculos_expedicion_contacto.flatMap(
+      ({ contactos_emergencia: contacto }) => contacto
+        ? [{ nombreCompleto: contacto.nombre_completo, correoElectronico: contacto.correo_electronico }]
+        : [],
+    ),
+    cantidadAmpliaciones: (fila.eventos_plan ?? []).filter(
+      (evento) => evento.tipo === 'RETORNO_AMPLIADO',
+    ).length,
+  };
+}
+
+export class RepositorioExpedicion implements IRepositorioExpedicion {
   constructor(private readonly supabase = getSupabaseAdmin()) {}
 
   async tieneExpedicionBloqueante(senderistaId: string): Promise<boolean> {
@@ -74,7 +110,7 @@ export class RepositorioExpedicion {
       idsContactos: string[];
       nombresAcompanantes: string[];
     },
-  ): Promise<FilaExpedicion> {
+  ): Promise<ExpedicionLeida> {
     const coordsInicio = input.coordenadasInicio
       ? parseDecimalCoordinates(input.coordenadasInicio)?.formatted ?? null
       : null;
@@ -121,10 +157,10 @@ export class RepositorioExpedicion {
     if (!data || typeof data !== 'object' || !('id' in data)) {
       throw new ErrorAplicacion(500, 'Respuesta inválida al crear la expedición');
     }
-    return data as FilaExpedicion;
+    return mapearExpedicionPersistida(data as FilaExpedicion);
   }
 
-  async listarExpedicionesCompletadas(senderistaId: string): Promise<FilaExpedicion[]> {
+  async listarExpedicionesCompletadas(senderistaId: string): Promise<ExpedicionLeida[]> {
     const { data, error } = await this.supabase
       .from('expediciones')
       .select(
@@ -135,10 +171,10 @@ export class RepositorioExpedicion {
       .order('actualizado_en', { ascending: false });
 
     if (error) throw new ErrorAplicacion(500, error.message);
-    return data ?? [];
+    return (data ?? []).map(mapearExpedicionPersistida);
   }
 
-  async listarExpediciones(senderistaId: string): Promise<FilaExpedicion[]> {
+  async listarExpediciones(senderistaId: string): Promise<ExpedicionLeida[]> {
     const { data, error } = await this.supabase
       .from('expediciones')
       .select(
@@ -148,10 +184,10 @@ export class RepositorioExpedicion {
       .order('creado_en', { ascending: false });
 
     if (error) throw new ErrorAplicacion(500, error.message);
-    return data ?? [];
+    return (data ?? []).map(mapearExpedicionPersistida);
   }
 
-  async buscarActivaPorSenderista(senderistaId: string): Promise<FilaExpedicionActiva | null> {
+  async buscarActivaPorSenderista(senderistaId: string): Promise<ExpedicionActivaLeida | null> {
     const { data, error } = await this.supabase
       .from('expediciones')
       .select(
@@ -172,10 +208,11 @@ export class RepositorioExpedicion {
     if (error) throw new ErrorAplicacion(500, error.message);
     const filas = (data ?? []) as unknown as FilaExpedicionActiva[];
     if (filas.length === 0) return null;
-    return filas.find((r) => r.estado === 'alerta') ?? filas[0] ?? null;
+    const fila = filas.find((r) => r.estado === 'alerta') ?? filas[0];
+    return fila ? mapearExpedicionActivaPersistida(fila) : null;
   }
 
-  async buscarPorIdParaSenderista(expedicionId: string, senderistaId: string): Promise<FilaExpedicion | null> {
+  async buscarPorIdParaSenderista(expedicionId: string, senderistaId: string): Promise<ExpedicionLeida | null> {
     const { data, error } = await this.supabase
       .from('expediciones')
       .select(
@@ -186,7 +223,7 @@ export class RepositorioExpedicion {
       .maybeSingle();
 
     if (error) throw new ErrorAplicacion(500, error.message);
-    return data;
+    return data ? mapearExpedicionPersistida(data) : null;
   }
 
   async promoverProgramadasListas(): Promise<number> {
@@ -279,7 +316,7 @@ export class RepositorioExpedicion {
     return marcadas;
   }
 
-  async completarConfirmacionRetorno(expedicionId: string, senderistaId: string): Promise<FilaExpedicion> {
+  async completarConfirmacionRetorno(expedicionId: string, senderistaId: string): Promise<ExpedicionLeida> {
     const confirmadoEn = new Date().toISOString();
 
     const { data, error } = await this.supabase
@@ -302,7 +339,7 @@ export class RepositorioExpedicion {
       );
     }
 
-    return data;
+    return mapearExpedicionPersistida(data);
   }
 
   async buscarEnProgresoParaRecordatorio(): Promise<

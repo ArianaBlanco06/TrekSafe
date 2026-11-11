@@ -1,9 +1,9 @@
 import type { EntradaActualizarFichaMedica, EntradaCrearContacto } from '../dto/usuario.dto.js';
 import type { EntradaRevocacionDatos } from '../dto/privacidad.dto.js';
-import { RepositorioUsuario } from '../../infrastructure/repositories/RepositorioUsuario.js';
+import type { IRepositorioUsuario } from '../ports/RepositorioUsuario.js';
 
 export class ServicioUsuario {
-  constructor(private readonly repo = new RepositorioUsuario()) {}
+  constructor(private readonly repo: IRepositorioUsuario) {}
 
   async actualizarFichaMedica(senderistaId: string, entrada: EntradaActualizarFichaMedica) {
     await this.repo.verificarEsSenderista(senderistaId);

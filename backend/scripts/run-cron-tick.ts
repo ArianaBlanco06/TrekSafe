@@ -1,6 +1,7 @@
-import { loadEnv } from '../src/infrastructure/config/env.js';
+import { inicializarEntorno, loadEnv } from '../src/infrastructure/config/env.js';
 import { ejecutarTickFechaLimite } from '../src/infrastructure/jobs/cronFechaLimiteExpedicion.js';
 
+inicializarEntorno();
 loadEnv();
 
 ejecutarTickFechaLimite()

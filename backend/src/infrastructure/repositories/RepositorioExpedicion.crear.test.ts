@@ -7,9 +7,12 @@ const adapter = (error: unknown, data: unknown = null) => new RepositorioExpedic
 describe('DEP-108 crear expedición mediante RPC única', () => {
     it('normaliza coordenadas y transmite una sola RPC sin escrituras compensatorias', async () => {
         const calls: unknown[] = [];
-        const row = { id: 'expedicion', estado: 'programada', version: 1 };
+        const row = { id: 'expedicion', estado: 'programada', version: 1, lugar_inicio: 'Inicio', hora_inicio: input.horaInicio };
         const repo = new RepositorioExpedicion({ rpc: async (name: string, args: unknown) => { calls.push([name, args]); return { data: row, error: null }; }, from: () => { throw new Error('No debe escribir por tablas'); } } as never);
-        assert.equal(await repo.crearExpedicion('actor', { ...input, coordenadasInicio: '-12,-77' }), row);
+        const resultado = await repo.crearExpedicion('actor', { ...input, coordenadasInicio: '-12,-77' });
+        assert.equal(resultado.lugarInicio, 'Inicio');
+        assert.equal(resultado.horaInicio, input.horaInicio);
+        assert.equal('lugar_inicio' in resultado, false);
         assert.equal(calls.length, 1);
         assert.equal((calls[0] as [
             string,

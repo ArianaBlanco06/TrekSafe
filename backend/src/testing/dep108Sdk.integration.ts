@@ -40,6 +40,9 @@ try {
     assert.ok(created.id);
     assert.equal(created.estado, 'programada');
     assert.equal(created.version, 1);
+    assert.equal(created.lugarInicio, input.lugarInicio);
+    assert.equal(new Date(created.horaInicio).toISOString(), input.horaInicio);
+    assert.equal('lugar_inicio' in created, false);
     assert.equal((await db.query('SELECT count(*)::int n FROM public.vinculos_expedicion_contacto WHERE expedicion_id=$1', [created.id])).rows[0].n, 1);
     assert.equal((await db.query('SELECT count(*)::int n FROM public.acompanantes_expedicion WHERE expedicion_id=$1', [created.id])).rows[0].n, 1);
     await assert.rejects(() => repo.crearExpedicion(actor, { ...input, idsContactos: [foreignContact] }), (e: unknown) => e instanceof Error && e.message.includes('no pertenecen'));
