@@ -1,6 +1,6 @@
 # DEP-03 / #107 — API y tareas con composición independiente
 
-Responsable: Marko Antonio Lopez Bernuy (PO). Base de implementación: `develop` en `68f24406660065ee2a227c037591e5521add6250`, con HU-39. Diseño acordado: [issue #106](https://github.com/ArianaBlanco06/TrekSafe/issues/106) y [PR #113](https://github.com/ArianaBlanco06/TrekSafe/pull/113).
+Responsable: Marko Antonio Lopez Bernuy (PO). Base de entrega: `develop` en `3b61042beb2265a4b38d2e2bc9427e410a65ae1e`, con HU-39, el diseño de [issue #106](https://github.com/ArianaBlanco06/TrekSafe/issues/106) integrado mediante [PR #113](https://github.com/ArianaBlanco06/TrekSafe/pull/113), y el registro DEV de 017/018. La implementación y las pruebas comenzaron sobre `68f2440`; la actualización de base incorporó únicamente documentación y registro.
 
 Esta entrega separa ensamblaje y ejecución. No cambia rutas, JWT, códigos HTTP, reglas de expediciones ni coordinación de incidentes. No cambia SQL ni publica máquinas. La persistencia transaccional se integra desde #108; outbox y recuperación de despachos corresponden a #109.
 
