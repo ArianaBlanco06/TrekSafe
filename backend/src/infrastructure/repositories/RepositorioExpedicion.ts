@@ -30,7 +30,7 @@ type FilaExpedicionActiva = FilaExpedicion & {
 };
 
 export class RepositorioExpedicion {
-  private readonly supabase = getSupabaseAdmin();
+  constructor(private readonly supabase = getSupabaseAdmin()) {}
 
   async tieneExpedicionBloqueante(senderistaId: string): Promise<boolean> {
     const { data, error } = await this.supabase
@@ -82,56 +82,46 @@ export class RepositorioExpedicion {
       ? parseDecimalCoordinates(input.coordenadasFin)?.formatted ?? null
       : null;
 
-    const { data: expedicion, error } = await this.supabase
-      .from('expediciones')
-      .insert({
-        senderista_id: senderistaId,
-        lugar_inicio: input.lugarInicio,
-        lugar_fin: input.lugarFin,
-        coordenadas_inicio: coordsInicio,
-        coordenadas_fin: coordsFin,
-        hora_inicio: input.horaInicio,
-        hora_retorno_estimada: input.horaRetornoEstimada,
-        minutos_tolerancia: input.minutosTolerancia,
-        minutos_recordatorio: input.minutosRecordatorio ?? 30,
-        estado: input.estado,
-      })
-      .select(
-        'id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada, minutos_tolerancia, minutos_recordatorio, estado, version, creado_en',
-      )
-      .single();
-
-    if (error || !expedicion) throw new ErrorAplicacion(500, error?.message ?? 'Error al crear expedición');
-
-    const enlacesContacto = input.idsContactos.map((contactoId) => ({
-      expedicion_id: expedicion.id,
-      contacto_id: contactoId,
-    }));
-
-    const { error: errorEnlace } = await this.supabase
-      .from('vinculos_expedicion_contacto')
-      .insert(enlacesContacto);
-
-    if (errorEnlace) {
-      await this.supabase.from('expediciones').delete().eq('id', expedicion.id);
-      throw new ErrorAplicacion(500, errorEnlace.message);
+    const { data, error } = await this.supabase.rpc('treksafe_crear_expedicion', {
+      p_senderista_id: senderistaId,
+      p_datos: {
+        ...input,
+        coordenadasInicio: coordsInicio,
+        coordenadasFin: coordsFin,
+        minutosRecordatorio: input.minutosRecordatorio ?? 30,
+      },
+    });
+    if (error) {
+      if (error.message === 'EXPEDICION_ACTIVA_EXISTE'
+        || (error.code === '23505' && error.message.includes('uq_expedicion_bloqueante_senderista'))) {
+        throw new ErrorAplicacion(409,
+          'Ya tienes una expedición en curso o en alerta. Confirma tu retorno antes de crear otra.',
+          'EXPEDICION_ACTIVA_EXISTE');
+      }
+      if (error.message === 'CONTACTOS_INVALIDOS') {
+        throw new ErrorAplicacion(400, 'Uno o más contactos no pertenecen al senderista', 'CONTACTOS_INVALIDOS');
+      }
+      if (error.message === 'HORA_INICIO_INVALIDA') {
+        throw new ErrorAplicacion(400, 'La hora de salida debe ser posterior al momento actual', 'HORA_INICIO_INVALIDA');
+      }
+      if (error.message === 'HORA_RETORNO_INVALIDA') {
+        throw new ErrorAplicacion(400, 'La hora de retorno estimada debe ser posterior al momento actual', 'HORA_RETORNO_INVALIDA');
+      }
+      if (error.message === 'NO_ES_SENDERISTA') {
+        throw new ErrorAplicacion(403, 'Solo un senderista puede crear una expedición', 'PROHIBIDO');
+      }
+      if (error.message === 'DATOS_INVALIDOS') {
+        throw new ErrorAplicacion(400, 'Datos de expedición inválidos', 'DATOS_INVALIDOS');
+      }
+      if (error.code === 'PGRST202' || error.code === '42883') {
+        throw new ErrorAplicacion(500, 'La base de datos requiere la migración de creación transaccional');
+      }
+      throw new ErrorAplicacion(500, 'No se pudo crear la expedición');
     }
-
-    const acompanantes = input.nombresAcompanantes.map((nombre) => ({
-      expedicion_id: expedicion.id,
-      nombre_acompanante: nombre,
-    }));
-
-    const { error: errorAcompanante } = await this.supabase
-      .from('acompanantes_expedicion')
-      .insert(acompanantes);
-
-    if (errorAcompanante) {
-      await this.supabase.from('expediciones').delete().eq('id', expedicion.id);
-      throw new ErrorAplicacion(500, errorAcompanante.message);
+    if (!data || typeof data !== 'object' || !('id' in data)) {
+      throw new ErrorAplicacion(500, 'Respuesta inválida al crear la expedición');
     }
-
-    return expedicion;
+    return data as FilaExpedicion;
   }
 
   async listarExpedicionesCompletadas(senderistaId: string): Promise<FilaExpedicion[]> {

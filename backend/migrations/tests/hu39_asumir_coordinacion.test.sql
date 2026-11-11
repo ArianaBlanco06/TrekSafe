@@ -46,9 +46,21 @@ INSERT INTO public.perfiles_rescatista (usuario_id, numero_credencial, nombre_co
     ('a0000000-0000-4000-8000-000000000001', 'CRED-1', 'Rescatista Uno', '1990-01-01'),
     ('a0000000-0000-4000-8000-000000000002', 'CRED-2', 'Rescatista Dos', '1991-02-02');
 
+-- Un propietario por expedición: compatible con DEP-04, que impide dos planes
+-- bloqueantes de un mismo senderista. No cambia los actores de coordinación.
+INSERT INTO public.usuarios(id, correo_electronico, hash_contrasena, rol)
+SELECT id, id::text || '@example.invalid', 'fixture', 'senderista'
+FROM (VALUES ('b0000000-0000-4000-8000-000000000002'::uuid),
+ ('b0000000-0000-4000-8000-000000000003'::uuid), ('b0000000-0000-4000-8000-000000000011'::uuid),
+ ('b0000000-0000-4000-8000-000000000012'::uuid), ('b0000000-0000-4000-8000-000000000013'::uuid),
+ ('b0000000-0000-4000-8000-000000000014'::uuid)) x(id);
+INSERT INTO public.perfiles_senderista(usuario_id,nombre_completo,telefono,id_documento)
+SELECT id, 'Senderista ficticio', '999999999', right(id::text,20) FROM public.usuarios
+WHERE id::text LIKE 'b0000000-0000-4000-8000-%' AND id <> 'b0000000-0000-4000-8000-000000000001';
+
 INSERT INTO public.expediciones
     (id, senderista_id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada, estado)
-SELECT id, 'b0000000-0000-4000-8000-000000000001', 'Inicio', 'Destino',
+SELECT id, ('b' || substr(id::text,2))::uuid, 'Inicio', 'Destino',
        now() - interval '5 hours', now() - interval '2 hours', estado::public.estado_expedicion_enum
 FROM (VALUES
     ('e0000000-0000-4000-8000-000000000001'::uuid, 'alerta'),
@@ -374,8 +386,13 @@ BEGIN
     BEGIN
         DELETE FROM public.perfiles_rescatista WHERE usuario_id = 'a0000000-0000-4000-8000-000000000002';
         RAISE EXCEPTION 'RESTRICT no impidió borrar al responsable';
-    -- Solo restrict_violation (23001): con NO ACTION saldría 23503 y la prueba fallaría.
-    EXCEPTION WHEN restrict_violation THEN NULL;
+    -- PostgreSQL informa 23503 para esta FK RESTRICT; comprobar además su acción
+    -- declarada evita confundirla con una FK NO ACTION.
+    EXCEPTION WHEN foreign_key_violation THEN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='fk_incidentes_responsable'
+            AND conrelid='public.incidentes'::regclass AND confdeltype='r') THEN
+            RAISE EXCEPTION 'La FK del responsable debe ser ON DELETE RESTRICT';
+        END IF;
     END;
     DELETE FROM public.expediciones WHERE id = 'e0000000-0000-4000-8000-000000000001';
     IF EXISTS (SELECT 1 FROM public.incidentes WHERE expedicion_id = 'e0000000-0000-4000-8000-000000000001') THEN
