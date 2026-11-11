@@ -24,6 +24,7 @@ Solo se anotan aplicaciones reales sobre un entorno (DEV, producción u otro). L
 | `20261101_hu30_operaciones_equipo.sql` | hu30_operaciones | entre 2026-11-02 03:19 y 2026-11-04 00:07 UTC (hora exacta no registrada) · asiento conciliado 2026-11-10 14:12 UTC | DEV | 6dbd632 | Ariana | OK (TECH-56) |
 | `018_hu27_cancelar_salida_futura.sql` | 018 | 2026-11-10 20:43 UTC | DEV | 9b43f46 | Marko | OK |
 | `017_hu39_asumir_coordinacion.sql` | 017 | 2026-11-10 22:51 UTC | DEV | 257b2e2 | Ariana | OK |
+| `019_hu41_bitacora_incidente.sql` | 019 | 2026-11-11 17:46 UTC | DEV | 2deb4af | Ariana | OK |
 
 HU-32: la estructura final está aplicada y verificada en Supabase DEV.
 El asiento administrativo 010 fue registrado correctamente en public.treksafe_migraciones el 2026-11-06 a las 05:23 UTC.
