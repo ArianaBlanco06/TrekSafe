@@ -58,9 +58,13 @@ try {
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon,authenticated,service_role;
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon,authenticated,service_role;`);
   await pool.query(await readFile(path.join(root,'init_schema.sql'),'utf8'));
-  for(const nombre of ['000_registro_migraciones','002_hu26_version_y_eventos_plan','014_hu38_minutos_recordatorio','019_hu49_creacion_plan_idempotente']) {
+  for(const nombre of ['000_registro_migraciones','002_hu26_version_y_eventos_plan','014_hu38_minutos_recordatorio']) {
     await pool.query(await readFile(path.join(root,'backend/migrations',`${nombre}.sql`),'utf8'));
   }
+  // Fixture de registro: 019 ya pertenece a HU-41. HU-49 debe registrar 020
+  // sin sobrescribir el asiento previo. No instala la funcionalidad HU-41.
+  await pool.query("INSERT INTO public.treksafe_migraciones(version,nombre,hu) VALUES('019','hu41_bitacora_incidente','HU-41')");
+  await pool.query(await readFile(path.join(root,'backend/migrations/020_hu49_creacion_plan_idempotente.sql'),'utf8'));
   for(const [usuario,id,i] of [[actor,contacto,1],[otro,contactoOtro,2]]) {
     await pool.query("INSERT INTO public.usuarios(id,correo_electronico,hash_contrasena,rol) VALUES($1,$2,'fixture','senderista')",[usuario,`hu49-${i}@example.invalid`]);
     await pool.query("INSERT INTO public.perfiles_senderista(usuario_id,nombre_completo,telefono,id_documento) VALUES($1,'Prueba','999999999',$2)",[usuario,`hu49000${i}`]);
@@ -117,12 +121,15 @@ try {
     await pool.query('DELETE FROM public.expediciones WHERE id=$1',[primera.expedicion.id]);
     assert.equal((await invoke(id,datos)).tipo,'plan_eliminado');
   });
-  await test('permisos cerrados, RPC INVOKER y registro 019',async()=>{
+  await test('permisos cerrados, RPC INVOKER y registro 020 sin alterar 019 de HU-41',async()=>{
     const r=(await pool.query(`SELECT has_function_privilege('anon','public.treksafe_crear_plan_borrador(uuid,uuid,jsonb)','EXECUTE') anon,
       has_table_privilege('authenticated','public.creaciones_plan_offline','SELECT') privado,
       (SELECT prosecdef FROM pg_proc WHERE oid='public.treksafe_crear_plan_borrador(uuid,uuid,jsonb)'::regprocedure) definer`)).rows[0];
     assert.deepEqual(r,{anon:false,privado:false,definer:false});
-    assert.equal((await pool.query("SELECT hu FROM public.treksafe_migraciones WHERE version='019'")).rows[0].hu,'HU-49');
+    assert.deepEqual((await pool.query("SELECT version,nombre,hu FROM public.treksafe_migraciones WHERE version IN ('019','020') ORDER BY version")).rows,[
+      {version:'019',nombre:'hu41_bitacora_incidente',hu:'HU-41'},
+      {version:'020',nombre:'hu49_creacion_plan_idempotente',hu:'HU-49'},
+    ]);
   });
   await test('no crea eventos_plan ni modifica las versiones de planes anteriores',async()=>{
     assert.equal((await pool.query('SELECT count(*)::int n FROM public.eventos_plan')).rows[0].n,0);

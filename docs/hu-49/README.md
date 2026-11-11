@@ -35,13 +35,17 @@ Se migra exclusivamente la cola antigua de la **misma sesión**. Nunca se import
 - `410`: el plan original fue eliminado; la clave consumida impide recrearlo.
 - `503` o pérdida de respuesta: resultado incierto, comprobar el mismo comando.
 
-**Migración nueva:** `backend/migrations/019_hu49_creacion_plan_idempotente.sql`, después de 002 y 014. El **019 es provisional hasta el merge**: revisar nuevamente el siguiente número libre con el equipo. La 015 sigue reservada para HU-45. Pendiente de coordinar aplicación en DEV con Ariana; no se ejecutó en Supabase ni se cambió su registro de aplicación.
+**Migración nueva:** `backend/migrations/020_hu49_creacion_plan_idempotente.sql`, después de 002 y 014. El 11/11 el equipo asignó la `019` a HU-41, ya integrada y registrada en DEV, y propuso pasar HU-49 a la **020**. Archivo, asiento SQL, runner y comprobaciones usan 020. Marko debe confirmar su disponibilidad y Ariana coordinar su aplicación en DEV antes del merge del PR #115. Si Marko la tiene reservada, el equipo debe confirmar otro número; no se reasigna automáticamente. No se ejecutó esta migración en Supabase ni se agregó un asiento inexistente en `REGISTRO_APLICACION.md`.
+
+Según el informe de coordinación del Sprint 2 del 11/11, `015` y `022`–`024` ya están en DEV y sus archivos siguen pendientes de conciliación por sus responsables. No se reutilizan ni modifican como parte de HU-49.
 
 La tabla `creaciones_plan_offline` relaciona cuenta/UUID, contenido original y plan. La RPC es `SECURITY INVOKER`, `search_path` vacío, ejecución solo `service_role`, RLS y permisos cerrados a `anon/authenticated`. Un lock por perfil serializa las creaciones offline; plan, contactos, acompañantes y clave se guardan en una sola transacción. Repetir con datos diferentes produce conflicto. Eliminar el plan deja constancia de la clave; eliminar la cuenta elimina esa constancia por FK. No cambia `servicioExpedicion.ts`, el cron, `eventos_plan` ni las otras RPC.
 
 ## Validación
 
 Node 22.23.4 y PostgreSQL 18 local desechable, sin `.env` ni conexiones a Supabase. Resultados finales y CI se registran en el PR.
+
+Renumeración del 11/11 validada: TypeScript del backend y los 13 casos SQL aprobados, incluida la coexistencia de los asientos 019/HU-41 (fixture) y 020/HU-49. El PR #115 conserva la revisión técnica, la confirmación del número con Marko y la aplicación en DEV como pendientes del equipo.
 
 ```powershell
 npm.cmd run typecheck --prefix backend
@@ -57,7 +61,7 @@ npm.cmd run test:ui --prefix frontend
 npm.cmd run test:pwa:privacidad --prefix frontend
 ```
 
-El workflow conserva las suites existentes y añade el runner SQL HU-49. Las pruebas de navegador usan el Service Worker del build y una API controlada para desconexiones, dos cuentas y respuesta cortada; las pruebas SQL ejercitan la transacción y permisos reales en PostgreSQL. Esto no sustituye probar el despliegue en Supabase DEV una vez aplicada la migración.
+El workflow conserva las suites existentes y añade el runner SQL HU-49. El runner instala la 020 y comprueba que su asiento convive con un registro 019 de HU-41 simulado como fixture; no instala la funcionalidad de HU-41. Las pruebas de navegador usan el Service Worker del build y una API controlada para desconexiones, dos cuentas y respuesta cortada; las pruebas SQL ejercitan la transacción y permisos reales en PostgreSQL. Esto no sustituye probar el despliegue en Supabase DEV una vez aplicada la migración.
 
 ## Demostración para Marko
 

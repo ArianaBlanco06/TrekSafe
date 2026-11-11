@@ -1,4 +1,4 @@
--- HU-49. Número 019 provisional: verificar que siga libre antes del merge.
+-- HU-49. Número 020 propuesto por el equipo; pendiente de confirmar con Marko antes del merge.
 -- Requiere esquema inicial, 002 y 014. Aplicación coordinada en DEV pendiente.
 BEGIN;
 
@@ -114,7 +114,7 @@ GRANT EXECUTE ON FUNCTION public.treksafe_crear_plan_borrador(uuid,uuid,jsonb) T
 
 DO $$ BEGIN
   IF to_regclass('public.treksafe_migraciones') IS NOT NULL THEN
-    INSERT INTO public.treksafe_migraciones(version,nombre,hu) VALUES('019','hu49_creacion_plan_idempotente','HU-49')
+    INSERT INTO public.treksafe_migraciones(version,nombre,hu) VALUES('020','hu49_creacion_plan_idempotente','HU-49')
       ON CONFLICT(version) DO NOTHING;
   END IF;
 END $$;

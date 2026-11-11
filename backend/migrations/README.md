@@ -46,8 +46,9 @@ Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos
 | `017_hu39_asumir_coordinacion.sql` | Tabla `incidentes` (un incidente no cerrado por expedición) y RPC `treksafe_asumir_coordinacion`. Aplicar una sola vez | `002` |
 | `018_hu27_cancelar_salida_futura.sql` | Sustituye `treksafe_cancelar_expedicion` de la `005`: solo cancela una expedición programada con salida futura (`hora_inicio > clock_timestamp()` tomado tras el bloqueo de la fila, no `now()`; sin códigos de error nuevos). Re-ejecutable. **No ejecutar la `005` después de esta migración**: restauraría la función anterior | `005` |
 | `019_hu41_bitacora_incidente.sql` | Tabla `entradas_bitacora_incidente` (solo anexado, hora del servidor, corrección como entrada nueva, un cierre por incidente), `UPDATE (version)` sobre `incidentes` para `service_role` (bloqueo `FOR SHARE` frente al relevo), `treksafe_anexar_entrada_bitacora_interna` (para HU-42) y RPC `treksafe_agregar_entrada_bitacora`. Aplicar una sola vez | `017` |
+| `020_hu49_creacion_plan_idempotente.sql` | Clave por cuenta/borrador y creación atómica sin duplicados. Propuesta para HU-49; confirmar disponibilidad con Marko y aplicación en DEV con Ariana antes del merge | `002`, `014`; pendiente de aplicar en DEV |
 
-Para nuevas migraciones, usar el siguiente número libre al momento del merge (hoy, `020`).
+Para nuevas migraciones, coordinar el siguiente número libre al momento del merge. La `019` ya corresponde a HU-41 y la `020` está propuesta para HU-49, pendiente de confirmación de Marko. El informe del Sprint 2 del 11/11 también indica que `022`–`024` ya están aplicadas en DEV; no reutilizar esos números aunque sus archivos aún no aparezcan en el repositorio.
 
 Las migraciones `002` a `007` y `012` son re-ejecutables. No dependen de
 `000_registro_migraciones.sql`: si la tabla `treksafe_migraciones` existe, registran
