@@ -139,7 +139,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node backend/scripts/test-dep108-postgres.mjs --pg-bin /usr/lib/postgresql/17/bin --postgrest "$RUNNER_TEMP/postgrest/postgrest" | tee "$RUNNER_TEMP/dep108.log"
+          node backend/scripts/test-dep108-postgres.mjs --pg-bin /usr/lib/postgresql/17/bin --postgrest "$RUNNER_TEMP/postgrest/postgrest" --dev-check backend/migrations/tests/dep108_dev_rollback.sql | tee "$RUNNER_TEMP/dep108.log"
 
       - name: Adjuntar evidencia de persistencia
         if: always()

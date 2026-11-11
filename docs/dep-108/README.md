@@ -1,6 +1,6 @@
 # DEP-04 / #108 — Persistencia transaccional
 
-Base: `develop` en `68f24406660065ee2a227c037591e5521add6250`. Responsable: PO. Validación local: **2026-11-11**. [Issue #108](https://github.com/ArianaBlanco06/TrekSafe/issues/108), [diseño #106](https://github.com/ArianaBlanco06/TrekSafe/pull/113), procesador posterior [#109](https://github.com/ArianaBlanco06/TrekSafe/issues/109).
+Base: `develop` en `3b61042beb2265a4b38d2e2bc9427e410a65ae1e`; código funcional inicial en `68f2440`. Responsable: PO. Validación local y DEV: **2026-11-11**. [Issue #108](https://github.com/ArianaBlanco06/TrekSafe/issues/108), [diseño #106](https://github.com/ArianaBlanco06/TrekSafe/pull/113), procesador posterior [#109](https://github.com/ArianaBlanco06/TrekSafe/issues/109).
 
 ## Cambios y compatibilidad
 
@@ -65,9 +65,13 @@ HU-36 usa `TRUNCATE ... CASCADE` para alcanzar el trigger cuando HU-37 ya refere
 
 ## DEV y recuperación
 
-El preflight del 2026-11-11 confirmó `017`/`018` ya aplicadas por el equipo, con definiciones normalizadas coincidentes. No repetirlas. `015`/`022`/`023`/`024` se aplicarán después de la validación desechable, previa revisión de objetos, permisos, registros y ausencia de duplicados. El [registro](../../backend/migrations/REGISTRO_APLICACION.md) contendrá únicamente aplicaciones reales.
+El preflight del 2026-11-11 confirmó `017`/`018` ya aplicadas por el equipo, con definiciones normalizadas coincidentes. No se repitieron. `015`/`022`/`023`/`024` se aplicaron a **Supabase DEV** entre las 12:57:25 y 12:57:50 UTC (07:57 Lima), después de las pruebas desechables y la comprobación de objetos, permisos, registros y ausencia de duplicados. El [registro](../../backend/migrations/REGISTRO_APLICACION.md) incluye esas aplicaciones reales; [evidencia detallada](evidencia-dev.md).
 
-El chequeo DEV versionado en `backend/migrations/tests/dep108_dev_rollback.sql` utiliza datos ficticios y rollback, sin cron ni correo. Se ensayó contra la base desechable. Sus resultados reales en DEV se incorporarán tras ejecutarlo; las pruebas anteriores son locales y no lo sustituyen.
+El chequeo versionado en `backend/migrations/tests/dep108_dev_rollback.sql` pasó primero en la base desechable y después en DEV, con datos ficticios y rollback: **cero usuarios ficticios restantes**, sin cron ni correo. Se verificaron creación/colecciones, propiedad de contactos, cancelación con evento/aviso idempotentes, vencimiento con pendientes y coordinación HU-39. Los cuerpos SQL normalizados coinciden con el commit `a988637`; los asesores de seguridad no devolvieron observaciones. La comprobación DEV usa SQL con rol `service_role`; el SDK/PostgREST real se probó en la base desechable, no se afirma una prueba HTTP autenticada de DEV.
+
+## Validación conjunta con #107
+
+La unión local de `032317f` (#107) y `a988637` (#108), sobre `develop` `3b61042`, pasó con Node 22.23.4: **567 pruebas backend**, tipos y compilación de ambos componentes, **25 escenarios PostgreSQL/PostgREST**, **125 pruebas frontend** y **33 pruebas de navegador** (13 de interfaz y 20 de privacidad/PWA). Las dos pruebas frontend condicionadas a sus runners SQL particulares quedaron omitidas por ese comando; no se cuentan como aprobadas. Las regresiones SQL de esta entrega están descritas por separado. El ajuste posterior de limpieza del runner `4ac4e6d` no cambió SQL ni comportamiento de producto y volvió a pasar los 25 escenarios.
 
 Las nuevas migraciones son aditivas y de una sola aplicación. Una versión anterior puede conservar el esquema, pero no se debe activar simultáneamente envío legado y nuevo sin el corte/conciliación de #109. Preservar datos/pendientes ante un fallo; no usar `init_schema.sql`, `.down.sql` destructivos ni borrar asientos para forzar repetición. Una incompatibilidad requiere una migración correctiva ensayada.
 
