@@ -16,6 +16,7 @@ import type {
   SolicitudAceptarRelevo,
   SolicitudAsuncion,
   SolicitudProponerRelevo,
+  SolicitudResolverRelevo,
 } from '../../../domain/repositories/IIncidenteDAO.js';
 
 type FilaIncidente = { incidente: Incidente; operacionId: string };
@@ -23,7 +24,8 @@ type FilaRelevo = {
   relevo: Relevo;
   incidenteId: string;
   operacionId: string;
-  operacionAceptacionId: string | null;
+  /** Operación que lo resolvió (aceptar, rechazar o cancelar); nula mientras esté pendiente. */
+  operacionResolucionId: string | null;
 };
 /** Evento de transferencia (tabla `transferencias_coordinacion`): solo se anexa. */
 export type TransferenciaRegistrada = {
@@ -188,6 +190,14 @@ export class IncidenteDAOMemoria implements IIncidenteDAO, IRelevoDAO {
     return this.serializar(solicitud.expedicionId, () => this.aceptarRelevoBloqueado(solicitud));
   }
 
+  async rechazarRelevo(solicitud: SolicitudResolverRelevo): Promise<ResultadoRelevo> {
+    return this.serializar(solicitud.expedicionId, () => this.resolverRelevoBloqueado(solicitud, 'rechazado'));
+  }
+
+  async cancelarRelevo(solicitud: SolicitudResolverRelevo): Promise<ResultadoRelevo> {
+    return this.serializar(solicitud.expedicionId, () => this.resolverRelevoBloqueado(solicitud, 'cancelado'));
+  }
+
   private incidenteDe(incidenteId: string): Incidente {
     const fila = this.filas.find((f) => f.incidente.id === incidenteId);
     if (!fila) throw new Error(`Incidente ${incidenteId} no sembrado`);
@@ -223,7 +233,7 @@ export class IncidenteDAOMemoria implements IIncidenteDAO, IRelevoDAO {
     // 3) Operación ya usada en otro tipo de operación.
     if (
       this.operacionUsadaPorOtroTipo(s.operacionId) ||
-      this.relevos.some((r) => r.operacionAceptacionId === s.operacionId)
+      this.relevos.some((r) => r.operacionResolucionId === s.operacionId)
     ) {
       throw rechazoRelevo('DATOS_INVALIDOS');
     }
@@ -275,17 +285,19 @@ export class IncidenteDAOMemoria implements IIncidenteDAO, IRelevoDAO {
       motivo,
       solicitadoEn: new Date().toISOString(),
       resueltoEn: null,
+      resueltoPorId: null,
       versionIncidente: incidente.version,
     };
-    this.relevos.push({ relevo, incidenteId: incidente.id, operacionId: s.operacionId, operacionAceptacionId: null });
+    this.relevos.push({ relevo, incidenteId: incidente.id, operacionId: s.operacionId, operacionResolucionId: null });
     return { incidente, relevo, repetido: false };
   }
 
   private async aceptarRelevoBloqueado(s: SolicitudAceptarRelevo): Promise<ResultadoRelevo> {
     await Promise.resolve();
 
-    // 2) Operación de aceptación ya registrada.
-    const registrada = this.relevos.find((r) => r.operacionAceptacionId === s.operacionId);
+    // 2) Operación de resolución ya registrada: repetición si la aceptó este destinatario;
+    //    si el relevo se resolvió de otra manera con esa operación, es de otro tipo.
+    const registrada = this.relevos.find((r) => r.operacionResolucionId === s.operacionId);
     if (registrada) {
       const incidente = this.incidenteDe(registrada.incidenteId);
       if (
@@ -293,7 +305,8 @@ export class IncidenteDAOMemoria implements IIncidenteDAO, IRelevoDAO {
         registrada.relevo.id === s.relevoId &&
         incidente.expedicionId === s.expedicionId
       ) {
-        return { incidente, relevo: registrada.relevo, repetido: true };
+        if (registrada.relevo.estado === 'aceptado') return { incidente, relevo: registrada.relevo, repetido: true };
+        throw rechazoRelevo('DATOS_INVALIDOS');
       }
       throw rechazoRelevo('RELEVO_NO_ENCONTRADO');
     }
@@ -316,12 +329,13 @@ export class IncidenteDAOMemoria implements IIncidenteDAO, IRelevoDAO {
     // 7) Solo el destinatario acepta (antes de revelar el estado del relevo).
     if (fila.relevo.destinatarioId !== s.rescatistaId) throw rechazoRelevo('NO_ES_DESTINATARIO');
 
-    // 8) Ya resuelto: la misma operación es repetición; otra no se confirma en silencio.
+    // 8) Ya resuelto: la misma operación es repetición; otra no se confirma en silencio y el
+    //    detalle dice cómo quedó el relevo.
     if (fila.relevo.estado !== 'pendiente') {
-      if (fila.operacionAceptacionId === s.operacionId) {
+      if (fila.operacionResolucionId === s.operacionId && fila.relevo.estado === 'aceptado') {
         return { incidente: filaIncidente.incidente, relevo: fila.relevo, repetido: true };
       }
-      throw rechazoRelevo('RELEVO_YA_RESUELTO');
+      throw rechazoRelevo('RELEVO_YA_RESUELTO', { estadoRelevo: fila.relevo.estado });
     }
 
     // 9) y 9b) Caso abierto y destinatario todavía validado. Aceptar no compara versión.
@@ -341,8 +355,8 @@ export class IncidenteDAOMemoria implements IIncidenteDAO, IRelevoDAO {
       asumidoEn: ahora,
     };
     filaIncidente.incidente = incidente;
-    fila.relevo = { ...fila.relevo, estado: 'aceptado', resueltoEn: ahora };
-    fila.operacionAceptacionId = s.operacionId;
+    fila.relevo = { ...fila.relevo, estado: 'aceptado', resueltoEn: ahora, resueltoPorId: s.rescatistaId };
+    fila.operacionResolucionId = s.operacionId;
     this.transferencias.push({
       incidenteId: incidente.id,
       relevoId: fila.relevo.id,
@@ -354,5 +368,61 @@ export class IncidenteDAOMemoria implements IIncidenteDAO, IRelevoDAO {
       ocurridoEn: ahora,
     });
     return { incidente, relevo: fila.relevo, repetido: false };
+  }
+
+  /** Rechazar o cancelar: mismo orden que la RPC treksafe_resolver_relevo (019). */
+  private async resolverRelevoBloqueado(
+    s: SolicitudResolverRelevo,
+    final: 'rechazado' | 'cancelado',
+  ): Promise<ResultadoRelevo> {
+    await Promise.resolve();
+
+    // 2) Operación de resolución ya registrada: mismo actor, relevo y tipo → repetición.
+    const registrada = this.relevos.find((r) => r.operacionResolucionId === s.operacionId);
+    if (registrada) {
+      const incidente = this.incidenteDe(registrada.incidenteId);
+      if (
+        registrada.relevo.resueltoPorId === s.rescatistaId &&
+        registrada.relevo.id === s.relevoId &&
+        incidente.expedicionId === s.expedicionId
+      ) {
+        if (registrada.relevo.estado === final) return { incidente, relevo: registrada.relevo, repetido: true };
+        throw rechazoRelevo('DATOS_INVALIDOS');
+      }
+      throw rechazoRelevo('RELEVO_NO_ENCONTRADO');
+    }
+
+    // 3) Operación ya usada como propuesta o en otro tipo de operación.
+    if (this.operacionUsadaPorOtroTipo(s.operacionId) || this.relevos.some((r) => r.operacionId === s.operacionId)) {
+      throw rechazoRelevo('DATOS_INVALIDOS');
+    }
+
+    // 4) Actor validado.
+    if (!this.rescatistas.has(s.rescatistaId)) throw rechazoRelevo('NO_ES_RESCATISTA');
+
+    // 5) El relevo existe y es de esa expedición.
+    const fila = this.relevos.find((r) => r.relevo.id === s.relevoId);
+    const filaIncidente = fila ? this.filas.find((f) => f.incidente.id === fila.incidenteId) : undefined;
+    if (!fila || !filaIncidente || filaIncidente.incidente.expedicionId !== s.expedicionId) {
+      throw rechazoRelevo('RELEVO_NO_ENCONTRADO');
+    }
+
+    // 7) Rechaza el destinatario; cancela quien propuso (antes de revelar el estado).
+    if (final === 'rechazado' && fila.relevo.destinatarioId !== s.rescatistaId) throw rechazoRelevo('NO_ES_DESTINATARIO');
+    if (final === 'cancelado' && fila.relevo.responsableAnteriorId !== s.rescatistaId) throw rechazoRelevo('NO_ES_PROPONENTE');
+
+    // 8) Ya resuelto por otra operación: el detalle dice cómo quedó.
+    if (fila.relevo.estado !== 'pendiente') {
+      throw rechazoRelevo('RELEVO_YA_RESUELTO', { estadoRelevo: fila.relevo.estado });
+    }
+
+    // 9) Caso cerrado: el relevo pendiente queda inerte y no se escribe nada.
+    if (filaIncidente.incidente.estado === 'cerrado') throw rechazoRelevo('INCIDENTE_CERRADO');
+
+    // 10) Solo cambia el relevo: ni el responsable ni la versión.
+    await Promise.resolve();
+    fila.relevo = { ...fila.relevo, estado: final, resueltoEn: new Date().toISOString(), resueltoPorId: s.rescatistaId };
+    fila.operacionResolucionId = s.operacionId;
+    return { incidente: filaIncidente.incidente, relevo: fila.relevo, repetido: false };
   }
 }

@@ -4,6 +4,7 @@ import {
   type CodigoErrorCoordinacion,
   type CodigoErrorRelevo,
   type DetalleErrorRelevo,
+  type EstadoRelevoResuelto,
   type RelevoPendientePublico,
   type ResponsableVigente,
 } from '../../domain/errors/ErrorCoordinacion.js';
@@ -20,6 +21,7 @@ import type {
   SolicitudAceptarRelevo,
   SolicitudAsuncion,
   SolicitudProponerRelevo,
+  SolicitudResolverRelevo,
 } from '../../domain/repositories/IIncidenteDAO.js';
 import { ErrorAplicacion } from '../../shared/errors/ErrorAplicacion.js';
 
@@ -31,7 +33,7 @@ const CODIGOS_RPC = new Set<string>([
   'COORDINACION_YA_ASUMIDA',
 ] satisfies CodigoErrorCoordinacion[]);
 
-/** Códigos de negocio que lanzan treksafe_proponer_relevo y treksafe_aceptar_relevo (019) en `error.message`. */
+/** Códigos de negocio que lanzan las cuatro RPC de relevo (019: proponer, aceptar, rechazar y cancelar) en `error.message`. */
 const CODIGOS_RELEVO = new Set<string>([
   'DATOS_INVALIDOS',
   'INCIDENTE_NO_ENCONTRADO',
@@ -40,6 +42,7 @@ const CODIGOS_RELEVO = new Set<string>([
   'INCIDENTE_CERRADO',
   'NO_ES_RESPONSABLE',
   'NO_ES_DESTINATARIO',
+  'NO_ES_PROPONENTE',
   'DESTINATARIO_INVALIDO',
   'DESTINATARIO_NO_VALIDADO',
   'VERSION_DESACTUALIZADA',
@@ -48,7 +51,8 @@ const CODIGOS_RELEVO = new Set<string>([
 ] satisfies CodigoErrorRelevo[]);
 
 const ESTADOS = new Set<string>(['abierto', 'localizado', 'cerrado'] satisfies EstadoIncidente[]);
-const ESTADOS_RELEVO = new Set<string>(['pendiente', 'aceptado'] satisfies EstadoRelevo[]);
+const ESTADOS_RELEVO = new Set<string>(['pendiente', 'aceptado', 'rechazado', 'cancelado'] satisfies EstadoRelevo[]);
+const ESTADOS_RELEVO_RESUELTO = new Set<string>(['aceptado', 'rechazado', 'cancelado'] satisfies EstadoRelevoResuelto[]);
 
 /** Error inesperado: nunca expone el mensaje de la base al cliente y nunca es 401. */
 function errorInterno(contexto: string, causa: { message: string }): ErrorAplicacion {
@@ -145,6 +149,19 @@ function leerVersionActual(detalle: unknown): DetalleErrorRelevo | null {
   }
 }
 
+/** `DETAIL` de RELEVO_YA_RESUELTO: `{estado}` con cómo quedó el relevo. */
+function leerEstadoResuelto(detalle: unknown): DetalleErrorRelevo | null {
+  if (typeof detalle !== 'string') return null;
+  try {
+    const estado = (JSON.parse(detalle) as { estado?: unknown } | null)?.estado;
+    return typeof estado === 'string' && ESTADOS_RELEVO_RESUELTO.has(estado)
+      ? { estadoRelevo: estado as EstadoRelevoResuelto }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 /** `DETAIL` de RELEVO_PENDIENTE: el relevo sin motivo (`treksafe_relevo_publico`). */
 function leerRelevoPendiente(detalle: unknown): DetalleErrorRelevo | null {
   if (typeof detalle !== 'string') return null;
@@ -179,7 +196,7 @@ const personaValida = (valor: unknown): valor is { id: string; nombreCompleto: s
   esTexto((valor as Record<string, unknown>).id) &&
   typeof (valor as Record<string, unknown>).nombreCompleto === 'string';
 
-/** Resultado JSON de proponer o aceptar: la coordinación de HU-39 más `relevo`. */
+/** Resultado JSON de proponer, aceptar, rechazar o cancelar: la coordinación de HU-39 más `relevo`. */
 function leerResultadoRelevo(datos: unknown): ResultadoRelevo | null {
   const base = leerResultado(datos);
   if (!base) return null;
@@ -196,6 +213,7 @@ function leerResultadoRelevo(datos: unknown): ResultadoRelevo | null {
     typeof r.solicitadoEn !== 'string' ||
     Number.isNaN(Date.parse(r.solicitadoEn)) ||
     !(r.resueltoEn === null || (typeof r.resueltoEn === 'string' && !Number.isNaN(Date.parse(r.resueltoEn)))) ||
+    !(r.resueltoPorId === null || esTexto(r.resueltoPorId)) ||
     typeof r.versionIncidente !== 'number'
   ) {
     return null;
@@ -210,6 +228,7 @@ function leerResultadoRelevo(datos: unknown): ResultadoRelevo | null {
     motivo: r.motivo,
     solicitadoEn: new Date(r.solicitadoEn).toISOString(),
     resueltoEn: r.resueltoEn === null ? null : new Date(r.resueltoEn as string).toISOString(),
+    resueltoPorId: r.resueltoPorId,
     versionIncidente: r.versionIncidente,
   };
   return { incidente: base.incidente, relevo, repetido: base.repetido };
@@ -315,6 +334,23 @@ export class IncidenteDAOSupabase implements IIncidenteDAO, IRelevoDAO {
     });
   }
 
+  async rechazarRelevo(solicitud: SolicitudResolverRelevo): Promise<ResultadoRelevo> {
+    return this.invocarRelevo('rechazarRelevo', 'treksafe_rechazar_relevo', this.parametrosResolver(solicitud));
+  }
+
+  async cancelarRelevo(solicitud: SolicitudResolverRelevo): Promise<ResultadoRelevo> {
+    return this.invocarRelevo('cancelarRelevo', 'treksafe_cancelar_relevo', this.parametrosResolver(solicitud));
+  }
+
+  private parametrosResolver(solicitud: SolicitudResolverRelevo): Record<string, unknown> {
+    return {
+      p_expedicion_id: solicitud.expedicionId,
+      p_actor_id: solicitud.rescatistaId,
+      p_relevo_id: solicitud.relevoId,
+      p_operacion_id: solicitud.operacionId,
+    };
+  }
+
   /** Llama a la RPC, traduce sus códigos de negocio a `ErrorCoordinacion` y valida el resultado. */
   private async invocarRelevo(
     contexto: string,
@@ -326,11 +362,13 @@ export class IncidenteDAOSupabase implements IIncidenteDAO, IRelevoDAO {
     if (error) {
       if (!CODIGOS_RELEVO.has(error.message)) throw errorInterno(contexto, error);
       const codigo = error.message as CodigoErrorRelevo;
-      if (codigo === 'VERSION_DESACTUALIZADA' || codigo === 'RELEVO_PENDIENTE') {
+      if (codigo === 'VERSION_DESACTUALIZADA' || codigo === 'RELEVO_PENDIENTE' || codigo === 'RELEVO_YA_RESUELTO') {
         const detalle =
           codigo === 'VERSION_DESACTUALIZADA'
             ? leerVersionActual(error.details)
-            : leerRelevoPendiente(error.details);
+            : codigo === 'RELEVO_PENDIENTE'
+              ? leerRelevoPendiente(error.details)
+              : leerEstadoResuelto(error.details);
         if (!detalle) throw errorInterno(contexto, { message: `DETAIL de ${codigo} mal formado` });
         throw new ErrorCoordinacion<CodigoErrorRelevo>(codigo, undefined, detalle);
       }

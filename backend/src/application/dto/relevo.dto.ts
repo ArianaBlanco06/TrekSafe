@@ -35,5 +35,13 @@ export const aceptarRelevoSchema = cuerpoAceptarRelevoSchema.extend({
   rescatistaId: z.string().uuid('Identificador de rescatista inválido'),
 });
 
+/**
+ * Rechazar y cancelar llevan solo la operación (sin motivo ni versión): quién, qué y cuándo
+ * quedan registrados por la persistencia. Misma forma que aceptar.
+ */
+export const rechazarRelevoSchema = aceptarRelevoSchema;
+export const cancelarRelevoSchema = aceptarRelevoSchema;
+
 export type EntradaProponerRelevo = z.infer<typeof proponerRelevoSchema>;
 export type EntradaAceptarRelevo = z.infer<typeof aceptarRelevoSchema>;
+export type EntradaResolverRelevo = z.infer<typeof rechazarRelevoSchema>;

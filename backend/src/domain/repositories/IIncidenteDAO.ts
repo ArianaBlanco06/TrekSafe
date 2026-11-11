@@ -44,7 +44,7 @@ export type RelevoPendiente = {
   motivo?: string;
 };
 
-export type EstadoRelevo = 'pendiente' | 'aceptado';
+export type EstadoRelevo = 'pendiente' | 'aceptado' | 'rechazado' | 'cancelado';
 
 /** Relevo completo: lo reciben solo quienes lo proponen o lo aceptan. */
 export type Relevo = {
@@ -58,6 +58,8 @@ export type Relevo = {
   solicitadoEn: string;
   /** Nulo mientras esté pendiente. */
   resueltoEn: string | null;
+  /** Quién lo aceptó, rechazó o canceló. Nulo mientras esté pendiente. */
+  resueltoPorId: string | null;
   /** Versión del incidente en la que se propuso (auditoría). */
   versionIncidente: number;
 };
@@ -78,6 +80,18 @@ export type SolicitudProponerRelevo = {
 export type SolicitudAceptarRelevo = {
   expedicionId: string;
   /** Quien acepta: el destinatario del relevo. */
+  rescatistaId: string;
+  relevoId: string;
+  operacionId: string;
+};
+
+/**
+ * Datos que la persistencia necesita para rechazar o cancelar un relevo pendiente. Sin motivo
+ * ni versión. Rechaza el destinatario y cancela quien propuso; la persistencia lo comprueba.
+ */
+export type SolicitudResolverRelevo = {
+  expedicionId: string;
+  /** Quien rechaza (el destinatario) o cancela (quien propuso). */
   rescatistaId: string;
   relevoId: string;
   operacionId: string;
@@ -142,4 +156,18 @@ export interface IRelevoDAO {
    * @throws ErrorCoordinacion<CodigoErrorRelevo> si alguna regla de negocio lo rechaza.
    */
   aceptarRelevo(solicitud: SolicitudAceptarRelevo): Promise<ResultadoRelevo>;
+
+  /**
+   * El destinatario rechaza el relevo pendiente (HU-40). Solo resuelve el relevo: el
+   * responsable actual conserva la coordinación, la versión no cambia y se puede proponer
+   * otro relevo. En un caso cerrado no escribe nada (`INCIDENTE_CERRADO`).
+   * @throws ErrorCoordinacion<CodigoErrorRelevo> si alguna regla de negocio lo rechaza.
+   */
+  rechazarRelevo(solicitud: SolicitudResolverRelevo): Promise<ResultadoRelevo>;
+
+  /**
+   * Quien propuso cancela el relevo pendiente (HU-40). Mismos efectos que rechazar.
+   * @throws ErrorCoordinacion<CodigoErrorRelevo> si alguna regla de negocio lo rechaza.
+   */
+  cancelarRelevo(solicitud: SolicitudResolverRelevo): Promise<ResultadoRelevo>;
 }
