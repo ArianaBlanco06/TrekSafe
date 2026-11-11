@@ -1,6 +1,6 @@
 # DEP-03 / #107 — API y tareas con composición independiente
 
-Responsable: Marko Antonio Lopez Bernuy (PO). Base de entrega: `develop` en `3b61042beb2265a4b38d2e2bc9427e410a65ae1e`, con HU-39, el diseño de [issue #106](https://github.com/ArianaBlanco06/TrekSafe/issues/106) integrado mediante [PR #113](https://github.com/ArianaBlanco06/TrekSafe/pull/113), y el registro DEV de 017/018. La implementación y las pruebas comenzaron sobre `68f2440`; la actualización de base incorporó únicamente documentación y registro.
+Responsable: Marko Antonio Lopez Bernuy (PO). La implementación comenzó sobre `68f2440` y se actualizó sobre `3b61042`, que integró el diseño de [issue #106](https://github.com/ArianaBlanco06/TrekSafe/issues/106) mediante [PR #113](https://github.com/ArianaBlanco06/TrekSafe/pull/113). La entrega incorpora mediante merge `develop` en `a5c4ca461c253ab25b2fb1315f324e0a7d79a6bf`, que añadió HU-41 y su registro DEV mediante PR #117/#118. Se conserva HU-39 y la bitácora cronológica nueva, junto con la composición independiente de #107.
 
 Esta entrega separa ensamblaje y ejecución. No cambia rutas, JWT, códigos HTTP, reglas de expediciones ni coordinación de incidentes. No cambia SQL ni publica máquinas. La persistencia transaccional se integra desde #108; outbox y recuperación de despachos corresponden a #109.
 
@@ -22,6 +22,7 @@ flowchart TB
 - Los servicios históricos de autenticación, usuario, expediciones, rescate, alertas, bandeja y recordatorios reciben puertos. Aplicación y dominio no importan Supabase, Express, correo o implementaciones de infraestructura.
 - Los puertos de aplicación conservan las formas históricas necesarias para la compatibilidad, incluidas filas de lectura de expediciones y rescate. Las operaciones nuevas no deben usar los adaptadores concretos como contratos.
 - Los controladores son fábricas y las rutas permiten inyectar servicios. `createApp(dependencias)` acepta configuración, routers y lector de salud, sin ensamblar Supabase o correo cuando se proporcionan dependencias.
+- El módulo de rescate incorpora los casos de uso HU-41. Un único adaptador de bitácora se comparte entre lectura y escritura y se construye solo si falta uno de esos casos; se conservan los casos inyectados y las rutas de coordinación/bitácora de incidentes.
 - Los formateadores de mensajes son funciones puras de aplicación; sus rutas de importación históricas se conservan mediante reexportaciones.
 
 ## Entradas y configuración
@@ -63,14 +64,14 @@ npm run build --prefix backend
 | Casos de uso dependen de contratos | Prueba estática de límites y ausencia de imports de infraestructura en aplicación/dominio |
 | API y tareas se construyen independientemente | `api.ts`, `worker.ts`, scripts explícitos, mismo build TypeScript |
 | Dependencias sustituibles sin servicios compartidos | Pruebas de reloj fijo, repositorios, correo simulado y aplicación HTTP inyectada |
-| Compatibilidad y regresión | Suite backend existente, roles/JWT y coordinación HU-39; compilación y verificaciones pertinentes |
+| Compatibilidad y regresión | Suite backend existente, roles/JWT, coordinación HU-39 y rutas/casos de bitácora HU-41; compilación y verificaciones pertinentes |
 | Módulos, deuda y comandos documentados | Este documento, archivos de composición y pruebas reproducibles |
 
 Pruebas específicas: `infrastructure/ejecucion/arranque.test.ts`, `importaciones.test.ts`, `jobs/cronFechaLimiteExpedicion.test.ts`, `application/services/desacoplamiento.test.ts` y `presentation/http/composicionInyectada.test.ts`.
 
 Los tests de importación se ejecutan en un proceso sin credenciales e instrumentan lectura de `.env`, conexiones HTTP, temporizadores y señales. Las pruebas de arranque cubren apagado desactivado, fallos previos a la escucha, puerto ocupado, parada repetida y trabajo pendiente. Los tests HTTP usan datos ficticios y loopback. Los tests de transporte no envían correos.
 
-Resultado local del 2026-11-11 con **Node 22.23.4**: verificación de tipos aprobada, **556 pruebas aprobadas**, build aprobado y diagrama Mermaid renderizado. Las suites PostgreSQL condicionadas a variables de integración no se activan por este comando; la validación SQL y conjunta con #108 se registra por separado. La ejecución usó acceso a servidores locales de prueba, sin cron contra DEV ni correo real.
+Resultado local del 2026-11-11 con **Node 22.23.4**: verificación de tipos y build aprobados; **556 pruebas aprobadas** antes de la incorporación de HU-41 y **616 aprobadas** después de resolver su composición y rutas. El diagrama Mermaid se renderizó. Las suites PostgreSQL condicionadas a variables de integración no se activan por este comando; la validación SQL y conjunta con #108 se registra por separado. La ejecución usó acceso a servidores locales de prueba, sin cron contra DEV ni correo real.
 
 ## Validación conjunta con #108
 

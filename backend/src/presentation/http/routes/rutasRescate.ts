@@ -1,28 +1,24 @@
 import { Router } from 'express';
-import { AsignarResponsable } from '../../../application/use-cases/AsignarResponsable.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import {
   middlewareAutenticacion,
   requerirRol,
 } from '../middleware/middlewareAutenticacion.js';
 import { crearControladorRescate } from '../controllers/controladorRescate.js';
-import { crearModuloRescate } from '../../../infrastructure/composicion/servicios.js';
-import type { ServicioRescate } from '../../../application/services/servicioRescate.js';
+import { crearControladorBitacoraIncidente } from '../controllers/controladorBitacoraIncidente.js';
 import { crearControladorCoordinacion } from '../controllers/controladorCoordinacion.js';
+import {
+  crearModuloRescate,
+  type ModuloRescate,
+} from '../../../infrastructure/composicion/servicios.js';
 
-export type DependenciasRutasRescate = {
-  /** Ejecutor de HU-39. Por defecto, con el DAO de Supabase; las pruebas inyectan uno propio. */
-  asignarResponsable?: AsignarResponsable;
-  servicio?: ServicioRescate;
-};
+/** Los casos inyectados no se sustituyen ni construyen adaptadores innecesarios. */
+export type DependenciasRutasRescate = Partial<ModuloRescate>;
 
 export function crearRutasRescate(
   dependencias: DependenciasRutasRescate = {},
 ): Router {
-  const modulo =
-    dependencias.servicio && dependencias.asignarResponsable
-      ? (dependencias as Required<DependenciasRutasRescate>)
-      : { ...crearModuloRescate(), ...dependencias };
+  const modulo = crearModuloRescate(dependencias);
   const {
     listarAlertas,
     obtenerDetalleAlerta,
@@ -32,11 +28,13 @@ export function crearRutasRescate(
     confirmarAlerta,
   } = crearControladorRescate(modulo.servicio);
   const router = Router();
-  // Ensamblaje: las clases concretas se crean solo aquí.
   const coordinacion = crearControladorCoordinacion(modulo.asignarResponsable);
+  const bitacora = crearControladorBitacoraIncidente({
+    consultar: modulo.consultarBitacoraIncidente,
+    agregar: modulo.agregarEntradaBitacora,
+  });
 
   router.use(middlewareAutenticacion, requerirRol('rescatista'));
-
   router.get('/expediciones', asyncHandler(listarExpediciones));
   router.get('/historial', asyncHandler(listarHistorial));
   router.get('/alertas', asyncHandler(listarAlertas));
@@ -54,6 +52,14 @@ export function crearRutasRescate(
     '/alertas/:expedicionId/coordinacion',
     asyncHandler(coordinacion.asumir),
   );
-
+  // HU-41: bitácora cronológica compartida; la bitácora personal anterior se conserva.
+  router.get(
+    '/incidentes/:incidenteId/bitacora',
+    asyncHandler(bitacora.consultar),
+  );
+  router.post(
+    '/incidentes/:incidenteId/bitacora',
+    asyncHandler(bitacora.agregar),
+  );
   return router;
 }
