@@ -42,3 +42,9 @@ Resultado observado: **“Pruebas DEV aprobadas; transaccion revertida, sin corr
 El asesor de seguridad devolvió **0 observaciones**. Las FK sin índice bajaron de seis en el preflight inicial a tres, por los índices del alcance. Permanecen avisos informativos de rendimiento sobre FK de auditoría médica/avances/bitácora y sobre índices todavía sin uso; no se eliminaron índices por falta de actividad en pruebas.
 
 Esta es validación SQL de DEV mediante la conexión administrada y el rol de aplicación. El SDK Supabase contra PostgREST nativo se probó en bases desechables. No se acredita aquí una sesión HTTP autenticada contra la Data API remota, entrega real de correo, recuperación del worker futuro ni publicación en Fly/Vercel: corresponden a #109–#112.
+
+## Conciliación posterior con HU-41
+
+Al actualizar la base a `develop` `a5c4ca4` se comprobó por consulta de solo lectura que el equipo ya había aplicado `019` en DEV el **2026-11-11 17:46:24 UTC** y que existía `entradas_bitacora_incidente`. No se repitió esa migración ni ninguna de las cuatro de #108.
+
+Los tres cuerpos SQL de #108 conservaron los MD5 de la tabla anterior; los permisos, `SECURITY INVOKER` y RLS siguieron vigentes. La outbox contenía cero filas. Se repitió el chequeo controlado versionado después de aprobar las regresiones locales con HU-41: **aprobado, transacción revertida, cero usuarios ficticios restantes**, sin correo ni cron. Esta comprobación conserva los mismos límites de evidencia SQL administrada descritos arriba.

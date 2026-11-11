@@ -43,13 +43,14 @@ En Windows, incluir PostgreSQL bin en el PATH del proceso para `libpq`. El entor
 
 | Comprobación | Resultado local |
 |---|---|
-| Runner | **24 escenarios aprobados**; 25 al añadir `--dev-check <archivo.sql>` con el chequeo controlado destinado a DEV |
+| Runner | **28 escenarios aprobados**; 29 al añadir `--dev-check <archivo.sql>` con el chequeo controlado destinado a DEV |
 | Instalación/actualización | Dos bases separadas, datos y asientos históricos conservados |
 | Atomicidad | Fallos en vínculos, acompañantes, aviso y outbox revierten las escrituras correspondientes |
 | Concurrencia | Dos creaciones; creación/promoción; ampliación/vencimiento; dos evaluadores; cancelación cuya salida pasa durante el bloqueo |
 | Permisos | `service_role` real; rechazo de tabla/RPC a `anon`/`authenticated`; actor/contacto ajenos |
 | Regresiones SQL | Suites completas HU-27/HU-39/HU-36/HU-41 (16 casos de bitácora) antes y después del esquema ampliado; coordinación/idempotencia conservadas |
 | SDK/HTTP | SDK Supabase y adaptador reales sobre PostgREST nativo, sin simular resultados SQL |
+| Contratos/casos de uso SQL activos | **60 pruebas aprobadas**: HU-30 (9), HU-31 (27), HU-36 (9) y HU-41 (15). Cada suite debe informar casos ejecutados, sin fallos, cancelaciones ni omisiones; no se acredita un `skip` como aprobación |
 | Adaptador unitario | **11 pruebas aprobadas**; errores, RPC ausente sin fallback y respuesta inválida |
 | Tipos | `tsc --noEmit` aprobado |
 | Regresión completa y build | **611 pruebas aprobadas**, cero fallos; `tsc` de producción aprobado |
@@ -61,7 +62,7 @@ El CI añade un job PostgreSQL 17/PostgREST 16.5 con checksum y artefacto de res
 
 HU-39 ahora utiliza un propietario por expedición para respetar la unicidad de bloqueantes, conservando actores y casos de coordinación. La FK `ON DELETE RESTRICT` produce `23503` en PostgreSQL 17; se comprueba ese rechazo y `pg_constraint.confdeltype='r'` en lugar de esperar `23001`.
 
-HU-41 también usa un propietario por cada expedición bloqueante en su fixture SQL, preservando responsables, entradas y casos de bitácora. Los 16 casos pasan antes y después de aplicar DEP-04; no se alteró su SQL productivo `019`.
+HU-41 también usa un propietario por cada expedición bloqueante en sus fixtures SQL y TypeScript, preservando responsables, entradas y casos de bitácora. Los 16 casos SQL pasan antes y después de aplicar DEP-04; sus 15 pruebas TypeScript se ejecutan contra la base ampliada. No se alteró su SQL productivo `019`. Los helpers de HU-30/HU-31/HU-36 admiten además el nombre exacto `treksafe_dep108_desechable`, manteniendo el requisito de conexión a loopback.
 
 HU-36 usa `TRUNCATE ... CASCADE` para alcanzar el trigger cuando HU-37 ya referencia eventos. El trigger rechaza la operación: la prueba no trunca datos. Son cambios de tests, sin alterar las migraciones productivas de esas HU.
 
@@ -75,7 +76,7 @@ El chequeo versionado en `backend/migrations/tests/dep108_dev_rollback.sql` pas�
 
 La unión local de `032317f` (#107) y `a988637` (#108), sobre `develop` `3b61042`, pasó con Node 22.23.4: **567 pruebas backend**, tipos y compilación de ambos componentes, **25 escenarios PostgreSQL/PostgREST**, **125 pruebas frontend** y **33 pruebas de navegador** (13 de interfaz y 20 de privacidad/PWA). Las dos pruebas frontend condicionadas a sus runners SQL particulares quedaron omitidas por ese comando; no se cuentan como aprobadas. Las regresiones SQL de esta entrega están descritas por separado. El ajuste posterior de limpieza del runner `4ac4e6d` no cambió SQL ni comportamiento de producto y volvió a pasar los 25 escenarios.
 
-Tras integrar HU-41 desde `a5c4ca4`, la rama de persistencia volvió a pasar **611 pruebas backend**, tipos, compilación y los **25 escenarios PostgreSQL/PostgREST**; estos últimos incluyen los 16 casos SQL de HU-41 antes y después de la actualización. Los archivos SQL ya aplicados a DEV (`015`, `022`, `023`, `024`) no cambiaron ni se reaplicaron.
+Tras integrar HU-41 desde `a5c4ca4`, la rama de persistencia volvió a pasar **611 pruebas backend**, tipos y compilación. El runner ampliado pasó **29 escenarios PostgreSQL/PostgREST**: incluye los 16 casos SQL de HU-41 antes y después de la actualización y **60 pruebas TypeScript activas** de HU-30/HU-31/HU-36/HU-41. Los archivos SQL ya aplicados a DEV (`015`, `022`, `023`, `024`) no cambiaron ni se reaplicaron.
 
 Las nuevas migraciones son aditivas y de una sola aplicación. Una versión anterior puede conservar el esquema, pero no se debe activar simultáneamente envío legado y nuevo sin el corte/conciliación de #109. Preservar datos/pendientes ante un fallo; no usar `init_schema.sql`, `.down.sql` destructivos ni borrar asientos para forzar repetición. Una incompatibilidad requiere una migración correctiva ensayada.
 

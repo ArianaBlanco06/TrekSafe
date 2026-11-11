@@ -252,6 +252,20 @@ try {
             await c.end();
         }
     } });
+    for (const hu of [30, 31, 36, 41]) {
+        await test(`HU-${hu} contrato DAO y casos de uso reales sobre esquema DEP-04`, async () => {
+            const output = await run(process.execPath, ['--import', 'tsx', '--test', '--test-concurrency=1', `src/testing/hu${hu}Postgres.integration.test.ts`], {
+                cwd: path.join(root, 'backend'),
+                env: { ...env, [`HU${hu}_TEST_DATABASE_URL`]: `postgresql://postgres@127.0.0.1:${port}/${database}` },
+            });
+            const passed = Number(output.match(/^# pass (\d+)\s*$/m)?.[1] ?? 0);
+            assert.ok(passed > 0, `HU-${hu} debe ejecutar casos reales; salida: ${output}`);
+            assert.match(output, /^# fail 0\s*$/m);
+            assert.match(output, /^# cancelled 0\s*$/m);
+            assert.match(output, /^# skipped 0\s*$/m);
+            console.log(output);
+        });
+    }
     if (value('--dev-check'))
         await test('comprobación DEV controlada ensayada localmente con rollback', async () => { const c = await client('dep108-dev-check'); try {
             const results = await c.query(await readFile(path.resolve(value('--dev-check')), 'utf8'));
