@@ -12,7 +12,11 @@
     "test:migraciones": "node --import tsx --test src/infrastructure/migraciones/migraciones.test.ts",
     "test:frontend-logica": "node --import tsx --test ../frontend/src/lib/plantillasCuentaLogica.test.ts",
     "test:mail": "tsx scripts/test-mail.ts",
-    "test:rescue-alert": "tsx scripts/test-rescue-alert.ts"
+    "test:rescue-alert": "tsx scripts/test-rescue-alert.ts",
+    "start:api": "node dist/api.js",
+    "start:worker": "node dist/worker.js",
+    "dev:api": "tsx watch src/api.ts",
+    "dev:worker": "tsx watch src/worker.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",

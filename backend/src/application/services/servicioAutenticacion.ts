@@ -4,9 +4,8 @@ import type {
   EntradaRegistrarRescatista,
   EntradaRegistrarSenderista,
 } from '../dto/autenticacion.dto.js';
-import { RepositorioAutenticacionPostgres } from '../../infrastructure/repositories/RepositorioAutenticacionPostgres.js';
-import { hashearContrasena, verificarContrasena } from '../../infrastructure/security/password.js';
-import { firmarToken } from '../../infrastructure/security/jwt.js';
+import type { IRepositorioAutenticacionPostgres } from '../ports/RepositorioAutenticacionPostgres.js';
+import type { ISeguridadAutenticacion } from '../ports/seguridad.js';
 
 export type RespuestaAutenticacion = {
   token: string;
@@ -19,7 +18,7 @@ export type RespuestaAutenticacion = {
 };
 
 export class ServicioAutenticacion {
-  constructor(private readonly repo = new RepositorioAutenticacionPostgres()) {}
+  constructor(private readonly repo: IRepositorioAutenticacionPostgres, private readonly seguridad: ISeguridadAutenticacion) {}
 
   async registrarSenderista(entrada: EntradaRegistrarSenderista): Promise<RespuestaAutenticacion> {
     const existente = await this.repo.buscarUsuarioPorCorreo(entrada.correoElectronico);
@@ -32,7 +31,7 @@ export class ServicioAutenticacion {
       throw new ErrorAplicacion(400, 'El DNI ya está registrado', 'DOCUMENTO_EXISTE');
     }
 
-    const hashContrasena = await hashearContrasena(entrada.contrasena);
+    const hashContrasena = await this.seguridad.hashearContrasena(entrada.contrasena);
 
     const usuario = await this.repo.registrarSenderista({
       correoElectronico: entrada.correoElectronico,
@@ -42,7 +41,7 @@ export class ServicioAutenticacion {
       telefono: entrada.telefono,
     });
 
-    const token = firmarToken({ sub: usuario.id, rol: usuario.rol });
+    const token = this.seguridad.firmarToken({ sub: usuario.id, rol: usuario.rol });
 
     return {
       token,
@@ -61,12 +60,12 @@ export class ServicioAutenticacion {
       throw new ErrorAplicacion(401, 'Credenciales inválidas', 'CREDENCIALES_INVALIDAS');
     }
 
-    const valida = await verificarContrasena(entrada.contrasena, usuario.hash_contrasena);
+    const valida = await this.seguridad.verificarContrasena(entrada.contrasena, usuario.hash_contrasena);
     if (!valida) {
       throw new ErrorAplicacion(401, 'Credenciales inválidas', 'CREDENCIALES_INVALIDAS');
     }
 
-    const token = firmarToken({ sub: usuario.id, rol: usuario.rol });
+    const token = this.seguridad.firmarToken({ sub: usuario.id, rol: usuario.rol });
     const nombreCompleto = await this.repo.obtenerNombreCompletoPerfil(usuario.id, usuario.rol);
 
     return {
@@ -101,7 +100,7 @@ export class ServicioAutenticacion {
       throw new ErrorAplicacion(400, 'El correo electrónico ya está registrado', 'CORREO_EXISTE');
     }
 
-    const hashContrasena = await hashearContrasena(entrada.contrasena);
+    const hashContrasena = await this.seguridad.hashearContrasena(entrada.contrasena);
 
     const usuario = await this.repo.registrarRescatista({
       correoElectronico: entrada.correoElectronico,
@@ -111,7 +110,7 @@ export class ServicioAutenticacion {
       fechaNacimiento: entrada.fechaNacimiento,
     });
 
-    const token = firmarToken({ sub: usuario.id, rol: usuario.rol });
+    const token = this.seguridad.firmarToken({ sub: usuario.id, rol: usuario.rol });
 
     return {
       token,

@@ -3,12 +3,11 @@ import type {
   CrearAvisoInput,
   INotificacionDAO,
 } from '../../domain/repositories/INotificacionDAO.js';
-import { RepositorioAvisosSupabase } from '../../infrastructure/repositories/RepositorioAvisosSupabase.js';
 import type { RespuestaAvisoDTO, RespuestaConteoNoLeidosDTO } from '../dto/aviso.dto.js';
 
 export class ServicioBandejaAvisos {
   constructor(
-    private readonly repoAvisos: INotificacionDAO = new RepositorioAvisosSupabase(),
+    private readonly repoAvisos: INotificacionDAO,
   ) {}
 
   async crearAviso(input: CrearAvisoInput): Promise<Aviso> {

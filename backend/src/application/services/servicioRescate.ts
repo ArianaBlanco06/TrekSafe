@@ -4,15 +4,14 @@ import type {
   ConsultaListarExpediciones,
   EntradaActualizarBitacoraRescate,
 } from '../dto/rescate.dto.js';
-import { RepositorioAlerta } from '../../infrastructure/repositories/RepositorioAlerta.js';
-import { calcularFechaLimite } from '../../infrastructure/repositories/RepositorioExpedicion.js';
-import { RepositorioRescate } from '../../infrastructure/repositories/RepositorioRescate.js';
-import { RepositorioUsuario } from '../../infrastructure/repositories/RepositorioUsuario.js';
-import { RepositorioAuditoriaAccesoMedico } from '../../infrastructure/repositories/RepositorioAuditoriaAccesoMedico.js';
+import type { IRepositorioAlerta } from '../ports/RepositorioAlerta.js';
+import { calcularFechaLimite } from '../../domain/entities/Expedicion.js';
+import type { IReloj } from '../../domain/services/IReloj.js';
+import type { IRepositorioRescate } from '../ports/RepositorioRescate.js';
+import type { IRepositorioUsuario } from '../ports/RepositorioUsuario.js';
+import type { IRepositorioAuditoriaAccesoMedico } from '../ports/RepositorioAuditoriaAccesoMedico.js';
 import type { NivelRiesgoExpedicion } from '../../domain/value-objects/enums.js';
 import type { Coordinacion, IIncidenteDAO } from '../../domain/repositories/IIncidenteDAO.js';
-import { getSupabaseAdmin } from '../../infrastructure/database/supabase.js';
-import { IncidenteDAOSupabase } from '../../infrastructure/repositories/IncidenteDAOSupabase.js';
 
 const UMBRAL_URGENCIA_MS = 30 * 60_000;
 
@@ -140,11 +139,12 @@ export type ItemHistorialRescatista = {
 
 export class ServicioRescate {
   constructor(
-    private readonly repo = new RepositorioRescate(),
-    private readonly repoAlerta = new RepositorioAlerta(),
-    private readonly repoUsuario = new RepositorioUsuario(),
-    private readonly repoAuditoria = new RepositorioAuditoriaAccesoMedico(),
-    private readonly incidentes: IIncidenteDAO = new IncidenteDAOSupabase(getSupabaseAdmin()),
+    private readonly repo: IRepositorioRescate,
+    private readonly repoAlerta: IRepositorioAlerta,
+    private readonly repoUsuario: IRepositorioUsuario,
+    private readonly repoAuditoria: IRepositorioAuditoriaAccesoMedico,
+    private readonly incidentes: IIncidenteDAO,
+    private readonly reloj: IReloj = { ahora: () => new Date() },
   ) {}
 
   async listarExpediciones(
@@ -173,6 +173,7 @@ export class ServicioRescate {
       const { nivelRiesgo, minutosRestantes, minutosExcedidos } = calcularNivelRiesgoExpedicion(
         fila.estado,
         fechaLimite,
+        this.reloj.ahora().getTime(),
       );
       const confirmacion = confirmaciones.get(fila.id) ?? null;
 
@@ -281,7 +282,7 @@ export class ServicioRescate {
       horaRetornoEstimada: contexto.horaRetornoEstimada,
       minutosTolerancia: contexto.minutosTolerancia,
       fechaLimite: contexto.fechaLimite,
-      enAlertaDesde: expedicion?.actualizado_en ?? new Date().toISOString(),
+      enAlertaDesde: expedicion?.actualizado_en ?? this.reloj.ahora().toISOString(),
       acompanantes: contexto.acompanantes,
       contactosEmergencia: contexto.contactos.map((c, i) => ({
         nombreCompleto: c.nombreCompleto,

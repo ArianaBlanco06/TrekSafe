@@ -2,13 +2,12 @@ import { ampliacionesRestantes } from '../../domain/value-objects/ampliacionReto
 import { ErrorAplicacion } from '../../shared/errors/ErrorAplicacion.js';
 import type { EntradaConfirmarRetorno } from '../dto/expedicion.dto.js';
 import type { EntradaCrearExpedicion } from '../dto/usuario.dto.js';
-import {
-  calcularFechaLimite,
-  RepositorioExpedicion,
-} from '../../infrastructure/repositories/RepositorioExpedicion.js';
-import { RepositorioAutenticacionPostgres } from '../../infrastructure/repositories/RepositorioAutenticacionPostgres.js';
-import { RepositorioUsuario } from '../../infrastructure/repositories/RepositorioUsuario.js';
-import { verificarContrasena } from '../../infrastructure/security/password.js';
+import { calcularFechaLimite } from '../../domain/entities/Expedicion.js';
+import type { IRepositorioExpedicion } from '../ports/RepositorioExpedicion.js';
+import type { IRepositorioAutenticacionPostgres } from '../ports/RepositorioAutenticacionPostgres.js';
+import type { IRepositorioUsuario } from '../ports/RepositorioUsuario.js';
+import type { VerificarContrasena } from '../ports/seguridad.js';
+import type { IReloj } from '../../domain/services/IReloj.js';
 
 export type ResumenExpedicionActiva = {
   id: string;
@@ -30,9 +29,11 @@ export type ResumenExpedicionActiva = {
 
 export class ServicioExpedicion {
   constructor(
-    private readonly repoExpedicion = new RepositorioExpedicion(),
-    private readonly repoUsuario = new RepositorioUsuario(),
-    private readonly repoAuth = new RepositorioAutenticacionPostgres(),
+    private readonly repoExpedicion: IRepositorioExpedicion,
+    private readonly repoUsuario: IRepositorioUsuario,
+    private readonly repoAuth: IRepositorioAutenticacionPostgres,
+    private readonly verificarContrasena: VerificarContrasena,
+    private readonly reloj: IReloj,
   ) {}
 
   async crearExpedicion(senderistaId: string, entrada: EntradaCrearExpedicion) {
@@ -46,7 +47,7 @@ export class ServicioExpedicion {
       );
     }
 
-    const ahora = Date.now();
+    const ahora = this.reloj.ahora().getTime();
     const inicioMs = new Date(entrada.horaInicio).getTime();
     const retornoMs = new Date(entrada.horaRetornoEstimada).getTime();
 
@@ -141,7 +142,7 @@ export class ServicioExpedicion {
       throw new ErrorAplicacion(401, 'Usuario no encontrado', 'NO_AUTORIZADO');
     }
 
-    const valida = await verificarContrasena(entrada.contrasena, usuario.hash_contrasena);
+    const valida = await this.verificarContrasena(entrada.contrasena, usuario.hash_contrasena);
     if (!valida) {
       throw new ErrorAplicacion(401, 'Contraseña incorrecta', 'CONTRASENA_INVALIDA');
     }
@@ -150,7 +151,7 @@ export class ServicioExpedicion {
 
     return {
       expedicion: mapearExpedicion(completada),
-      confirmadoEn: completada.actualizado_en ?? new Date().toISOString(),
+      confirmadoEn: completada.actualizado_en ?? this.reloj.ahora().toISOString(),
     };
   }
 

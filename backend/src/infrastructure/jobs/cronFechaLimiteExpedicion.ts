@@ -1,103 +1,70 @@
-import { ServicioNotificacionAlerta } from '../../application/services/servicioNotificacionAlerta.js';
-import { ServicioAlertaRescate } from '../../application/services/servicioAlertaRescate.js';
-import { ServicioRecordatorioExpedicion } from '../../application/services/servicioRecordatorioExpedicion.js';
-import { ServicioCorreo } from '../email/ServicioCorreo.js';
+import {
+  procesarPlazos,
+  type DependenciasPlazos,
+  type ResultadoTickCron,
+} from '../../application/use-cases/ProcesarPlazosExpedicion.js';
+import { crearDependenciasCron } from '../composicion/servicios.js';
 import { loadEnv, type Env } from '../config/env.js';
-import { RepositorioExpedicion } from '../repositories/RepositorioExpedicion.js';
 import { cronHealth } from './cronState.js';
 
-export type ResultadoTickCron = {
-  promovidas: number;
-  enAlerta: number;
-  correosContacto: number;
-  correosRescate: number;
-  recordatoriosGenerados?: number;
-};
+export type { ResultadoTickCron };
 
 export async function ejecutarTickFechaLimite(
-  repo = new RepositorioExpedicion(),
-  alertasContacto = new ServicioNotificacionAlerta(),
-  alertasRescate = new ServicioAlertaRescate(),
-  recordatorios = new ServicioRecordatorioExpedicion(),
+  repo?: DependenciasPlazos['repo'],
+  alertasContacto?: DependenciasPlazos['alertasContacto'],
+  alertasRescate?: DependenciasPlazos['alertasRescate'],
+  recordatorios?: DependenciasPlazos['recordatorios'],
 ): Promise<ResultadoTickCron> {
-  const promovidas = await repo.promoverProgramadasListas();
-  const idsEnAlerta = await repo.marcarEnProgresoExpiradaComoAlerta();
-
-  let correosContacto = 0;
-  let correosRescate = 0;
-
-  for (const expedicionId of idsEnAlerta) {
-    const contactos = await alertasContacto.notificarContactosEmergencia(expedicionId);
-    correosContacto += contactos.enviados + contactos.registrados;
-
-    const rescate = await alertasRescate.notificarEquiposRescate(expedicionId);
-    correosRescate += rescate.enviados + rescate.registrados;
-  }
-
-  // HU-38: Evaluar recordatorios in-app para expediciones en progreso
-  let recordatoriosGenerados = 0;
-  try {
-    const resRec = await recordatorios.procesarRecordatorios();
-    recordatoriosGenerados = resRec.avisosGenerados;
-  } catch (err) {
-    console.error('[Cron] Error al procesar recordatorios de expediciones:', err);
-  }
-
-  const resultado: ResultadoTickCron = {
-    promovidas,
-    enAlerta: idsEnAlerta.length,
-    correosContacto,
-    correosRescate,
-  };
-
-  if (recordatoriosGenerados > 0) {
-    resultado.recordatoriosGenerados = recordatoriosGenerados;
-  }
-
-  return resultado;
+  const base =
+    repo && alertasContacto && alertasRescate && recordatorios
+      ? undefined
+      : crearDependenciasCron();
+  return procesarPlazos({
+    repo: repo ?? base!.repo,
+    alertasContacto: alertasContacto ?? base!.alertasContacto,
+    alertasRescate: alertasRescate ?? base!.alertasRescate,
+    recordatorios: recordatorios ?? base!.recordatorios,
+  });
 }
 
 export function iniciarCronFechaLimiteExpedicion(
   configuracion: Pick<Env, 'cronEnabled' | 'cronIntervalMs'> = loadEnv(),
-): () => void {
-  const { cronEnabled, cronIntervalMs } = configuracion;
-  // No instanciar repositorios, ejecutar el primer tick ni crear un timer al desactivar.
-  if (!cronEnabled) return () => {};
-  const repo = new RepositorioExpedicion();
-  const alertasContacto = new ServicioNotificacionAlerta();
-  const alertasRescate = new ServicioAlertaRescate();
-  const modoCorreo = new ServicioCorreo().getModoTransporte();
-
-  const tick = async () => {
-    try {
-      const { promovidas, enAlerta, correosContacto, correosRescate } =
-        await ejecutarTickFechaLimite(repo, alertasContacto, alertasRescate);
-
-      cronHealth.lastTickAt = new Date().toISOString();
-      cronHealth.lastError = null;
-      cronHealth.lastPromoted = promovidas;
-      cronHealth.lastAlerted = enAlerta;
-
-      if (promovidas > 0 || enAlerta > 0) {
-        console.log(
-          `[Cron] fechas límite: promovidas=${promovidas} enAlerta=${enAlerta} correosContacto=${correosContacto} correosRescate=${correosRescate}`,
-        );
+  crearDependencias: () => DependenciasPlazos = crearDependenciasCron,
+): () => Promise<void> {
+  if (!configuracion.cronEnabled) return async () => {};
+  const dependencias = crearDependencias();
+  let detenido = false;
+  let pendiente: Promise<void> | null = null;
+  const tick = (): Promise<void> => {
+    if (detenido) return Promise.resolve();
+    if (pendiente) return pendiente;
+    pendiente = (async () => {
+      try {
+        const resultado = await procesarPlazos(dependencias);
+        cronHealth.lastTickAt = new Date().toISOString();
+        cronHealth.lastError = null;
+        cronHealth.lastPromoted = resultado.promovidas;
+        cronHealth.lastAlerted = resultado.enAlerta;
+      } catch (error) {
+        cronHealth.lastError =
+          error instanceof Error ? error.message : String(error);
+        console.error('[Cron] tick de fecha límite falló:', error);
       }
-    } catch (err) {
-      cronHealth.lastError = err instanceof Error ? err.message : String(err);
-      console.error('[Cron] tick de fecha límite falló:', err);
-    }
+    })().finally(() => {
+      pendiente = null;
+    });
+    return pendiente;
   };
-
   void tick();
-
   const timer = setInterval(() => {
     void tick();
-  }, cronIntervalMs);
-
+  }, configuracion.cronIntervalMs);
   console.log(
-    `[Cron] job de fechas límite iniciado (intervalo=${cronIntervalMs}ms, correo=${modoCorreo})`,
+    `[Cron] job de fechas límite iniciado (intervalo=${configuracion.cronIntervalMs}ms)`,
   );
-
-  return () => clearInterval(timer);
+  return async () => {
+    detenido = true;
+    clearInterval(timer);
+    await pendiente;
+  };
 }
