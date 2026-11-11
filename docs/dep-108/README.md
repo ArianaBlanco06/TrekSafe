@@ -1,6 +1,6 @@
 # DEP-04 / #108 — Persistencia transaccional
 
-Base: `develop` en `3b61042beb2265a4b38d2e2bc9427e410a65ae1e`; código funcional inicial en `68f2440`. Responsable: PO. Validación local y DEV: **2026-11-11**. [Issue #108](https://github.com/ArianaBlanco06/TrekSafe/issues/108), [diseño #106](https://github.com/ArianaBlanco06/TrekSafe/pull/113), procesador posterior [#109](https://github.com/ArianaBlanco06/TrekSafe/issues/109).
+Base conciliada: `develop` en `a5c4ca461c253ab25b2fb1315f324e0a7d79a6bf`, incluida HU-41 y su registro `019`; código funcional inicial en `68f2440`. Responsable: PO. Validación local y DEV: **2026-11-11**. [Issue #108](https://github.com/ArianaBlanco06/TrekSafe/issues/108), [diseño #106](https://github.com/ArianaBlanco06/TrekSafe/pull/113), procesador posterior [#109](https://github.com/ArianaBlanco06/TrekSafe/issues/109).
 
 ## Cambios y compatibilidad
 
@@ -27,7 +27,7 @@ Las plantillas vacías fueron generadas con Supabase CLI **3.1.0**, `migration n
 
 ## Validación reproducible
 
-Herramientas: Node **22.23.4**, PostgreSQL **17.11**, PostgREST **16.5**, archivos temporales verificados contra SHA256 oficiales. Sin servicio instalado ni PATH global modificado. El runner crea clúster/base nuevos en loopback, no lee `.env`, `DATABASE_URL` o claves Supabase y detiene sus procesos al terminar. Conserva carpeta temporal/log para inspección.
+Herramientas: Node **22.23.4**, PostgreSQL **17.11**, PostgREST **16.5**, archivos temporales verificados contra SHA256 oficiales. Sin servicio instalado ni PATH global modificado. El runner crea clúster/base nuevos en loopback, desactiva sockets Unix para no depender de permisos de `/var/run/postgresql` en CI, no lee `.env`, `DATABASE_URL` o claves Supabase y detiene sus procesos al terminar. Conserva carpeta temporal/log para inspección.
 
 Desde la raíz con dependencias del backend:
 
@@ -48,11 +48,11 @@ En Windows, incluir PostgreSQL bin en el PATH del proceso para `libpq`. El entor
 | Atomicidad | Fallos en vínculos, acompañantes, aviso y outbox revierten las escrituras correspondientes |
 | Concurrencia | Dos creaciones; creación/promoción; ampliación/vencimiento; dos evaluadores; cancelación cuya salida pasa durante el bloqueo |
 | Permisos | `service_role` real; rechazo de tabla/RPC a `anon`/`authenticated`; actor/contacto ajenos |
-| Regresiones SQL | Suites completas HU-27/HU-39/HU-36 antes y después del esquema ampliado; coordinación/idempotencia conservadas |
+| Regresiones SQL | Suites completas HU-27/HU-39/HU-36/HU-41 (16 casos de bitácora) antes y después del esquema ampliado; coordinación/idempotencia conservadas |
 | SDK/HTTP | SDK Supabase y adaptador reales sobre PostgREST nativo, sin simular resultados SQL |
 | Adaptador unitario | **11 pruebas aprobadas**; errores, RPC ausente sin fallback y respuesta inválida |
 | Tipos | `tsc --noEmit` aprobado |
-| Regresión completa y build | **551 pruebas aprobadas**, cero fallos; `tsc` de producción aprobado |
+| Regresión completa y build | **611 pruebas aprobadas**, cero fallos; `tsc` de producción aprobado |
 | Fallo del ejecutable PostgREST | Ruta inexistente produce error controlado; `postmaster.pid` ausente, `pg_isready` sin respuesta y log PostgreSQL confirma apagado |
 
 El CI añade un job PostgreSQL 17/PostgREST 16.5 con checksum y artefacto de resultados. Su resultado remoto se consulta en el PR; disponer del job no acredita una ejecución remota aún no terminada.
@@ -60,6 +60,8 @@ El CI añade un job PostgreSQL 17/PostgREST 16.5 con checksum y artefacto de res
 ### Fixtures históricas corregidas
 
 HU-39 ahora utiliza un propietario por expedición para respetar la unicidad de bloqueantes, conservando actores y casos de coordinación. La FK `ON DELETE RESTRICT` produce `23503` en PostgreSQL 17; se comprueba ese rechazo y `pg_constraint.confdeltype='r'` en lugar de esperar `23001`.
+
+HU-41 también usa un propietario por cada expedición bloqueante en su fixture SQL, preservando responsables, entradas y casos de bitácora. Los 16 casos pasan antes y después de aplicar DEP-04; no se alteró su SQL productivo `019`.
 
 HU-36 usa `TRUNCATE ... CASCADE` para alcanzar el trigger cuando HU-37 ya referencia eventos. El trigger rechaza la operación: la prueba no trunca datos. Son cambios de tests, sin alterar las migraciones productivas de esas HU.
 
@@ -72,6 +74,8 @@ El chequeo versionado en `backend/migrations/tests/dep108_dev_rollback.sql` pas�
 ## Validación conjunta con #107
 
 La unión local de `032317f` (#107) y `a988637` (#108), sobre `develop` `3b61042`, pasó con Node 22.23.4: **567 pruebas backend**, tipos y compilación de ambos componentes, **25 escenarios PostgreSQL/PostgREST**, **125 pruebas frontend** y **33 pruebas de navegador** (13 de interfaz y 20 de privacidad/PWA). Las dos pruebas frontend condicionadas a sus runners SQL particulares quedaron omitidas por ese comando; no se cuentan como aprobadas. Las regresiones SQL de esta entrega están descritas por separado. El ajuste posterior de limpieza del runner `4ac4e6d` no cambió SQL ni comportamiento de producto y volvió a pasar los 25 escenarios.
+
+Tras integrar HU-41 desde `a5c4ca4`, la rama de persistencia volvió a pasar **611 pruebas backend**, tipos, compilación y los **25 escenarios PostgreSQL/PostgREST**; estos últimos incluyen los 16 casos SQL de HU-41 antes y después de la actualización. Los archivos SQL ya aplicados a DEV (`015`, `022`, `023`, `024`) no cambiaron ni se reaplicaron.
 
 Las nuevas migraciones son aditivas y de una sola aplicación. Una versión anterior puede conservar el esquema, pero no se debe activar simultáneamente envío legado y nuevo sin el corte/conciliación de #109. Preservar datos/pendientes ante un fallo; no usar `init_schema.sql`, `.down.sql` destructivos ni borrar asientos para forzar repetición. Una incompatibilidad requiere una migración correctiva ensayada.
 

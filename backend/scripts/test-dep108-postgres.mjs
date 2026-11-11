@@ -38,7 +38,7 @@ const baseMigrations = [
     '004_hu27_estado_cancelada', '005_hu27_rpc_cancelar_expedicion', '006_hu27_permiso_anonimizar_eventos', '007_hu35_rpc_ampliar_retorno',
     '20261101_hu30_listas_equipo', '20261101_hu30_operaciones_equipo', '008_hu31_preparacion_expedicion', '009_hu31_operaciones_preparacion',
     '010_hu32_puntos_ruta', '011_hu29_endurecer_permisos', '012_hu36_eventos_plan_solo_anexado', '013_hu37_avisos', '014_hu38_minutos_recordatorio',
-    '016_hu34_avances_expedicion', '017_hu39_asumir_coordinacion', '018_hu27_cancelar_salida_futura'
+    '016_hu34_avances_expedicion', '017_hu39_asumir_coordinacion', '018_hu27_cancelar_salida_futura', '019_hu41_bitacora_incidente'
 ];
 const newMigrations = ['015_hu45_outbox', '022_dep108_crear_expedicion_atomica', '023_dep108_avisos_transaccionales', '024_dep108_vencimientos_outbox'];
 const apply = async (client, names) => { for (const name of names)
@@ -85,6 +85,8 @@ const counts = async (c) => (await c.query(`SELECT (SELECT count(*) FROM public.
 const inject = async (c, table) => { await c.query(`CREATE FUNCTION public.dep108_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'FALLO_INYECTADO'; END $$; CREATE TRIGGER dep108_failure BEFORE INSERT ON public.${table} FOR EACH ROW EXECUTE FUNCTION public.dep108_failure();`); };
 try {
     await run(exe('initdb'), ['-D', data, '-U', 'postgres', '--auth=trust', '--encoding=UTF8', '--locale=C']);
+    // CI no necesita escribir sockets en /var/run/postgresql: usa solo TCP loopback.
+    await writeFile(path.join(data, 'postgresql.auto.conf'), "unix_socket_directories = ''\n");
     await control(['-D', data, '-l', path.join(workspace, 'postgres.log'), '-w', 'start', '-o', `-h 127.0.0.1 -p ${port} -c timezone=UTC -c max_connections=30`]);
     started = true;
     console.log(`Clúster temporal: ${workspace}; puerto PostgreSQL ${port}`);
@@ -96,7 +98,7 @@ try {
     await pool.query(roles);
     await pool.query(await readFile(path.join(root, 'init_schema.sql'), 'utf8'));
     await apply(pool, baseMigrations);
-    await test('regresiones SQL históricas HU-27/HU-39/HU-36 antes de actualizar', async () => { for (const f of ['hu27_cancelar_salida_futura.test.sql', 'hu39_asumir_coordinacion.test.sql', 'hu36_eventos_plan_solo_anexado.test.sql']) {
+    await test('regresiones SQL históricas HU-27/HU-39/HU-36/HU-41 antes de actualizar', async () => { for (const f of ['hu27_cancelar_salida_futura.test.sql', 'hu39_asumir_coordinacion.test.sql', 'hu36_eventos_plan_solo_anexado.test.sql', 'hu41_bitacora_incidente.test.sql']) {
         const c = await client('dep108-regression');
         try {
             await c.query(await readFile(path.join(root, 'backend/migrations/tests', f), 'utf8'));
@@ -240,7 +242,7 @@ try {
         await c.query('DELETE FROM public.usuarios WHERE id=ANY($1)', [[f.actor, f.stranger]]);
         await c.end();
     } });
-    await test('regresiones HU-27/HU-39/HU-36 sobre el esquema ampliado', async () => { for (const f of ['hu27_cancelar_salida_futura.test.sql', 'hu39_asumir_coordinacion.test.sql', 'hu36_eventos_plan_solo_anexado.test.sql']) {
+    await test('regresiones HU-27/HU-39/HU-36/HU-41 sobre el esquema ampliado', async () => { for (const f of ['hu27_cancelar_salida_futura.test.sql', 'hu39_asumir_coordinacion.test.sql', 'hu36_eventos_plan_solo_anexado.test.sql', 'hu41_bitacora_incidente.test.sql']) {
         const c = await client('dep108-regression-new');
         try {
             await c.query(await readFile(path.join(root, 'backend/migrations/tests', f), 'utf8'));

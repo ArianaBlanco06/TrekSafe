@@ -28,6 +28,7 @@ Solo se anotan aplicaciones reales sobre un entorno (DEV, producción u otro). L
 | `022_dep108_crear_expedicion_atomica.sql` | 022 | 2026-11-11 12:57:41 UTC | DEV | a988637 | Marko (PO), mediante Codex/Supabase | OK: creación por RPC y unicidad de bloqueantes |
 | `023_dep108_avisos_transaccionales.sql` | 023 | 2026-11-11 12:57:45 UTC | DEV | a988637 | Marko (PO), mediante Codex/Supabase | OK: evento y aviso transaccionales |
 | `024_dep108_vencimientos_outbox.sql` | 024 | 2026-11-11 12:57:50 UTC | DEV | a988637 | Marko (PO), mediante Codex/Supabase | OK: productor SQL futuro; cron legado sin cambios |
+| `019_hu41_bitacora_incidente.sql` | 019 | 2026-11-11 17:46 UTC | DEV | 2deb4af | Ariana | OK |
 
 HU-32: la estructura final está aplicada y verificada en Supabase DEV.
 El asiento administrativo 010 fue registrado correctamente en public.treksafe_migraciones el 2026-11-06 a las 05:23 UTC.
