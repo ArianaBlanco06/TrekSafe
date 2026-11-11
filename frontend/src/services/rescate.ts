@@ -154,6 +154,24 @@ export function aceptarRelevo(expedicionId: string, relevoId: string, operacionI
   );
 }
 
+/** El destinatario rechaza el relevo pendiente (HU-40). Solo la operación: sin motivo ni versión. */
+export function rechazarRelevo(expedicionId: string, relevoId: string, operacionId: string) {
+  return api.post<{ coordinacion: Coordinacion }>(
+    `/rescate/alertas/${expedicionId}/coordinacion/relevos/${relevoId}/rechazar`,
+    { operacionId },
+    true,
+  );
+}
+
+/** Quien propuso cancela el relevo pendiente (HU-40). Solo la operación: sin motivo ni versión. */
+export function cancelarRelevo(expedicionId: string, relevoId: string, operacionId: string) {
+  return api.post<{ coordinacion: Coordinacion }>(
+    `/rescate/alertas/${expedicionId}/coordinacion/relevos/${relevoId}/cancelar`,
+    { operacionId },
+    true,
+  );
+}
+
 export type DetalleAlertaRescate = {
   expedicionId: string;
   nombreCompletoSenderista: string;

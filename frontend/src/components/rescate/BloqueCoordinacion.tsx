@@ -28,7 +28,7 @@ export type BloqueCoordinacionProps = {
   /** Solo para pruebas. */
   generarId?: () => string;
   /** Solo para pruebas: dependencias del relevo (HU-40). */
-  relevo?: Pick<BloqueRelevoProps, 'proponer' | 'aceptar' | 'listarRescatistas'>;
+  relevo?: Pick<BloqueRelevoProps, 'proponer' | 'aceptar' | 'rechazar' | 'cancelar' | 'listarRescatistas'>;
 };
 
 type Local =

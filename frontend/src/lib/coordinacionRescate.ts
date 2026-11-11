@@ -141,6 +141,19 @@ export function puedeAceptarRelevo(coordinacion: Coordinacion | null | undefined
   return coordinacion?.relevoPendiente?.esParaMi === true;
 }
 
+/** Solo el destinatario del relevo pendiente lo rechaza. */
+export function puedeRechazarRelevo(coordinacion: Coordinacion | null | undefined): boolean {
+  return coordinacion?.relevoPendiente?.esParaMi === true;
+}
+
+/**
+ * Solo quien propuso cancela el relevo pendiente. Mientras el relevo está pendiente quien
+ * propuso sigue siendo el responsable vigente (`esMia`); el servidor lo vuelve a comprobar.
+ */
+export function puedeCancelarRelevo(coordinacion: Coordinacion | null | undefined): boolean {
+  return !!coordinacion && coordinacion.esMia && !!coordinacion.relevoPendiente;
+}
+
 /** Mensaje de error del motivo, o `null` si es válido (1 a 280 caracteres tras recortar). */
 export function validarMotivoRelevo(motivo: string): string | null {
   const recortado = motivo.trim();
@@ -166,6 +179,18 @@ export function textoRelevoPendiente(coordinacion: Coordinacion, zonaHoraria?: s
   return coordinacion.esMia ? `${conHora}. Sigues coordinando tú` : conHora;
 }
 
+export const AVISO_RELEVO_RECHAZADO = 'Rechazaste el relevo. Sigue coordinando quien lo propuso.';
+export const AVISO_RELEVO_CANCELADO = 'Cancelaste el relevo. Sigues coordinando tú y puedes proponer otro.';
+export const TEXTO_CONFIRMAR_RECHAZO = '¿Rechazar el relevo? Seguirá coordinando quien lo propuso.';
+export const TEXTO_CONFIRMAR_CANCELACION = '¿Cancelar el relevo? Seguirás coordinando tú y podrás proponer otro.';
+
+/** Cómo quedó un relevo que ya no estaba pendiente (extra `estadoRelevo` de RELEVO_YA_RESUELTO). */
+const TEXTO_RELEVO_YA_RESUELTO: Record<string, string> = {
+  aceptado: 'El relevo ya fue aceptado.',
+  rechazado: 'El relevo ya fue rechazado.',
+  cancelado: 'El relevo ya fue cancelado.',
+};
+
 export type ResultadoRelevoUi =
   | { tipo: 'ok'; coordinacion: Coordinacion }
   /** El estado cambió en el servidor: se muestra el motivo y se vuelve a leer la pantalla. */
@@ -179,6 +204,7 @@ const CODIGOS_RELEER_RELEVO = new Set([
   'NO_ES_RESPONSABLE',
   'RELEVO_YA_RESUELTO',
   'NO_ES_DESTINATARIO',
+  'NO_ES_PROPONENTE',
   'RELEVO_NO_ENCONTRADO',
   'INCIDENTE_CERRADO',
 ]);
@@ -194,6 +220,9 @@ export type AceptarRelevoFn = (
   relevoId: string,
   operacionId: string,
 ) => Promise<{ coordinacion: Coordinacion }>;
+/** Rechazar y cancelar tienen la misma forma que aceptar: relevo y operación, sin motivo ni versión. */
+export type RechazarRelevoFn = AceptarRelevoFn;
+export type CancelarRelevoFn = AceptarRelevoFn;
 
 /** Misma política de `operacionId` que `intentarAsumir`: se conserva solo si el resultado es incierto. */
 async function ejecutarRelevo(
@@ -211,6 +240,11 @@ async function ejecutarRelevo(
     const mensaje = e.message || mensajePorDefecto;
     if (esResultadoIncierto(error)) return { tipo: 'error', mensaje };
     gestor.resolver();
+    if (e.codigo === 'RELEVO_YA_RESUELTO') {
+      // El servidor dice cómo quedó el relevo: se le explica a quien actuó, sin adivinar.
+      const estado = e.extras?.estadoRelevo;
+      return { tipo: 'releer', mensaje: (typeof estado === 'string' && TEXTO_RELEVO_YA_RESUELTO[estado]) || mensaje };
+    }
     if (e.codigo && CODIGOS_RELEER_RELEVO.has(e.codigo)) return { tipo: 'releer', mensaje };
     return { tipo: 'error', mensaje };
   }
@@ -235,5 +269,27 @@ export function intentarAceptarRelevo(
 ): Promise<ResultadoRelevoUi> {
   return ejecutarRelevo(gestor, 'No se pudo aceptar el relevo.', (operacionId) =>
     aceptar(expedicionId, relevoId, operacionId),
+  );
+}
+
+export function intentarRechazarRelevo(
+  expedicionId: string,
+  relevoId: string,
+  gestor: GestorOperacion,
+  rechazar: RechazarRelevoFn,
+): Promise<ResultadoRelevoUi> {
+  return ejecutarRelevo(gestor, 'No se pudo rechazar el relevo.', (operacionId) =>
+    rechazar(expedicionId, relevoId, operacionId),
+  );
+}
+
+export function intentarCancelarRelevo(
+  expedicionId: string,
+  relevoId: string,
+  gestor: GestorOperacion,
+  cancelar: CancelarRelevoFn,
+): Promise<ResultadoRelevoUi> {
+  return ejecutarRelevo(gestor, 'No se pudo cancelar el relevo.', (operacionId) =>
+    cancelar(expedicionId, relevoId, operacionId),
   );
 }

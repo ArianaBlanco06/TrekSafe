@@ -2,24 +2,36 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowRightLeft } from 'lucide-react';
 import {
   ADVERTENCIA_MOTIVO_RELEVO,
+  AVISO_RELEVO_CANCELADO,
+  AVISO_RELEVO_RECHAZADO,
   MOTIVO_RELEVO_MAXIMO,
+  TEXTO_CONFIRMAR_CANCELACION,
+  TEXTO_CONFIRMAR_RECHAZO,
   crearGestorOperacion,
   intentarAceptarRelevo,
+  intentarCancelarRelevo,
   intentarProponerRelevo,
+  intentarRechazarRelevo,
   puedeAceptarRelevo,
+  puedeCancelarRelevo,
   puedeProponerRelevo,
+  puedeRechazarRelevo,
   textoRelevoPendiente,
   validarMotivoRelevo,
   type AceptarRelevoFn,
+  type CancelarRelevoFn,
   type GestorOperacion,
   type ProponerRelevoFn,
+  type RechazarRelevoFn,
   type ResultadoRelevoUi,
 } from '@/lib/coordinacionRescate';
 import { generarUuid } from '@/lib/uuid';
 import {
   aceptarRelevo,
+  cancelarRelevo,
   obtenerRescatistasElegibles,
   proponerRelevo,
+  rechazarRelevo,
   type Coordinacion,
   type RescatistaElegible,
 } from '@/services/rescate';
@@ -28,12 +40,16 @@ export type BloqueRelevoProps = {
   expedicionId: string;
   /** Coordinación vigente que informa el servidor. */
   coordinacion: Coordinacion;
-  /** Se llama tras proponer, aceptar o un rechazo por estado cambiado, para volver a leer la pantalla. */
+  /** Se llama tras proponer, aceptar, rechazar, cancelar o un rechazo por estado cambiado, para volver a leer la pantalla. */
   alActualizar: () => void;
   /** Solo para pruebas. */
   proponer?: ProponerRelevoFn;
   /** Solo para pruebas. */
   aceptar?: AceptarRelevoFn;
+  /** Solo para pruebas. */
+  rechazar?: RechazarRelevoFn;
+  /** Solo para pruebas. */
+  cancelar?: CancelarRelevoFn;
   /** Solo para pruebas. */
   listarRescatistas?: () => Promise<{ rescatistas: RescatistaElegible[] }>;
   /** Solo para pruebas. */
@@ -42,8 +58,10 @@ export type BloqueRelevoProps = {
 
 /**
  * HU-40: relevo de la coordinación dentro de `BloqueCoordinacion`. Responsable sin relevo:
- * "Transferir coordinación". Relevo pendiente: texto según quién consulta y, para el
- * destinatario, "Aceptar relevo". Las reglas viven en `lib/coordinacionRescate.ts`; aquí
+ * "Transferir coordinación". Relevo pendiente: texto según quién consulta; el destinatario
+ * ve "Aceptar relevo" y "Rechazar", y quien propuso ve "Cancelar relevo" (rechazar y
+ * cancelar piden una confirmación). Sin vencimiento: el relevo sigue hasta que alguien lo
+ * resuelva. Las reglas viven en `lib/coordinacionRescate.ts`; aquí
  * solo hay estado de pantalla. Lo que informa el servidor (`coordinacion`) manda: la
  * respuesta local solo cubre el instante hasta la siguiente lectura.
  */
@@ -53,6 +71,8 @@ export function BloqueRelevo({
   alActualizar,
   proponer = proponerRelevo,
   aceptar = aceptarRelevo,
+  rechazar = rechazarRelevo,
+  cancelar = cancelarRelevo,
   listarRescatistas = obtenerRescatistasElegibles,
   generarId = generarUuid,
 }: BloqueRelevoProps) {
@@ -63,10 +83,19 @@ export function BloqueRelevo({
   const [motivo, setMotivo] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [mensaje, setMensaje] = useState('');
+  /** Resultado correcto de rechazar o cancelar (no es un error). */
+  const [aviso, setAviso] = useState('');
+  /** Acción pendiente de confirmar: rechazar o cancelar. */
+  const [confirmar, setConfirmar] = useState<'rechazar' | 'cancelar' | null>(null);
+  const [accion, setAccion] = useState<'aceptar' | 'rechazar' | 'cancelar' | null>(null);
   const gestorProponer = useRef<GestorOperacion | null>(null);
   const gestorAceptar = useRef<GestorOperacion | null>(null);
+  const gestorRechazar = useRef<GestorOperacion | null>(null);
+  const gestorCancelar = useRef<GestorOperacion | null>(null);
   gestorProponer.current ??= crearGestorOperacion(generarId);
   gestorAceptar.current ??= crearGestorOperacion(generarId);
+  gestorRechazar.current ??= crearGestorOperacion(generarId);
+  gestorCancelar.current ??= crearGestorOperacion(generarId);
 
   // Una lectura nueva del servidor reemplaza a la respuesta local.
   useEffect(() => {
@@ -78,6 +107,7 @@ export function BloqueRelevo({
   const abrirFormulario = async () => {
     setFormularioAbierto(true);
     setMensaje('');
+    setAviso('');
     if (rescatistas !== null) return;
     try {
       setRescatistas((await listarRescatistas()).rescatistas);
@@ -86,17 +116,20 @@ export function BloqueRelevo({
     }
   };
 
-  const terminar = (resultado: ResultadoRelevoUi) => {
+  const terminar = (resultado: ResultadoRelevoUi, avisoCorrecto = '') => {
+    setConfirmar(null);
     if (resultado.tipo === 'ok') {
       setRespuesta(resultado.coordinacion);
       setFormularioAbierto(false);
       setMotivo('');
       setDestinatarioId('');
       setMensaje('');
+      setAviso(avisoCorrecto);
       alActualizar();
     } else if (resultado.tipo === 'releer') {
       setFormularioAbierto(false);
       setMensaje(resultado.mensaje);
+      setAviso('');
       alActualizar();
     } else {
       setMensaje(resultado.mensaje);
@@ -110,6 +143,7 @@ export function BloqueRelevo({
     if (errorMotivo) return setMensaje(errorMotivo);
     setEnviando(true);
     setMensaje('');
+    setAviso('');
     try {
       terminar(
         await intentarProponerRelevo(
@@ -128,11 +162,35 @@ export function BloqueRelevo({
     const relevo = efectiva.relevoPendiente;
     if (enviando || !relevo) return;
     setEnviando(true);
+    setAccion('aceptar');
     setMensaje('');
+    setAviso('');
     try {
       terminar(await intentarAceptarRelevo(expedicionId, relevo.relevoId, gestorAceptar.current!, aceptar));
     } finally {
       setEnviando(false);
+      setAccion(null);
+    }
+  };
+
+  /** Rechazar (destinatario) o cancelar (quien propuso), ya confirmado. */
+  const alResolver = async (tipo: 'rechazar' | 'cancelar') => {
+    const relevo = efectiva.relevoPendiente;
+    if (enviando || !relevo) return;
+    setEnviando(true);
+    setAccion(tipo);
+    setMensaje('');
+    setAviso('');
+    try {
+      terminar(
+        tipo === 'rechazar'
+          ? await intentarRechazarRelevo(expedicionId, relevo.relevoId, gestorRechazar.current!, rechazar)
+          : await intentarCancelarRelevo(expedicionId, relevo.relevoId, gestorCancelar.current!, cancelar),
+        tipo === 'rechazar' ? AVISO_RELEVO_RECHAZADO : AVISO_RELEVO_CANCELADO,
+      );
+    } finally {
+      setEnviando(false);
+      setAccion(null);
     }
   };
 
@@ -147,14 +205,76 @@ export function BloqueRelevo({
         </p>
       )}
 
-      {puedeAceptarRelevo(efectiva) && (
+      {confirmar !== null && (
+        <div className="mt-2 space-y-2">
+          <p className="text-xs font-medium">
+            {confirmar === 'rechazar' ? TEXTO_CONFIRMAR_RECHAZO : TEXTO_CONFIRMAR_CANCELACION}
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => void alResolver(confirmar)}
+              disabled={enviando}
+              className="flex-1 py-2.5 bg-primary text-primary-foreground font-semibold rounded-xl text-sm disabled:opacity-60"
+            >
+              {accion === 'rechazar'
+                ? 'Rechazando…'
+                : accion === 'cancelar'
+                  ? 'Cancelando…'
+                  : confirmar === 'rechazar'
+                    ? 'Sí, rechazar'
+                    : 'Sí, cancelar relevo'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmar(null)}
+              disabled={enviando}
+              className="py-2.5 px-4 border border-border font-semibold rounded-xl text-sm disabled:opacity-60"
+            >
+              No, volver
+            </button>
+          </div>
+        </div>
+      )}
+
+      {confirmar === null && puedeAceptarRelevo(efectiva) && (
         <button
           type="button"
           onClick={() => void alAceptar()}
           disabled={enviando}
           className="w-full mt-2 py-2.5 bg-primary text-primary-foreground font-semibold rounded-xl text-sm disabled:opacity-60"
         >
-          {enviando ? 'Aceptando…' : 'Aceptar relevo'}
+          {accion === 'aceptar' ? 'Aceptando…' : 'Aceptar relevo'}
+        </button>
+      )}
+
+      {confirmar === null && puedeRechazarRelevo(efectiva) && (
+        <button
+          type="button"
+          onClick={() => {
+            setMensaje('');
+            setAviso('');
+            setConfirmar('rechazar');
+          }}
+          disabled={enviando}
+          className="w-full mt-2 py-2.5 border border-border font-semibold rounded-xl text-sm disabled:opacity-60"
+        >
+          Rechazar
+        </button>
+      )}
+
+      {confirmar === null && puedeCancelarRelevo(efectiva) && (
+        <button
+          type="button"
+          onClick={() => {
+            setMensaje('');
+            setAviso('');
+            setConfirmar('cancelar');
+          }}
+          disabled={enviando}
+          className="w-full mt-2 py-2.5 border border-border font-semibold rounded-xl text-sm disabled:opacity-60"
+        >
+          Cancelar relevo
         </button>
       )}
 
@@ -223,6 +343,12 @@ export function BloqueRelevo({
             </button>
           </div>
         </div>
+      )}
+
+      {aviso && (
+        <p role="status" className="text-xs text-muted-foreground mt-2">
+          {aviso}
+        </p>
       )}
 
       {mensaje && (
