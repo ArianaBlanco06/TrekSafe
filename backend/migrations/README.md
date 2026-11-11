@@ -46,7 +46,9 @@ Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos
 | `017_hu39_asumir_coordinacion.sql` | Tabla `incidentes` (un incidente no cerrado por expedición) y RPC `treksafe_asumir_coordinacion`. Aplicar una sola vez | `002` |
 | `018_hu27_cancelar_salida_futura.sql` | Sustituye `treksafe_cancelar_expedicion` de la `005`: solo cancela una expedición programada con salida futura (`hora_inicio > clock_timestamp()` tomado tras el bloqueo de la fila, no `now()`; sin códigos de error nuevos). Re-ejecutable. **No ejecutar la `005` después de esta migración**: restauraría la función anterior | `005` |
 
-Para nuevas migraciones, usar el siguiente número libre al momento del merge (hoy, `019`).
+| `019_hu49_creacion_plan_idempotente.sql` | Clave por cuenta/borrador y creación atómica sin duplicados; número provisional hasta el merge | `002`, `014`; pendiente de aplicar en DEV |
+
+Para nuevas migraciones, usar el siguiente número libre al momento del merge. La `019` está preparada para HU-49 y debe coordinarse antes de aplicarla en DEV.
 
 Las migraciones `002` a `007` y `012` son re-ejecutables. No dependen de
 `000_registro_migraciones.sql`: si la tabla `treksafe_migraciones` existe, registran

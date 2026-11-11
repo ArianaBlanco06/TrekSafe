@@ -56,13 +56,13 @@ export function guardarSesion(token: string, usuario: UsuarioSesion): void {
   sessionStorage.setItem(CLAVE_USUARIO, JSON.stringify(usuario));
 }
 
-export function limpiarSesion(): Promise<void> {
+export function limpiarSesion(conservarColaUsuario?: string): Promise<void> {
   sessionStorage.removeItem(CLAVE_TOKEN);
   sessionStorage.removeItem(CLAVE_USUARIO);
   sessionStorage.removeItem(CLAVE_TOKEN_LEGACY);
   sessionStorage.removeItem(CLAVE_USUARIO_LEGACY);
   sessionStorage.removeItem(CLAVE_AMBITO);
-  return eliminarDatosPrivados();
+  return eliminarDatosPrivados(conservarColaUsuario);
 }
 
 /** Ambito opaco de cuenta/sesion; sobrevive a una recarga, no al logout. */

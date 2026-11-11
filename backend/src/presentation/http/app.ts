@@ -37,6 +37,8 @@ import { EventosPlanDAOSupabase } from '../../infrastructure/repositories/Evento
 import { PropiedadExpedicionSupabase } from '../../infrastructure/repositories/PropiedadExpedicionSupabase.js';
 import { crearRutasHistorialCambios } from './routes/rutasHistorialCambios.js';
 import { crearRutasAvisos } from './routes/rutasAvisos.js';
+import { crearRutasBorradores } from './routes/rutasBorradores.js';
+import { CreadorPlanSupabase } from '../../infrastructure/repositories/CreadorPlanSupabase.js';
 
 export function createApp() {
   const env = loadEnv();
@@ -71,6 +73,7 @@ export function createApp() {
   const servicioEquipo = new ServicioListasEquipo(new RepositorioListasEquipoSupabase(getSupabaseAdmin()));
   app.use(`${env.apiPrefix}/usuario/listas-equipo`, crearRutasListasEquipo(servicioEquipo));
   app.use(`${env.apiPrefix}/usuario`, crearRutasUsuario());
+  app.use(`${env.apiPrefix}/expediciones`, crearRutasBorradores(new CreadorPlanSupabase(getSupabaseAdmin())));
   app.use(`${env.apiPrefix}/expediciones`, crearRutasPuntosRuta(crearServicioPuntosRuta()));
   const avances = new RepositorioAvancesExpedicion(getSupabaseAdmin());
   app.use(`${env.apiPrefix}/expediciones`, crearRutasAvancesExpedicion(orden => new RegistrarAvance(orden, avances), avances));
