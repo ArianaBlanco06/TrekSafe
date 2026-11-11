@@ -45,8 +45,9 @@ Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos
 | `016_hu34_avances_expedicion.sql` | Tabla `avances_expedicion` y RPC de registro idempotente y último avance. Aplicar una sola vez | `002` y `010` |
 | `017_hu39_asumir_coordinacion.sql` | Tabla `incidentes` (un incidente no cerrado por expedición) y RPC `treksafe_asumir_coordinacion`. Aplicar una sola vez | `002` |
 | `018_hu27_cancelar_salida_futura.sql` | Sustituye `treksafe_cancelar_expedicion` de la `005`: solo cancela una expedición programada con salida futura (`hora_inicio > clock_timestamp()` tomado tras el bloqueo de la fila, no `now()`; sin códigos de error nuevos). Re-ejecutable. **No ejecutar la `005` después de esta migración**: restauraría la función anterior | `005` |
+| `019_hu41_bitacora_incidente.sql` | Tabla `entradas_bitacora_incidente` (solo anexado, hora del servidor, corrección como entrada nueva, un cierre por incidente), `UPDATE (version)` sobre `incidentes` para `service_role` (bloqueo `FOR SHARE` frente al relevo), `treksafe_anexar_entrada_bitacora_interna` (para HU-42) y RPC `treksafe_agregar_entrada_bitacora`. Aplicar una sola vez | `017` |
 
-Para nuevas migraciones, usar el siguiente número libre al momento del merge (hoy, `019`).
+Para nuevas migraciones, usar el siguiente número libre al momento del merge (hoy, `020`).
 
 Las migraciones `002` a `007` y `012` son re-ejecutables. No dependen de
 `000_registro_migraciones.sql`: si la tabla `treksafe_migraciones` existe, registran
@@ -68,6 +69,21 @@ selecciona `expediciones.version`, por lo que sin `002` también fallarían los
 listados y `GET /api/expediciones/activa`. La API de HU-30 requiere sus tablas y RPC.
 La API `/api/plantillas` de HU-29 requiere `000` y `001`.
 La API de puntos de HU-32 requiere además `010_hu32_puntos_ruta.sql`.
+
+## HU-41: bitácora cronológica del incidente
+
+`019` no es re-ejecutable (el `CREATE TABLE` falla si la tabla ya existe) y requiere `017` (`incidentes`) y `002` (`eventos_plan`, para la idempotencia entre tipos de operación). Solo `service_role` ejecuta las funciones.
+
+**Aviso para HU-40 y HU-42:** `SELECT ... FOR SHARE` sobre `incidentes` exige, además de `SELECT`, el privilegio `UPDATE` sobre al menos una columna. La `019` concede `UPDATE (version)` a `service_role`. Si una migración posterior hace `REVOKE UPDATE` de tabla sobre `incidentes`, debe volver a conceder al menos esa columna; de lo contrario la RPC de la bitácora responde `permission denied`.
+
+Suite contra una base local desechable (Docker o PostgreSQL instalado; no toca Supabase ni DEV):
+
+```bash
+node backend/scripts/test-hu41-postgres.mjs                    # Docker: postgres:18, puerto 55432
+node backend/scripts/test-hu41-postgres.mjs --pg-bin "C:\Program Files\PostgreSQL\17\bin"
+```
+
+El script aplica `init_schema.sql` y las migraciones hasta la `018`, después la `019`, y ejecuta `tests/hu41_bitacora_incidente.test.sql` (16 casos), seis pruebas de concurrencia con sesiones reales y la suite TypeScript `hu41Postgres.integration.test.ts`. `REGISTRO_APLICACION.md` lo actualiza quien aplique la migración en cada entorno.
 
 ## HU-29: plantillas personales de ruta
 
