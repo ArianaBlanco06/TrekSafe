@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import {
   confirmarAlertaSchema,
   consultaListarExpedicionesSchema,
+  consultaListarAlertasSchema,
   actualizarBitacoraRescateSchema,
 } from '../../../application/dto/rescate.dto.js';
 import { ServicioRescate } from '../../../application/services/servicioRescate.js';
@@ -13,21 +14,27 @@ function solicitudAuth(req: Request): SolicitudAutenticada {
   return req as SolicitudAutenticada;
 }
 
-export async function listarExpediciones(req: Request, res: Response): Promise<void> {
-  const consulta = consultaListarExpedicionesSchema.parse(req.query);
-  const expediciones = await servicioRescate.listarExpediciones(solicitudAuth(req).user.id, consulta);
-  res.status(200).json({ expediciones });
+export function crearControladorListadosRescate(
+  servicio: Pick<ServicioRescate, 'listarExpediciones' | 'listarAlertas'> = servicioRescate,
+) {
+  return {
+    async listarExpediciones(req: Request, res: Response): Promise<void> {
+      const consulta = consultaListarExpedicionesSchema.parse(req.query);
+      const expediciones = await servicio.listarExpediciones(solicitudAuth(req).user.id, consulta);
+      res.status(200).json({ expediciones });
+    },
+    async listarAlertas(req: Request, res: Response): Promise<void> {
+      const consulta = consultaListarAlertasSchema.parse(req.query);
+      const alertas = await servicio.listarAlertas(solicitudAuth(req).user.id, consulta);
+      res.status(200).json({ alertas });
+    },
+  };
 }
 
 export async function obtenerDetalleAlerta(req: Request, res: Response): Promise<void> {
   const expedicionId = String(req.params.expedicionId);
   const detalle = await servicioRescate.obtenerDetalleAlerta(solicitudAuth(req).user.id, expedicionId);
   res.status(200).json({ alerta: detalle });
-}
-
-export async function listarAlertas(req: Request, res: Response): Promise<void> {
-  const alertas = await servicioRescate.listarAlertas(solicitudAuth(req).user.id);
-  res.status(200).json({ alertas });
 }
 
 export async function listarHistorial(req: Request, res: Response): Promise<void> {

@@ -2,15 +2,15 @@ import { Router } from 'express';
 import { AgregarEntradaBitacora } from '../../../application/use-cases/AgregarEntradaBitacora.js';
 import { AsignarResponsable } from '../../../application/use-cases/AsignarResponsable.js';
 import { ConsultarBitacoraIncidente } from '../../../application/use-cases/ConsultarBitacoraIncidente.js';
+import type { ServicioRescate } from '../../../application/services/servicioRescate.js';
 import { getSupabaseAdmin } from '../../../infrastructure/database/supabase.js';
 import { BitacoraIncidenteDAOSupabase } from '../../../infrastructure/repositories/BitacoraIncidenteDAOSupabase.js';
 import { IncidenteDAOSupabase } from '../../../infrastructure/repositories/IncidenteDAOSupabase.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { middlewareAutenticacion, requerirRol } from '../middleware/middlewareAutenticacion.js';
 import {
-  listarAlertas,
+  crearControladorListadosRescate,
   obtenerDetalleAlerta,
-  listarExpediciones,
   listarHistorial,
   actualizarBitacoraRescate,
   confirmarAlerta,
@@ -19,6 +19,7 @@ import { crearControladorBitacoraIncidente } from '../controllers/controladorBit
 import { crearControladorCoordinacion } from '../controllers/controladorCoordinacion.js';
 
 export type DependenciasRutasRescate = {
+  listadosRescate?: Pick<ServicioRescate, 'listarExpediciones' | 'listarAlertas'>;
   /** Ejecutor de HU-39. Por defecto, con el DAO de Supabase; las pruebas inyectan uno propio. */
   asignarResponsable?: AsignarResponsable;
   /** Casos de uso de HU-41. Por defecto, con el DAO de Supabase; las pruebas inyectan los suyos. */
@@ -28,6 +29,7 @@ export type DependenciasRutasRescate = {
 
 export function crearRutasRescate(dependencias: DependenciasRutasRescate = {}): Router {
   const router = Router();
+  const listados = crearControladorListadosRescate(dependencias.listadosRescate);
   // Ensamblaje: las clases concretas se crean solo aquí.
   const coordinacion = crearControladorCoordinacion(
     dependencias.asignarResponsable ?? new AsignarResponsable(new IncidenteDAOSupabase(getSupabaseAdmin())),
@@ -45,9 +47,9 @@ export function crearRutasRescate(dependencias: DependenciasRutasRescate = {}): 
 
   router.use(middlewareAutenticacion, requerirRol('rescatista'));
 
-  router.get('/expediciones', asyncHandler(listarExpediciones));
+  router.get('/expediciones', asyncHandler(listados.listarExpediciones));
   router.get('/historial', asyncHandler(listarHistorial));
-  router.get('/alertas', asyncHandler(listarAlertas));
+  router.get('/alertas', asyncHandler(listados.listarAlertas));
   router.get('/alertas/:expedicionId', asyncHandler(obtenerDetalleAlerta));
   router.patch('/alertas/:expedicionId/bitacora', asyncHandler(actualizarBitacoraRescate));
   router.post('/alertas/:expedicionId/confirmar', asyncHandler(confirmarAlerta));

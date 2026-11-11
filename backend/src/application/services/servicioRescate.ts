@@ -2,6 +2,7 @@ import { ErrorAplicacion } from '../../shared/errors/ErrorAplicacion.js';
 import type {
   EntradaConfirmarAlerta,
   ConsultaListarExpediciones,
+  ConsultaListarAlertas,
   EntradaActualizarBitacoraRescate,
 } from '../dto/rescate.dto.js';
 import { RepositorioAlerta } from '../../infrastructure/repositories/RepositorioAlerta.js';
@@ -13,11 +14,25 @@ import type { NivelRiesgoExpedicion } from '../../domain/value-objects/enums.js'
 import type { Coordinacion, IIncidenteDAO } from '../../domain/repositories/IIncidenteDAO.js';
 import { getSupabaseAdmin } from '../../infrastructure/database/supabase.js';
 import { IncidenteDAOSupabase } from '../../infrastructure/repositories/IncidenteDAOSupabase.js';
+import { OrdenadorAlertas } from '../../domain/services/OrdenadorAlertas.js';
+import {
+  CRITERIO_PRIORIDAD_PREDETERMINADO,
+  type CriterioPrioridad,
+  type IEstrategiaPrioridad,
+} from '../../domain/strategies/IEstrategiaPrioridad.js';
+import { PorTiempoExcedido } from '../../domain/strategies/PorTiempoExcedido.js';
+import { PorTamanoGrupo } from '../../domain/strategies/PorTamanoGrupo.js';
 
 const UMBRAL_URGENCIA_MS = 30 * 60_000;
 
+const ESTRATEGIAS_PRIORIDAD: Readonly<Record<CriterioPrioridad, IEstrategiaPrioridad>> = {
+  tiempo_excedido: new PorTiempoExcedido(),
+  tamano_grupo: new PorTamanoGrupo(),
+};
+
 export type ItemAlertaRescate = {
   expedicionId: string;
+  numeroParticipantes: number;
   nombreCompletoSenderista: string;
   telefonoSenderista: string;
   lugarInicio: string;
@@ -35,6 +50,7 @@ export type ItemAlertaRescate = {
 
 export type ItemExpedicionRescate = {
   expedicionId: string;
+  numeroParticipantes: number;
   estado: 'en_progreso' | 'alerta';
   nivelRiesgo: NivelRiesgoExpedicion;
   nombreCompletoSenderista: string;
@@ -145,6 +161,7 @@ export class ServicioRescate {
     private readonly repoUsuario = new RepositorioUsuario(),
     private readonly repoAuditoria = new RepositorioAuditoriaAccesoMedico(),
     private readonly incidentes: IIncidenteDAO = new IncidenteDAOSupabase(getSupabaseAdmin()),
+    private readonly estrategiasPrioridad = ESTRATEGIAS_PRIORIDAD,
   ) {}
 
   async listarExpediciones(
@@ -178,6 +195,7 @@ export class ServicioRescate {
 
       items.push({
         expedicionId: fila.id,
+        numeroParticipantes: 1 + (fila.acompanantes_expedicion?.[0]?.count ?? 0),
         estado: fila.estado,
         nivelRiesgo,
         nombreCompletoSenderista: senderista.nombre_completo,
@@ -199,14 +217,15 @@ export class ServicioRescate {
       });
     }
 
-    return items.sort((a, b) => {
-      const difRiesgo = ORDEN_RIESGO[a.nivelRiesgo] - ORDEN_RIESGO[b.nivelRiesgo];
-      if (difRiesgo !== 0) return difRiesgo;
-      return new Date(a.fechaLimite).getTime() - new Date(b.fechaLimite).getTime();
-    });
+    const criterio = consulta.criterio ?? CRITERIO_PRIORIDAD_PREDETERMINADO;
+    const ordenador = new OrdenadorAlertas(this.estrategiasPrioridad[criterio]);
+    return ordenador.ordenar(items, (item) => ORDEN_RIESGO[item.nivelRiesgo]);
   }
 
-  async listarAlertas(rescatistaId: string): Promise<ItemAlertaRescate[]> {
+  async listarAlertas(
+    rescatistaId: string,
+    consulta: ConsultaListarAlertas = {},
+  ): Promise<ItemAlertaRescate[]> {
     await this.repo.verificarEsRescatista(rescatistaId);
 
     const expediciones = await this.repo.listarExpedicionesEnAlerta();
@@ -228,6 +247,7 @@ export class ServicioRescate {
 
       items.push({
         expedicionId: fila.id,
+        numeroParticipantes: 1 + (fila.acompanantes_expedicion?.[0]?.count ?? 0),
         nombreCompletoSenderista: senderista.nombre_completo,
         telefonoSenderista: senderista.telefono,
         lugarInicio: fila.lugar_inicio,
@@ -243,7 +263,8 @@ export class ServicioRescate {
       });
     }
 
-    return items;
+    const criterio = consulta.criterio ?? CRITERIO_PRIORIDAD_PREDETERMINADO;
+    return new OrdenadorAlertas(this.estrategiasPrioridad[criterio]).ordenar(items);
   }
 
   async obtenerDetalleAlerta(rescatistaId: string, expedicionId: string): Promise<DetalleAlertaRescate> {

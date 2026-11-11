@@ -14,6 +14,7 @@ export type FilaExpedicionAlerta = {
   hora_retorno_estimada: string;
   minutos_tolerancia: number;
   actualizado_en: string;
+  acompanantes_expedicion?: { count: number }[];
   perfiles_senderista: { nombre_completo: string; telefono: string } | { nombre_completo: string; telefono: string }[] | null;
 };
 
@@ -54,7 +55,7 @@ export type FilaHistorialRescatista = {
 };
 
 export class RepositorioRescate {
-  private readonly supabase = getSupabaseAdmin();
+  constructor(private readonly supabase = getSupabaseAdmin()) {}
 
   async verificarEsRescatista(rescatistaId: string): Promise<void> {
     const { data, error } = await this.supabase
@@ -105,6 +106,7 @@ export class RepositorioRescate {
         id, estado, lugar_inicio, lugar_fin, coordenadas_inicio, coordenadas_fin,
         hora_inicio, hora_retorno_estimada,
         minutos_tolerancia, actualizado_en,
+        acompanantes_expedicion ( count ),
         perfiles_senderista ( nombre_completo, telefono )
       `,
       )
@@ -148,6 +150,7 @@ export class RepositorioRescate {
         `
         id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada,
         minutos_tolerancia, actualizado_en,
+        acompanantes_expedicion ( count ),
         perfiles_senderista ( nombre_completo, telefono )
       `,
       )
