@@ -1,6 +1,7 @@
 -- Solo PostgreSQL local desechable; todos los datos de prueba se revierten (ROLLBACK final).
 -- Requiere: los roles anon, authenticated y service_role con los privilegios por defecto
 -- de Supabase, el esquema base, las migraciones 000 a 016 y la 017 y la 019 aplicadas.
+-- Cubre proponer, aceptar, rechazar y cancelar el relevo (casos 1 a 23).
 -- Se ejecuta con backend/scripts/test-hu40-postgres.mjs, que prepara ese entorno. Cada caso
 -- imprime un aviso "OK n: ..."; el primero que falla aborta el archivo con su mensaje.
 -- Las carreras reales entre sesiones se prueban en el script .mjs, no aquí.
@@ -46,6 +47,32 @@ BEGIN
     END;
 END; $$;
 
+CREATE FUNCTION hu40_prueba.rechazar(p_exp UUID, p_actor UUID, p_relevo UUID, p_op UUID)
+RETURNS JSONB LANGUAGE plpgsql AS $$
+DECLARE v_detalle TEXT; v_res JSONB;
+BEGIN
+    BEGIN
+        v_res := public.treksafe_rechazar_relevo(p_exp, p_actor, p_relevo, p_op);
+        RETURN jsonb_build_object('codigo', 'OK', 'resultado', v_res);
+    EXCEPTION WHEN OTHERS THEN
+        GET STACKED DIAGNOSTICS v_detalle = PG_EXCEPTION_DETAIL;
+        RETURN jsonb_build_object('codigo', SQLERRM, 'detalle', v_detalle);
+    END;
+END; $$;
+
+CREATE FUNCTION hu40_prueba.cancelar(p_exp UUID, p_actor UUID, p_relevo UUID, p_op UUID)
+RETURNS JSONB LANGUAGE plpgsql AS $$
+DECLARE v_detalle TEXT; v_res JSONB;
+BEGIN
+    BEGIN
+        v_res := public.treksafe_cancelar_relevo(p_exp, p_actor, p_relevo, p_op);
+        RETURN jsonb_build_object('codigo', 'OK', 'resultado', v_res);
+    EXCEPTION WHEN OTHERS THEN
+        GET STACKED DIAGNOSTICS v_detalle = PG_EXCEPTION_DETAIL;
+        RETURN jsonb_build_object('codigo', SQLERRM, 'detalle', v_detalle);
+    END;
+END; $$;
+
 -- Comprueba el código y devuelve la respuesta completa.
 CREATE FUNCTION hu40_prueba.espera(r JSONB, p_codigo TEXT) RETURNS JSONB LANGUAGE plpgsql AS $$
 BEGIN
@@ -62,6 +89,8 @@ $$ SELECT id FROM public.relevos_coordinacion WHERE operacion_id = p_op $$;
 GRANT EXECUTE ON FUNCTION
     hu40_prueba.proponer(UUID, UUID, UUID, TEXT, INT, UUID),
     hu40_prueba.aceptar(UUID, UUID, UUID, UUID),
+    hu40_prueba.rechazar(UUID, UUID, UUID, UUID),
+    hu40_prueba.cancelar(UUID, UUID, UUID, UUID),
     hu40_prueba.espera(JSONB, TEXT),
     hu40_prueba.relevo(UUID)
 TO service_role;
@@ -90,18 +119,20 @@ INSERT INTO public.expediciones
     (id, senderista_id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada, estado)
 SELECT hu40_prueba.e(n), 'b0000000-0000-4000-8000-000000000001', 'Inicio', 'Destino',
        now() - interval '5 hours', now() - interval '2 hours', 'alerta'::public.estado_expedicion_enum
-FROM generate_series(1, 7) AS n;
+FROM generate_series(1, 8) AS n;
 
 -- Incidentes (contrato de HU-39), insertados directamente:
 --   e1: responsable A · e2: sin incidente · e3: cerrado · e4: responsable B
 --   e5: A (se cierra tras proponer) · e6: A (versión que cambia) · e7: A (cascada)
+--   e8: A (rechazar y cancelar)
 INSERT INTO public.incidentes (expedicion_id, responsable_id, estado, cerrado_en, operacion_id) VALUES
     (hu40_prueba.e(1), hu40_prueba.u(1), 'abierto', NULL, hu40_prueba.op(901)),
     (hu40_prueba.e(3), hu40_prueba.u(1), 'cerrado', now(), hu40_prueba.op(903)),
     (hu40_prueba.e(4), hu40_prueba.u(2), 'abierto', NULL, hu40_prueba.op(904)),
     (hu40_prueba.e(5), hu40_prueba.u(1), 'abierto', NULL, hu40_prueba.op(905)),
     (hu40_prueba.e(6), hu40_prueba.u(1), 'abierto', NULL, hu40_prueba.op(906)),
-    (hu40_prueba.e(7), hu40_prueba.u(1), 'abierto', NULL, hu40_prueba.op(907));
+    (hu40_prueba.e(7), hu40_prueba.u(1), 'abierto', NULL, hu40_prueba.op(907)),
+    (hu40_prueba.e(8), hu40_prueba.u(1), 'abierto', NULL, hu40_prueba.op(908));
 
 -- 1) Esquema, permisos y funciones (superusuario).
 DO $$
@@ -155,6 +186,18 @@ BEGIN
             RAISE EXCEPTION 'service_role no debe poder actualizar incidentes.%', v_col;
         END IF;
     END LOOP;
+    -- Relevos: UPDATE solo de las cuatro columnas de la resolución.
+    FOREACH v_col IN ARRAY ARRAY['estado', 'resuelto_en', 'resuelto_por_id', 'operacion_resolucion_id'] LOOP
+        IF NOT has_column_privilege('service_role', 'public.relevos_coordinacion', v_col, 'UPDATE') THEN
+            RAISE EXCEPTION 'service_role debe poder actualizar relevos_coordinacion.%', v_col;
+        END IF;
+    END LOOP;
+    FOREACH v_col IN ARRAY ARRAY['id', 'incidente_id', 'responsable_anterior_id', 'destinatario_id', 'motivo',
+                                 'solicitado_en', 'version_incidente', 'operacion_id'] LOOP
+        IF has_column_privilege('service_role', 'public.relevos_coordinacion', v_col, 'UPDATE') THEN
+            RAISE EXCEPTION 'service_role no debe poder actualizar relevos_coordinacion.%', v_col;
+        END IF;
+    END LOOP;
     IF NOT has_table_privilege('service_role', 'public.incidentes', 'SELECT')
        OR NOT has_table_privilege('service_role', 'public.incidentes', 'INSERT') THEN
         RAISE EXCEPTION 'service_role conserva SELECT e INSERT sobre incidentes (HU-39)';
@@ -168,6 +211,9 @@ BEGIN
     FOREACH v_funcion IN ARRAY ARRAY[
         'public.treksafe_proponer_relevo(uuid,uuid,uuid,text,integer,uuid)'::REGPROCEDURE,
         'public.treksafe_aceptar_relevo(uuid,uuid,uuid,uuid)'::REGPROCEDURE,
+        'public.treksafe_rechazar_relevo(uuid,uuid,uuid,uuid)'::REGPROCEDURE,
+        'public.treksafe_cancelar_relevo(uuid,uuid,uuid,uuid)'::REGPROCEDURE,
+        'public.treksafe_resolver_relevo(uuid,uuid,uuid,uuid,text)'::REGPROCEDURE,
         'public.treksafe_resultado_relevo(public.incidentes,public.relevos_coordinacion,boolean)'::REGPROCEDURE,
         'public.treksafe_relevo_publico(public.relevos_coordinacion)'::REGPROCEDURE,
         'public.treksafe_transferencias_solo_anexado()'::REGPROCEDURE
@@ -195,14 +241,20 @@ BEGIN
     IF NOT has_function_privilege('service_role',
         'public.treksafe_proponer_relevo(uuid,uuid,uuid,text,integer,uuid)'::REGPROCEDURE, 'EXECUTE')
        OR NOT has_function_privilege('service_role',
-        'public.treksafe_aceptar_relevo(uuid,uuid,uuid,uuid)'::REGPROCEDURE, 'EXECUTE') THEN
-        RAISE EXCEPTION 'service_role debe poder ejecutar las dos RPC';
+        'public.treksafe_aceptar_relevo(uuid,uuid,uuid,uuid)'::REGPROCEDURE, 'EXECUTE')
+       OR NOT has_function_privilege('service_role',
+        'public.treksafe_rechazar_relevo(uuid,uuid,uuid,uuid)'::REGPROCEDURE, 'EXECUTE')
+       OR NOT has_function_privilege('service_role',
+        'public.treksafe_cancelar_relevo(uuid,uuid,uuid,uuid)'::REGPROCEDURE, 'EXECUTE')
+       OR NOT has_function_privilege('service_role',
+        'public.treksafe_resolver_relevo(uuid,uuid,uuid,uuid,text)'::REGPROCEDURE, 'EXECUTE') THEN
+        RAISE EXCEPTION 'service_role debe poder ejecutar las cuatro RPC y la función común';
     END IF;
 
     -- Sin datos médicos ni de otra índole: las tablas tienen exactamente estas columnas.
     SELECT string_agg(column_name, ',' ORDER BY column_name COLLATE "C") INTO v_columnas
     FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'relevos_coordinacion';
-    IF v_columnas <> 'destinatario_id,estado,id,incidente_id,motivo,operacion_aceptacion_id,operacion_id,responsable_anterior_id,resuelto_en,solicitado_en,version_incidente' THEN
+    IF v_columnas <> 'destinatario_id,estado,id,incidente_id,motivo,operacion_id,operacion_resolucion_id,responsable_anterior_id,resuelto_en,resuelto_por_id,solicitado_en,version_incidente' THEN
         RAISE EXCEPTION 'Columnas inesperadas en relevos_coordinacion: %', v_columnas;
     END IF;
     SELECT string_agg(column_name, ',' ORDER BY column_name COLLATE "C") INTO v_columnas
@@ -215,7 +267,7 @@ BEGIN
     IF v_columnas <> 'abierto_en,asumido_en,cerrado_en,estado,expedicion_id,id,operacion_id,responsable_id,version' THEN
         RAISE EXCEPTION 'incidentes no debe cambiar de columnas: %', v_columnas;
     END IF;
-    RAISE NOTICE 'OK 1: RLS, índice único parcial, UPDATE por columna en incidentes, funciones SECURITY INVOKER con search_path vacío, sin columnas médicas';
+    RAISE NOTICE 'OK 1: RLS, índice único parcial, UPDATE por columna en incidentes y relevos, funciones SECURITY INVOKER con search_path vacío, sin columnas médicas';
 END $$;
 
 -- 2) anon y authenticated no leen, escriben ni ejecutan nada de HU-40.
@@ -256,6 +308,27 @@ BEGIN
             RESET ROLE;
             RAISE EXCEPTION '% pudo aceptar', v_rol;
         EXCEPTION WHEN insufficient_privilege THEN RESET ROLE; END;
+        EXECUTE format('SET LOCAL ROLE %I', v_rol);
+        BEGIN
+            PERFORM public.treksafe_rechazar_relevo(hu40_prueba.e(1), hu40_prueba.u(2),
+                gen_random_uuid(), gen_random_uuid());
+            RESET ROLE;
+            RAISE EXCEPTION '% pudo rechazar', v_rol;
+        EXCEPTION WHEN insufficient_privilege THEN RESET ROLE; END;
+        EXECUTE format('SET LOCAL ROLE %I', v_rol);
+        BEGIN
+            PERFORM public.treksafe_cancelar_relevo(hu40_prueba.e(1), hu40_prueba.u(1),
+                gen_random_uuid(), gen_random_uuid());
+            RESET ROLE;
+            RAISE EXCEPTION '% pudo cancelar', v_rol;
+        EXCEPTION WHEN insufficient_privilege THEN RESET ROLE; END;
+        EXECUTE format('SET LOCAL ROLE %I', v_rol);
+        BEGIN
+            PERFORM public.treksafe_resolver_relevo(hu40_prueba.e(1), hu40_prueba.u(2),
+                gen_random_uuid(), gen_random_uuid(), 'rechazado');
+            RESET ROLE;
+            RAISE EXCEPTION '% pudo resolver', v_rol;
+        EXCEPTION WHEN insufficient_privilege THEN RESET ROLE; END;
     END LOOP;
     RAISE NOTICE 'OK 2: anon y authenticated no leen, escriben ni ejecutan';
 END $$;
@@ -281,11 +354,12 @@ BEGIN
        OR rel->'destinatario'->>'nombreCompleto' <> 'Rescatista Dos'
        OR rel->>'motivo' <> 'Cambio de turno'
        OR rel->>'solicitadoEn' IS NULL OR rel->>'resueltoEn' IS NOT NULL
+       OR rel->>'resueltoPorId' IS NOT NULL
        OR (rel->>'versionIncidente')::INT <> 1 THEN
         RAISE EXCEPTION 'Resultado inesperado: %', r;
     END IF;
     IF (SELECT array_agg(k ORDER BY k COLLATE "C") FROM jsonb_object_keys(rel) AS k)
-       <> ARRAY['destinatario','estado','id','motivo','responsableAnterior','resueltoEn','solicitadoEn','versionIncidente'] THEN
+       <> ARRAY['destinatario','estado','id','motivo','responsableAnterior','resueltoEn','resueltoPorId','solicitadoEn','versionIncidente'] THEN
         RAISE EXCEPTION 'El relevo debe tener exactamente estas claves: %', rel;
     END IF;
     -- CA-02: mientras está pendiente, el responsable anterior conserva el caso.
@@ -454,6 +528,7 @@ BEGIN
        OR (r->>'version')::INT <> 2
        OR r->'relevo'->>'estado' <> 'aceptado'
        OR r->'relevo'->>'resueltoEn' IS NULL
+       OR r->'relevo'->>'resueltoPorId' <> hu40_prueba.u(2)::TEXT
        OR r->>'asumidoEn' <> r->'relevo'->>'resueltoEn' THEN
         RAISE EXCEPTION 'Resultado inesperado: %', r;
     END IF;
@@ -462,8 +537,9 @@ BEGIN
         RAISE EXCEPTION 'El incidente debe pasar a B con la versión 2';
     END IF;
     IF NOT EXISTS (SELECT 1 FROM public.relevos_coordinacion WHERE id = v_relevo AND estado = 'aceptado'
-        AND operacion_aceptacion_id = hu40_prueba.op(10) AND resuelto_en IS NOT NULL) THEN
-        RAISE EXCEPTION 'El relevo debe quedar aceptado con su operación y hora';
+        AND operacion_resolucion_id = hu40_prueba.op(10) AND resuelto_en IS NOT NULL
+        AND resuelto_por_id = hu40_prueba.u(2)) THEN
+        RAISE EXCEPTION 'El relevo debe quedar aceptado con su operación, quién lo aceptó y hora';
     END IF;
     SELECT * INTO t FROM public.transferencias_coordinacion;
     IF (SELECT count(*) FROM public.transferencias_coordinacion) <> 1
@@ -488,7 +564,10 @@ BEGIN
     IF (a->>'repetido')::BOOLEAN IS NOT TRUE OR (a->>'version')::INT <> 2 THEN
         RAISE EXCEPTION 'La misma operación debió ser una repetición segura: %', a;
     END IF;
-    PERFORM hu40_prueba.espera(hu40_prueba.aceptar(hu40_prueba.e(1), hu40_prueba.u(2), v_relevo, hu40_prueba.op(11)), 'RELEVO_YA_RESUELTO');
+    IF ((hu40_prueba.espera(hu40_prueba.aceptar(hu40_prueba.e(1), hu40_prueba.u(2), v_relevo, hu40_prueba.op(11)),
+            'RELEVO_YA_RESUELTO')->>'detalle')::JSONB->>'estado') <> 'aceptado' THEN
+        RAISE EXCEPTION 'RELEVO_YA_RESUELTO debe llevar el estado aceptado';
+    END IF;
     -- La operación de aceptación vale solo para su destinatario y su relevo.
     PERFORM hu40_prueba.espera(hu40_prueba.aceptar(hu40_prueba.e(1), hu40_prueba.u(3), v_relevo, hu40_prueba.op(10)), 'RELEVO_NO_ENCONTRADO');
     -- Un tercero sobre un relevo ya resuelto no averigua su estado.
@@ -658,6 +737,249 @@ BEGIN
         RAISE EXCEPTION 'La cascada debía borrar el incidente y su relevo';
     END IF;
     RAISE NOTICE 'OK 16: el borrado en cascada de la expedición elimina incidente, relevo y transferencia';
+END $$;
+
+-- De aquí en adelante, otra vez como service_role (el caso 16 terminó como superusuario).
+SET LOCAL ROLE service_role;
+
+-- 17) Rechazar: solo el destinatario; el responsable conserva el caso y se puede proponer otro.
+DO $$
+DECLARE
+    r JSONB; v_relevo UUID;
+BEGIN
+    PERFORM hu40_prueba.espera(hu40_prueba.proponer(hu40_prueba.e(8), hu40_prueba.u(1),
+        hu40_prueba.u(2), 'Primero', 1, hu40_prueba.op(60)), 'OK');
+    v_relevo := hu40_prueba.relevo(hu40_prueba.op(60));
+    r := hu40_prueba.espera(hu40_prueba.rechazar(hu40_prueba.e(8), hu40_prueba.u(2), v_relevo,
+        hu40_prueba.op(61)), 'OK')->'resultado';
+    IF (r->>'repetido')::BOOLEAN IS NOT FALSE
+       OR r->'relevo'->>'estado' <> 'rechazado'
+       OR r->'relevo'->>'resueltoEn' IS NULL
+       OR r->'relevo'->>'resueltoPorId' <> hu40_prueba.u(2)::TEXT
+       OR r->'responsable'->>'id' <> hu40_prueba.u(1)::TEXT
+       OR (r->>'version')::INT <> 1 THEN
+        RAISE EXCEPTION 'Resultado de rechazar inesperado: %', r;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.relevos_coordinacion WHERE id = v_relevo AND estado = 'rechazado'
+            AND resuelto_por_id = hu40_prueba.u(2) AND resuelto_en IS NOT NULL
+            AND operacion_resolucion_id = hu40_prueba.op(61))
+       OR NOT EXISTS (SELECT 1 FROM public.incidentes WHERE expedicion_id = hu40_prueba.e(8)
+            AND responsable_id = hu40_prueba.u(1) AND version = 1 AND estado = 'abierto')
+       OR EXISTS (SELECT 1 FROM public.transferencias_coordinacion
+            WHERE incidente_id = (SELECT id FROM public.incidentes WHERE expedicion_id = hu40_prueba.e(8))) THEN
+        RAISE EXCEPTION 'Rechazar solo debe resolver el relevo';
+    END IF;
+    -- Liberó la posibilidad de proponer otro (el índice único parcial ya no lo bloquea).
+    r := hu40_prueba.espera(hu40_prueba.proponer(hu40_prueba.e(8), hu40_prueba.u(1),
+        hu40_prueba.u(3), 'Segundo', 1, hu40_prueba.op(62)), 'OK')->'resultado';
+    IF r->'relevo'->>'estado' <> 'pendiente' OR r->'relevo'->'destinatario'->>'id' <> hu40_prueba.u(3)::TEXT THEN
+        RAISE EXCEPTION 'Tras rechazar debe poder proponerse otro relevo: %', r;
+    END IF;
+    RAISE NOTICE 'OK 17: el destinatario rechaza; el responsable conserva el caso, la versión no cambia y se puede proponer otro relevo';
+END $$;
+
+-- 18) Cancelar: solo quien propuso; libera la posibilidad de proponer otro.
+DO $$
+DECLARE
+    r JSONB; v_relevo UUID := hu40_prueba.relevo(hu40_prueba.op(62));
+BEGIN
+    r := hu40_prueba.espera(hu40_prueba.cancelar(hu40_prueba.e(8), hu40_prueba.u(1), v_relevo,
+        hu40_prueba.op(63)), 'OK')->'resultado';
+    IF (r->>'repetido')::BOOLEAN IS NOT FALSE
+       OR r->'relevo'->>'estado' <> 'cancelado'
+       OR r->'relevo'->>'resueltoEn' IS NULL
+       OR r->'relevo'->>'resueltoPorId' <> hu40_prueba.u(1)::TEXT
+       OR r->'responsable'->>'id' <> hu40_prueba.u(1)::TEXT
+       OR (r->>'version')::INT <> 1 THEN
+        RAISE EXCEPTION 'Resultado de cancelar inesperado: %', r;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.relevos_coordinacion WHERE id = v_relevo AND estado = 'cancelado'
+            AND resuelto_por_id = hu40_prueba.u(1) AND operacion_resolucion_id = hu40_prueba.op(63)) THEN
+        RAISE EXCEPTION 'El relevo debe quedar cancelado por quien lo propuso';
+    END IF;
+    PERFORM hu40_prueba.espera(hu40_prueba.proponer(hu40_prueba.e(8), hu40_prueba.u(1),
+        hu40_prueba.u(2), 'Tercero', 1, hu40_prueba.op(64)), 'OK');
+    -- Historial: se conservan los tres relevos, con su estado y quién y cuándo lo resolvió.
+    IF (SELECT array_agg(estado ORDER BY estado COLLATE "C")
+        FROM public.relevos_coordinacion
+        WHERE incidente_id = (SELECT id FROM public.incidentes WHERE expedicion_id = hu40_prueba.e(8)))
+       IS DISTINCT FROM ARRAY['cancelado','pendiente','rechazado'] THEN
+        RAISE EXCEPTION 'El historial debe conservar los tres relevos';
+    END IF;
+    IF (SELECT count(*) FROM public.relevos_coordinacion
+        WHERE incidente_id = (SELECT id FROM public.incidentes WHERE expedicion_id = hu40_prueba.e(8))
+          AND estado IN ('rechazado', 'cancelado') AND resuelto_por_id IS NOT NULL AND resuelto_en IS NOT NULL) <> 2 THEN
+        RAISE EXCEPTION 'Rechazado y cancelado deben registrar quién y cuándo';
+    END IF;
+    RAISE NOTICE 'OK 18: quien propuso cancela; se puede proponer otro y el historial conserva quién y cuándo resolvió cada relevo';
+END $$;
+
+-- 19) Rechazos y cancelaciones denegados: ninguno escribe nada (el relevo de e8 a B sigue pendiente).
+DO $$
+DECLARE
+    v_relevo UUID := hu40_prueba.relevo(hu40_prueba.op(64));
+BEGIN
+    -- Rechazar: solo el destinatario (no quien propuso ni un tercero).
+    PERFORM hu40_prueba.espera(hu40_prueba.rechazar(hu40_prueba.e(8), hu40_prueba.u(1), v_relevo, hu40_prueba.op(70)), 'NO_ES_DESTINATARIO');
+    PERFORM hu40_prueba.espera(hu40_prueba.rechazar(hu40_prueba.e(8), hu40_prueba.u(3), v_relevo, hu40_prueba.op(70)), 'NO_ES_DESTINATARIO');
+    -- Cancelar: solo quien propuso (no el destinatario ni un tercero).
+    PERFORM hu40_prueba.espera(hu40_prueba.cancelar(hu40_prueba.e(8), hu40_prueba.u(2), v_relevo, hu40_prueba.op(70)), 'NO_ES_PROPONENTE');
+    PERFORM hu40_prueba.espera(hu40_prueba.cancelar(hu40_prueba.e(8), hu40_prueba.u(3), v_relevo, hu40_prueba.op(70)), 'NO_ES_PROPONENTE');
+    -- Sin perfil de rescatista, relevo inexistente o de otra expedición.
+    PERFORM hu40_prueba.espera(hu40_prueba.rechazar(hu40_prueba.e(8), hu40_prueba.u(4), v_relevo, hu40_prueba.op(70)), 'NO_ES_RESCATISTA');
+    PERFORM hu40_prueba.espera(hu40_prueba.cancelar(hu40_prueba.e(8), 'b0000000-0000-4000-8000-000000000001', v_relevo, hu40_prueba.op(70)), 'NO_ES_RESCATISTA');
+    PERFORM hu40_prueba.espera(hu40_prueba.rechazar(hu40_prueba.e(8), hu40_prueba.u(2), gen_random_uuid(), hu40_prueba.op(70)), 'RELEVO_NO_ENCONTRADO');
+    PERFORM hu40_prueba.espera(hu40_prueba.cancelar(hu40_prueba.e(8), hu40_prueba.u(1), gen_random_uuid(), hu40_prueba.op(70)), 'RELEVO_NO_ENCONTRADO');
+    PERFORM hu40_prueba.espera(hu40_prueba.rechazar(hu40_prueba.e(4), hu40_prueba.u(2), v_relevo, hu40_prueba.op(70)), 'RELEVO_NO_ENCONTRADO');
+    PERFORM hu40_prueba.espera(hu40_prueba.cancelar(hu40_prueba.e(4), hu40_prueba.u(1), v_relevo, hu40_prueba.op(70)), 'RELEVO_NO_ENCONTRADO');
+    -- Datos inválidos y operaciones de otro tipo (propuesta, asunción, evento del plan).
+    PERFORM hu40_prueba.espera(hu40_prueba.rechazar(hu40_prueba.e(8), hu40_prueba.u(2), v_relevo, NULL), 'DATOS_INVALIDOS');
+    PERFORM hu40_prueba.espera(hu40_prueba.cancelar(hu40_prueba.e(8), hu40_prueba.u(1), NULL, hu40_prueba.op(70)), 'DATOS_INVALIDOS');
+    PERFORM hu40_prueba.espera(hu40_prueba.rechazar(hu40_prueba.e(8), hu40_prueba.u(2), v_relevo, hu40_prueba.op(64)), 'DATOS_INVALIDOS');
+    PERFORM hu40_prueba.espera(hu40_prueba.cancelar(hu40_prueba.e(8), hu40_prueba.u(1), v_relevo, hu40_prueba.op(908)), 'DATOS_INVALIDOS');
+    PERFORM hu40_prueba.espera(hu40_prueba.cancelar(hu40_prueba.e(8), hu40_prueba.u(1), v_relevo, hu40_prueba.op(950)), 'DATOS_INVALIDOS');
+    -- La función común no admite otros estados finales.
+    BEGIN
+        PERFORM public.treksafe_resolver_relevo(hu40_prueba.e(8), hu40_prueba.u(2), v_relevo, hu40_prueba.op(70), 'aceptado');
+        RAISE EXCEPTION 'La función común no debe admitir el estado aceptado';
+    EXCEPTION WHEN raise_exception THEN
+        IF SQLERRM <> 'DATOS_INVALIDOS' THEN RAISE; END IF;
+    END;
+    IF NOT EXISTS (SELECT 1 FROM public.relevos_coordinacion WHERE id = v_relevo AND estado = 'pendiente'
+            AND resuelto_en IS NULL AND resuelto_por_id IS NULL AND operacion_resolucion_id IS NULL) THEN
+        RAISE EXCEPTION 'Una resolución denegada no debe cambiar el relevo';
+    END IF;
+    RAISE NOTICE 'OK 19: rechazar solo el destinatario, cancelar solo quien propuso; sin perfil, relevo ajeno, datos inválidos y operaciones de otro tipo no escriben nada';
+END $$;
+
+-- 20) Idempotencia de rechazar y cancelar, y operaciones de otro tipo o de otro actor.
+DO $$
+DECLARE
+    v_relevo UUID := hu40_prueba.relevo(hu40_prueba.op(64)); a JSONB; d JSONB;
+BEGIN
+    -- Rechazar el relevo de e8 (de A a B) con op(71), dos veces con la misma operación.
+    PERFORM hu40_prueba.espera(hu40_prueba.rechazar(hu40_prueba.e(8), hu40_prueba.u(2), v_relevo, hu40_prueba.op(71)), 'OK');
+    a := hu40_prueba.espera(hu40_prueba.rechazar(hu40_prueba.e(8), hu40_prueba.u(2), v_relevo, hu40_prueba.op(71)), 'OK')->'resultado';
+    IF (a->>'repetido')::BOOLEAN IS NOT TRUE OR a->'relevo'->>'estado' <> 'rechazado' THEN
+        RAISE EXCEPTION 'La misma operación debió repetir el resultado: %', a;
+    END IF;
+    -- Otra operación sobre un relevo resuelto: RELEVO_YA_RESUELTO con el estado, para cualquiera de las dos acciones.
+    d := (hu40_prueba.espera(hu40_prueba.rechazar(hu40_prueba.e(8), hu40_prueba.u(2), v_relevo, hu40_prueba.op(72)),
+        'RELEVO_YA_RESUELTO')->>'detalle')::JSONB;
+    IF d->>'estado' <> 'rechazado' THEN RAISE EXCEPTION 'Debe decir rechazado: %', d; END IF;
+    d := (hu40_prueba.espera(hu40_prueba.cancelar(hu40_prueba.e(8), hu40_prueba.u(1), v_relevo, hu40_prueba.op(73)),
+        'RELEVO_YA_RESUELTO')->>'detalle')::JSONB;
+    IF d->>'estado' <> 'rechazado' THEN RAISE EXCEPTION 'Cancelar tras rechazar debe decir rechazado: %', d; END IF;
+    d := (hu40_prueba.espera(hu40_prueba.aceptar(hu40_prueba.e(8), hu40_prueba.u(2), v_relevo, hu40_prueba.op(74)),
+        'RELEVO_YA_RESUELTO')->>'detalle')::JSONB;
+    IF d->>'estado' <> 'rechazado' THEN RAISE EXCEPTION 'Aceptar tras rechazar debe decir rechazado: %', d; END IF;
+    -- La operación de resolución vale solo para su actor y su relevo.
+    PERFORM hu40_prueba.espera(hu40_prueba.rechazar(hu40_prueba.e(8), hu40_prueba.u(3), v_relevo, hu40_prueba.op(71)), 'RELEVO_NO_ENCONTRADO');
+    PERFORM hu40_prueba.espera(hu40_prueba.rechazar(hu40_prueba.e(1), hu40_prueba.u(2), v_relevo, hu40_prueba.op(71)), 'RELEVO_NO_ENCONTRADO');
+    -- La operación que rechazó no sirve para aceptar.
+    PERFORM hu40_prueba.espera(hu40_prueba.aceptar(hu40_prueba.e(8), hu40_prueba.u(2), v_relevo, hu40_prueba.op(71)), 'DATOS_INVALIDOS');
+    -- Un tercero sobre un relevo resuelto no averigua su estado.
+    PERFORM hu40_prueba.espera(hu40_prueba.rechazar(hu40_prueba.e(8), hu40_prueba.u(3), v_relevo, hu40_prueba.op(75)), 'NO_ES_DESTINATARIO');
+    PERFORM hu40_prueba.espera(hu40_prueba.cancelar(hu40_prueba.e(8), hu40_prueba.u(3), v_relevo, hu40_prueba.op(75)), 'NO_ES_PROPONENTE');
+    -- Una operación de resolución no sirve como operación de propuesta.
+    PERFORM hu40_prueba.espera(hu40_prueba.proponer(hu40_prueba.e(8), hu40_prueba.u(1),
+        hu40_prueba.u(3), 'Reuso', 1, hu40_prueba.op(71)), 'DATOS_INVALIDOS');
+    -- Cancelar un relevo con la misma operación, también dos veces.
+    PERFORM hu40_prueba.espera(hu40_prueba.proponer(hu40_prueba.e(8), hu40_prueba.u(1),
+        hu40_prueba.u(3), 'Cuarto', 1, hu40_prueba.op(76)), 'OK');
+    PERFORM hu40_prueba.espera(hu40_prueba.cancelar(hu40_prueba.e(8), hu40_prueba.u(1),
+        hu40_prueba.relevo(hu40_prueba.op(76)), hu40_prueba.op(77)), 'OK');
+    a := hu40_prueba.espera(hu40_prueba.cancelar(hu40_prueba.e(8), hu40_prueba.u(1),
+        hu40_prueba.relevo(hu40_prueba.op(76)), hu40_prueba.op(77)), 'OK')->'resultado';
+    IF (a->>'repetido')::BOOLEAN IS NOT TRUE OR a->'relevo'->>'estado' <> 'cancelado' THEN
+        RAISE EXCEPTION 'Cancelar dos veces con la misma operación debió repetir: %', a;
+    END IF;
+    PERFORM hu40_prueba.espera(hu40_prueba.rechazar(hu40_prueba.e(8), hu40_prueba.u(1),
+        hu40_prueba.relevo(hu40_prueba.op(76)), hu40_prueba.op(77)), 'DATOS_INVALIDOS');
+    IF (SELECT count(*) FROM public.relevos_coordinacion WHERE operacion_resolucion_id = hu40_prueba.op(77)) <> 1 THEN
+        RAISE EXCEPTION 'La repetición no debe escribir otra resolución';
+    END IF;
+    RAISE NOTICE 'OK 20: idempotencia por operación, RELEVO_YA_RESUELTO con el estado y operaciones de otro tipo o de otro actor rechazadas sin revelar nada';
+END $$;
+
+-- 21) Aceptar, rechazar y cancelar entre sí: un relevo se resuelve una sola vez.
+DO $$
+DECLARE
+    d JSONB;
+BEGIN
+    -- El relevo de e1 de A a B ya fue aceptado (caso 9).
+    d := (hu40_prueba.espera(hu40_prueba.rechazar(hu40_prueba.e(1), hu40_prueba.u(2),
+        hu40_prueba.relevo(hu40_prueba.op(1)), hu40_prueba.op(80)), 'RELEVO_YA_RESUELTO')->>'detalle')::JSONB;
+    IF d->>'estado' <> 'aceptado' THEN RAISE EXCEPTION 'Debe decir aceptado: %', d; END IF;
+    d := (hu40_prueba.espera(hu40_prueba.cancelar(hu40_prueba.e(1), hu40_prueba.u(1),
+        hu40_prueba.relevo(hu40_prueba.op(1)), hu40_prueba.op(81)), 'RELEVO_YA_RESUELTO')->>'detalle')::JSONB;
+    IF d->>'estado' <> 'aceptado' THEN RAISE EXCEPTION 'Debe decir aceptado: %', d; END IF;
+    IF (SELECT count(*) FROM public.transferencias_coordinacion
+        WHERE relevo_id = hu40_prueba.relevo(hu40_prueba.op(1))) <> 1
+       OR NOT EXISTS (SELECT 1 FROM public.relevos_coordinacion
+            WHERE id = hu40_prueba.relevo(hu40_prueba.op(1)) AND estado = 'aceptado') THEN
+        RAISE EXCEPTION 'Un relevo aceptado no cambia al rechazar o cancelar';
+    END IF;
+    -- Cancelado: ya no se acepta (el relevo op(62) de e8 se canceló en el caso 18).
+    d := (hu40_prueba.espera(hu40_prueba.aceptar(hu40_prueba.e(8), hu40_prueba.u(3),
+        hu40_prueba.relevo(hu40_prueba.op(62)), hu40_prueba.op(82)), 'RELEVO_YA_RESUELTO')->>'detalle')::JSONB;
+    IF d->>'estado' <> 'cancelado' THEN RAISE EXCEPTION 'Debe decir cancelado: %', d; END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.incidentes WHERE expedicion_id = hu40_prueba.e(8)
+        AND responsable_id = hu40_prueba.u(1) AND version = 1) THEN
+        RAISE EXCEPTION 'El caso de e8 no debe cambiar de responsable ni de versión';
+    END IF;
+    RAISE NOTICE 'OK 21: un relevo aceptado, rechazado o cancelado no se vuelve a resolver y RELEVO_YA_RESUELTO dice cómo quedó';
+END $$;
+
+-- 22) Caso cerrado tras la propuesta (relevo pendiente de e5, caso 13): rechazar y cancelar
+--     devuelven INCIDENTE_CERRADO y no escriben; el relevo queda pendiente pero inerte.
+DO $$
+DECLARE
+    v_relevo UUID := hu40_prueba.relevo(hu40_prueba.op(40));
+BEGIN
+    PERFORM hu40_prueba.espera(hu40_prueba.rechazar(hu40_prueba.e(5), hu40_prueba.u(2), v_relevo, hu40_prueba.op(90)), 'INCIDENTE_CERRADO');
+    PERFORM hu40_prueba.espera(hu40_prueba.cancelar(hu40_prueba.e(5), hu40_prueba.u(1), v_relevo, hu40_prueba.op(91)), 'INCIDENTE_CERRADO');
+    PERFORM hu40_prueba.espera(hu40_prueba.aceptar(hu40_prueba.e(5), hu40_prueba.u(2), v_relevo, hu40_prueba.op(92)), 'INCIDENTE_CERRADO');
+    IF NOT EXISTS (SELECT 1 FROM public.relevos_coordinacion WHERE id = v_relevo AND estado = 'pendiente'
+            AND resuelto_en IS NULL AND resuelto_por_id IS NULL AND operacion_resolucion_id IS NULL)
+       OR NOT EXISTS (SELECT 1 FROM public.incidentes WHERE expedicion_id = hu40_prueba.e(5)
+            AND responsable_id = hu40_prueba.u(1) AND version = 1 AND estado = 'cerrado')
+       OR EXISTS (SELECT 1 FROM public.transferencias_coordinacion WHERE relevo_id = v_relevo) THEN
+        RAISE EXCEPTION 'En un caso cerrado no se resuelve ni se transfiere nada';
+    END IF;
+    RAISE NOTICE 'OK 22: rechazar, cancelar y aceptar en un caso cerrado devuelven INCIDENTE_CERRADO sin escribir; el relevo pendiente queda inerte';
+END $$;
+
+-- 23) Restricciones del historial (superusuario): estados y autor de la resolución coherentes.
+RESET ROLE;
+DO $$
+DECLARE
+    v_id UUID := hu40_prueba.relevo(hu40_prueba.op(40)); -- pendiente, de A a B (caso cerrado)
+BEGIN
+    BEGIN
+        UPDATE public.relevos_coordinacion SET estado = 'invalidado' WHERE id = v_id;
+        RAISE EXCEPTION 'Se aceptó el estado invalidado';
+    EXCEPTION WHEN check_violation THEN NULL; END;
+    BEGIN -- resuelto sin quién ni cuándo
+        UPDATE public.relevos_coordinacion SET estado = 'rechazado' WHERE id = v_id;
+        RAISE EXCEPTION 'Se aceptó un rechazo sin resolución';
+    EXCEPTION WHEN check_violation THEN NULL; END;
+    BEGIN -- pendiente con resolución
+        UPDATE public.relevos_coordinacion SET resuelto_en = now(), resuelto_por_id = hu40_prueba.u(2),
+            operacion_resolucion_id = hu40_prueba.op(99) WHERE id = v_id;
+        RAISE EXCEPTION 'Se aceptó un pendiente con resolución';
+    EXCEPTION WHEN check_violation THEN NULL; END;
+    BEGIN -- cancelar lo resuelve otro que quien propuso
+        UPDATE public.relevos_coordinacion SET estado = 'cancelado', resuelto_en = now(),
+            resuelto_por_id = hu40_prueba.u(2), operacion_resolucion_id = hu40_prueba.op(99) WHERE id = v_id;
+        RAISE EXCEPTION 'Se aceptó una cancelación del destinatario';
+    EXCEPTION WHEN check_violation THEN NULL; END;
+    BEGIN -- rechazar lo resuelve otro que el destinatario
+        UPDATE public.relevos_coordinacion SET estado = 'rechazado', resuelto_en = now(),
+            resuelto_por_id = hu40_prueba.u(1), operacion_resolucion_id = hu40_prueba.op(99) WHERE id = v_id;
+        RAISE EXCEPTION 'Se aceptó un rechazo de quien propuso';
+    EXCEPTION WHEN check_violation THEN NULL; END;
+    RAISE NOTICE 'OK 23: la base rechaza estados fuera de pendiente, aceptado, rechazado y cancelado y resoluciones sin autor o de la parte equivocada';
 END $$;
 
 ROLLBACK;

@@ -236,6 +236,8 @@ async function rpc(cliente, funcion, args) {
 const proponer = (c, exp, actor, dest, motivo, version, op) =>
   rpc(c, 'treksafe_proponer_relevo', [exp, actor, dest, motivo, version, op]);
 const aceptar = (c, exp, actor, relevo, op) => rpc(c, 'treksafe_aceptar_relevo', [exp, actor, relevo, op]);
+const rechazar = (c, exp, actor, relevo, op) => rpc(c, 'treksafe_rechazar_relevo', [exp, actor, relevo, op]);
+const cancelar = (c, exp, actor, relevo, op) => rpc(c, 'treksafe_cancelar_relevo', [exp, actor, relevo, op]);
 
 const contar = async (sql, params) => (await q(sql, params)).rows[0].n;
 const relevosDe = (incidente) => contar('SELECT count(*)::int AS n FROM relevos_coordinacion WHERE incidente_id = $1', [incidente]);
@@ -245,6 +247,8 @@ const transferenciasDe = (incidente) =>
   contar('SELECT count(*)::int AS n FROM transferencias_coordinacion WHERE incidente_id = $1', [incidente]);
 const estadoDe = async (incidente) =>
   (await q('SELECT responsable_id, version, estado FROM incidentes WHERE id = $1', [incidente])).rows[0];
+const relevoDe = async (relevo) =>
+  (await q('SELECT estado, resuelto_por_id, resuelto_en, operacion_resolucion_id FROM relevos_coordinacion WHERE id = $1', [relevo])).rows[0];
 
 // Una alerta con su incidente abierto (la asunción de HU-39, insertada como superusuario).
 async function crearIncidente(responsable) {
@@ -344,7 +348,7 @@ async function principal() {
   // --- Suites SQL de una sola sesión --------------------------------------
   await ejecutarSuiteSql('hu39_asumir_coordinacion.test.sql', 12, 'HU-39 (regresión, sin modificar, con la 019 aplicada)');
   console.log('');
-  await ejecutarSuiteSql('hu40_transferir_coordinacion.test.sql', 16, 'HU-40');
+  await ejecutarSuiteSql('hu40_transferir_coordinacion.test.sql', 23, 'HU-40');
 
   // --- Concurrencia con sesiones reales -----------------------------------
   console.log('\n== Concurrencia con sesiones reales ==');
@@ -593,6 +597,252 @@ async function principal() {
     } finally {
       await conexionA.query('ROLLBACK').catch(() => {});
     }
+  });
+
+
+  // ---- Rechazar, cancelar y sus carreras con aceptar y con el cierre ------------------
+  const cierre = await abrirSuperusuario('hu40_cierre');
+  const cerrar = (inc) => cierre.query("UPDATE incidentes SET estado = 'cerrado', cerrado_en = now() WHERE id = $1", [inc]);
+
+  // `quien` resuelve el relevo pendiente de A a B: rechaza B, cancela A. La acción de cada
+  // tipo y el estado final salen de aquí para recorrer los dos con las mismas pruebas.
+  const resoluciones = {
+    rechazar: { accion: (c, exp, relevo, op) => rechazar(c, exp, rB, relevo, op), final: 'rechazado', quien: rB },
+    cancelar: { accion: (c, exp, relevo, op) => cancelar(c, exp, rA, relevo, op), final: 'cancelado', quien: rA },
+  };
+
+  // El titular abre una transacción, ejecuta su acción (toma el bloqueo del incidente) y la
+  // mantiene abierta; la otra sesión se lanza, se espera a verla bloqueada y solo entonces
+  // se confirma al titular. El orden de llegada queda fijado, no depende del azar.
+  async function barrera(titular, accionTitular, aplicacionTitular, otra, accionOtra, aplicacionOtra) {
+    await titular.query('BEGIN');
+    try {
+      const primera = await accionTitular(titular);
+      const pendiente = accionOtra(otra);
+      await esperarBloqueo(aplicacionOtra);
+      await titular.query('SELECT pg_sleep(0.3)');
+      await titular.query('COMMIT');
+      return [primera, await pendiente];
+    } finally {
+      await titular.query('ROLLBACK').catch(() => {});
+    }
+  }
+
+  for (const [tipo, res] of Object.entries(resoluciones)) {
+    await caso(`aceptar contra ${tipo} (barrera, ambos órdenes): gana la primera, la otra recibe RELEVO_YA_RESUELTO con el estado y no queda transferencia sobre un relevo no aceptado`, async () => {
+      // 1) Gana la resolución: la aceptación espera y llega con el relevo ya resuelto.
+      let c = await crearPendiente(conexionA, rA, rB);
+      let [x, y] = await barrera(
+        conexionA, (cl) => res.accion(cl, c.exp, c.relevo, randomUUID()), 'hu40_a',
+        conexionB, (cl) => aceptar(cl, c.exp, rB, c.relevo, randomUUID()), 'hu40_b',
+      );
+      assert.equal(x.ok, true, JSON.stringify(x));
+      assert.equal(y.ok, false);
+      assert.equal(y.codigo, 'RELEVO_YA_RESUELTO');
+      assert.equal(y.detalle.estado, res.final);
+      assert.equal(await transferenciasDe(c.inc), 0);
+      assert.deepEqual({ ...(await estadoDe(c.inc)) }, { responsable_id: rA, version: 1, estado: 'abierto' });
+      assert.equal(await pendientesDe(c.inc), 0);
+      const hecho = await relevoDe(c.relevo);
+      assert.equal(hecho.estado, res.final);
+      assert.equal(hecho.resuelto_por_id, res.quien);
+      assert.ok(hecho.resuelto_en);
+      // Se liberó la posibilidad de proponer otro relevo.
+      const otro = await proponer(conexionA, c.exp, rA, rC, 'Otro', 1, randomUUID());
+      assert.equal(otro.ok, true, JSON.stringify(otro));
+
+      // 2) Gana la aceptación: la resolución espera y llega con el relevo ya aceptado.
+      c = await crearPendiente(conexionA, rA, rB);
+      [x, y] = await barrera(
+        conexionB, (cl) => aceptar(cl, c.exp, rB, c.relevo, randomUUID()), 'hu40_b',
+        conexionA, (cl) => res.accion(cl, c.exp, c.relevo, randomUUID()), 'hu40_a',
+      );
+      assert.equal(x.ok, true, JSON.stringify(x));
+      assert.equal(y.ok, false);
+      assert.equal(y.codigo, 'RELEVO_YA_RESUELTO');
+      assert.equal(y.detalle.estado, 'aceptado');
+      assert.equal(await transferenciasDe(c.inc), 1);
+      assert.deepEqual({ ...(await estadoDe(c.inc)) }, { responsable_id: rB, version: 2, estado: 'abierto' });
+      assert.equal((await relevoDe(c.relevo)).estado, 'aceptado');
+    });
+
+    await caso(`aceptar contra ${tipo} (25 rondas, Promise.all): gana exactamente una y la perdedora recibe RELEVO_YA_RESUELTO`, async () => {
+      let aceptaronPrimero = 0;
+      for (let ronda = 1; ronda <= 25; ronda += 1) {
+        const c = await crearPendiente(conexionA, rA, rB);
+        const [acep, resol] = await Promise.all([
+          aceptar(conexionA, c.exp, rB, c.relevo, randomUUID()),
+          res.accion(conexionB, c.exp, c.relevo, randomUUID()),
+        ]);
+        assert.equal([acep, resol].filter((r) => r.ok).length, 1, `ronda ${ronda}: ${JSON.stringify([acep, resol])}`);
+        const hecho = await relevoDe(c.relevo);
+        const perdedora = acep.ok ? resol : acep;
+        assert.equal(perdedora.codigo, 'RELEVO_YA_RESUELTO', `ronda ${ronda}: ${JSON.stringify(perdedora)}`);
+        assert.equal(perdedora.detalle.estado, hecho.estado, `ronda ${ronda}`);
+        assert.equal(await pendientesDe(c.inc), 0, `ronda ${ronda}`);
+        if (acep.ok) {
+          aceptaronPrimero += 1;
+          assert.equal(hecho.estado, 'aceptado');
+          assert.equal(await transferenciasDe(c.inc), 1, `ronda ${ronda}`);
+          assert.deepEqual({ ...(await estadoDe(c.inc)) }, { responsable_id: rB, version: 2, estado: 'abierto' });
+        } else {
+          assert.equal(hecho.estado, res.final);
+          assert.equal(await transferenciasDe(c.inc), 0, `ronda ${ronda}`);
+          assert.deepEqual({ ...(await estadoDe(c.inc)) }, { responsable_id: rA, version: 1, estado: 'abierto' });
+        }
+      }
+      console.log(`     (la aceptación ganó en ${aceptaronPrimero} rondas y la ${tipo} en ${25 - aceptaronPrimero})`);
+    });
+
+    await caso(`${tipo} dos veces a la vez (25 rondas): con la misma operación una escribe y la otra repite; con otra, RELEVO_YA_RESUELTO`, async () => {
+      for (let ronda = 1; ronda <= 25; ronda += 1) {
+        const misma = await crearPendiente(conexionA, rA, rB);
+        const op = randomUUID();
+        const [x, y] = await Promise.all([
+          res.accion(conexionA, misma.exp, misma.relevo, op),
+          res.accion(conexionB, misma.exp, misma.relevo, op),
+        ]);
+        assert.equal(x.ok && y.ok, true, `ronda ${ronda}: ${JSON.stringify([x, y])}`);
+        assert.equal([x, y].filter((r) => r.r.repetido === false).length, 1);
+        assert.equal((await relevoDe(misma.relevo)).estado, res.final);
+        assert.equal(await contar('SELECT count(*)::int AS n FROM relevos_coordinacion WHERE operacion_resolucion_id = $1', [op]), 1);
+
+        const distinta = await crearPendiente(conexionA, rA, rB);
+        const [u, v] = await Promise.all([
+          res.accion(conexionA, distinta.exp, distinta.relevo, randomUUID()),
+          res.accion(conexionB, distinta.exp, distinta.relevo, randomUUID()),
+        ]);
+        const malos = [u, v].filter((r) => !r.ok);
+        assert.equal([u, v].filter((r) => r.ok).length, 1, `ronda ${ronda}: ${JSON.stringify([u, v])}`);
+        assert.equal(malos[0].codigo, 'RELEVO_YA_RESUELTO');
+        assert.equal(malos[0].detalle.estado, res.final);
+        assert.deepEqual({ ...(await estadoDe(distinta.inc)) }, { responsable_id: rA, version: 1, estado: 'abierto' });
+      }
+    });
+
+    await caso(`${tipo} contra un cierre en curso (barrera): espera, recibe INCIDENTE_CERRADO y el relevo queda pendiente e inerte`, async () => {
+      const c = await crearPendiente(conexionA, rA, rB);
+      const [, r] = await barrera(
+        cierre, async () => { await cerrar(c.inc); return { ok: true }; }, 'hu40_cierre',
+        conexionB, (cl) => res.accion(cl, c.exp, c.relevo, randomUUID()), 'hu40_b',
+      );
+      assert.equal(r.ok, false);
+      assert.equal(r.codigo, 'INCIDENTE_CERRADO');
+      const hecho = await relevoDe(c.relevo);
+      assert.equal(hecho.estado, 'pendiente');
+      assert.equal(hecho.resuelto_por_id, null);
+      assert.equal(hecho.resuelto_en, null);
+      assert.equal(await transferenciasDe(c.inc), 0);
+      assert.deepEqual({ ...(await estadoDe(c.inc)) }, { responsable_id: rA, version: 1, estado: 'cerrado' });
+      // Un relevo pendiente de un caso cerrado tampoco se acepta.
+      const tarde = await aceptar(conexionB, c.exp, rB, c.relevo, randomUUID());
+      assert.equal(tarde.codigo, 'INCIDENTE_CERRADO');
+      assert.equal(await transferenciasDe(c.inc), 0);
+    });
+
+    await caso(`${tipo} contra un cierre (25 rondas, Promise.all): o se resuelve antes del cierre o recibe INCIDENTE_CERRADO; nunca ambas cosas a medias`, async () => {
+      let resueltoAntes = 0;
+      for (let ronda = 1; ronda <= 25; ronda += 1) {
+        const c = await crearPendiente(conexionA, rA, rB);
+        const [r] = await Promise.all([res.accion(conexionA, c.exp, c.relevo, randomUUID()), cerrar(c.inc)]);
+        const hecho = await relevoDe(c.relevo);
+        assert.equal((await estadoDe(c.inc)).estado, 'cerrado');
+        assert.equal(await transferenciasDe(c.inc), 0);
+        if (r.ok) {
+          resueltoAntes += 1;
+          assert.equal(hecho.estado, res.final, `ronda ${ronda}`);
+        } else {
+          assert.equal(r.codigo, 'INCIDENTE_CERRADO', `ronda ${ronda}: ${JSON.stringify(r)}`);
+          assert.equal(hecho.estado, 'pendiente', `ronda ${ronda}`);
+        }
+      }
+      console.log(`     (la ${tipo} llegó antes del cierre en ${resueltoAntes} rondas y después en ${25 - resueltoAntes})`);
+    });
+  }
+
+  await caso('rechazar contra cancelar (25 rondas, Promise.all): gana una sola y la otra recibe RELEVO_YA_RESUELTO con el estado ganador', async () => {
+    for (let ronda = 1; ronda <= 25; ronda += 1) {
+      const c = await crearPendiente(conexionA, rA, rB);
+      const [rech, canc] = await Promise.all([
+        rechazar(conexionA, c.exp, rB, c.relevo, randomUUID()),
+        cancelar(conexionB, c.exp, rA, c.relevo, randomUUID()),
+      ]);
+      assert.equal([rech, canc].filter((r) => r.ok).length, 1, `ronda ${ronda}: ${JSON.stringify([rech, canc])}`);
+      const hecho = await relevoDe(c.relevo);
+      const perdedora = rech.ok ? canc : rech;
+      assert.equal(perdedora.codigo, 'RELEVO_YA_RESUELTO');
+      assert.equal(perdedora.detalle.estado, hecho.estado);
+      assert.equal(hecho.estado, rech.ok ? 'rechazado' : 'cancelado');
+      assert.equal(hecho.resuelto_por_id, rech.ok ? rB : rA);
+      assert.equal(await pendientesDe(c.inc), 0);
+      assert.deepEqual({ ...(await estadoDe(c.inc)) }, { responsable_id: rA, version: 1, estado: 'abierto' });
+    }
+  });
+
+  await caso('aceptar contra un cierre, aceptar primero (barrera): el cierre espera, la transferencia es anterior al cierre y después todo devuelve el estado final', async () => {
+    const c = await crearPendiente(conexionA, rA, rB);
+    const [acep] = await barrera(
+      conexionB, (cl) => aceptar(cl, c.exp, rB, c.relevo, randomUUID()), 'hu40_b',
+      cierre, async () => { await cerrar(c.inc); return { ok: true }; }, 'hu40_cierre',
+    );
+    assert.equal(acep.ok, true, JSON.stringify(acep));
+    assert.equal(await transferenciasDe(c.inc), 1);
+    assert.deepEqual({ ...(await estadoDe(c.inc)) }, { responsable_id: rB, version: 2, estado: 'cerrado' });
+    // Una vez cerrado, el relevo aceptado no se resuelve de nuevo y no se propone otro.
+    const rr = await rechazar(conexionA, c.exp, rB, c.relevo, randomUUID());
+    assert.equal(rr.codigo, 'RELEVO_YA_RESUELTO');
+    assert.equal(rr.detalle.estado, 'aceptado');
+    const pp = await proponer(conexionB, c.exp, rB, rC, 'Tarde', 2, randomUUID());
+    assert.equal(pp.codigo, 'INCIDENTE_CERRADO');
+    assert.equal(await transferenciasDe(c.inc), 1);
+  });
+
+  await caso('aceptar contra un cierre (25 rondas, Promise.all): se transfiere solo si la aceptación llega antes del cierre; nunca una transferencia sobre un caso ya cerrado', async () => {
+    let aceptoAntes = 0;
+    for (let ronda = 1; ronda <= 25; ronda += 1) {
+      const c = await crearPendiente(conexionA, rA, rB);
+      const [acep] = await Promise.all([aceptar(conexionA, c.exp, rB, c.relevo, randomUUID()), cerrar(c.inc)]);
+      const estado = await estadoDe(c.inc);
+      const hecho = await relevoDe(c.relevo);
+      assert.equal(estado.estado, 'cerrado');
+      if (acep.ok) {
+        aceptoAntes += 1;
+        assert.equal(await transferenciasDe(c.inc), 1, `ronda ${ronda}`);
+        assert.equal(hecho.estado, 'aceptado');
+        assert.deepEqual({ responsable_id: estado.responsable_id, version: estado.version }, { responsable_id: rB, version: 2 });
+      } else {
+        // El cierre ganó: no hay transferencia, el responsable es el mismo y el relevo sigue pendiente.
+        assert.equal(acep.codigo, 'INCIDENTE_CERRADO', `ronda ${ronda}: ${JSON.stringify(acep)}`);
+        assert.equal(await transferenciasDe(c.inc), 0, `ronda ${ronda}`);
+        assert.equal(hecho.estado, 'pendiente');
+        assert.deepEqual({ responsable_id: estado.responsable_id, version: estado.version }, { responsable_id: rA, version: 1 });
+      }
+    }
+    console.log(`     (la aceptación llegó antes del cierre en ${aceptoAntes} rondas y después en ${25 - aceptoAntes})`);
+    // Invariante global: ninguna transferencia pertenece a un relevo que no esté aceptado.
+    assert.equal(
+      await contar(`SELECT count(*)::int AS n FROM transferencias_coordinacion t
+                    JOIN relevos_coordinacion r ON r.id = t.relevo_id WHERE r.estado <> 'aceptado'`),
+      0,
+    );
+  });
+
+  await caso('invariantes finales sobre todo lo ejecutado: un solo pendiente por incidente, resolución completa o ausente y una transferencia por relevo aceptado', async () => {
+    assert.equal(
+      await contar(`SELECT count(*)::int AS n FROM (SELECT incidente_id FROM relevos_coordinacion
+                    WHERE estado = 'pendiente' GROUP BY incidente_id HAVING count(*) > 1) x`),
+      0,
+    );
+    assert.equal(
+      await contar(`SELECT count(*)::int AS n FROM relevos_coordinacion
+                    WHERE (estado = 'pendiente') <> (resuelto_en IS NULL AND resuelto_por_id IS NULL AND operacion_resolucion_id IS NULL)`),
+      0,
+    );
+    assert.equal(
+      await contar(`SELECT count(*)::int AS n FROM relevos_coordinacion r
+                    WHERE (r.estado = 'aceptado') <> EXISTS (SELECT 1 FROM transferencias_coordinacion t WHERE t.relevo_id = r.id)`),
+      0,
+    );
   });
 
   await caso('error forzado al registrar la transferencia revierte la aceptación completa', async () => {
