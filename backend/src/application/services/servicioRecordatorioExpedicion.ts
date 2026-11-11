@@ -2,8 +2,7 @@ import {
   FabricaReglaRecordatorio,
 } from '../../domain/strategies/IReglaRecordatorio.js';
 import type { IReloj } from '../../domain/services/IReloj.js';
-import { RelojSistema } from '../../infrastructure/services/RelojSistema.js';
-import { RepositorioExpedicion } from '../../infrastructure/repositories/RepositorioExpedicion.js';
+import type { IRepositorioExpedicion } from '../ports/RepositorioExpedicion.js';
 import { ServicioBandejaAvisos } from './servicioBandejaAvisos.js';
 
 export type ResultadoProcesamientoRecordatorios = {
@@ -19,8 +18,9 @@ export type ResultadoProcesamientoRecordatorios = {
  */
 export class ServicioRecordatorioExpedicion {
   constructor(
-    private readonly repoExpedicion: RepositorioExpedicion = new RepositorioExpedicion(),
-    private readonly servicioBandeja: ServicioBandejaAvisos = new ServicioBandejaAvisos(),
+    private readonly repoExpedicion: IRepositorioExpedicion,
+    private readonly servicioBandeja: ServicioBandejaAvisos,
+    private readonly reloj: IReloj = { ahora: () => new Date() },
   ) {}
 
   /**
@@ -30,7 +30,7 @@ export class ServicioRecordatorioExpedicion {
    * @param reloj Reloj inyectado opcional (por defecto reloj real del sistema)
    */
   async procesarRecordatorios(
-    reloj: IReloj = new RelojSistema(),
+    reloj: IReloj = this.reloj,
   ): Promise<ResultadoProcesamientoRecordatorios> {
     const expedicionesEnProgreso =
       await this.repoExpedicion.buscarEnProgresoParaRecordatorio();

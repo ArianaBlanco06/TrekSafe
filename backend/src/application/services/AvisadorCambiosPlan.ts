@@ -1,5 +1,4 @@
-import { RepositorioAvisosSupabase } from '../../infrastructure/repositories/RepositorioAvisosSupabase.js';
-import { GeneradorAvisosEvento, ServicioBandejaAvisos } from './servicioBandejaAvisos.js';
+import { GeneradorAvisosEvento } from './servicioBandejaAvisos.js';
 
 export type EventoPlanPendiente = {
   id: string;
@@ -23,10 +22,8 @@ export interface IRepositorioEventosAvisos {
  */
 export class AvisadorCambiosPlan {
   constructor(
-    private readonly repo: IRepositorioEventosAvisos = new RepositorioAvisosSupabase(),
-    private readonly generador: GeneradorAvisosEvento = new GeneradorAvisosEvento(
-      new ServicioBandejaAvisos(),
-    ),
+    private readonly repo: IRepositorioEventosAvisos,
+    private readonly generador: GeneradorAvisosEvento,
   ) {}
 
   async avisarEdicion(usuarioId: string, expedicionId: string, operacionId?: string): Promise<void> {

@@ -1,41 +1,65 @@
 import { Router } from 'express';
-import { AsignarResponsable } from '../../../application/use-cases/AsignarResponsable.js';
-import { getSupabaseAdmin } from '../../../infrastructure/database/supabase.js';
-import { IncidenteDAOSupabase } from '../../../infrastructure/repositories/IncidenteDAOSupabase.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
-import { middlewareAutenticacion, requerirRol } from '../middleware/middlewareAutenticacion.js';
 import {
-  listarAlertas,
-  obtenerDetalleAlerta,
-  listarExpediciones,
-  listarHistorial,
-  actualizarBitacoraRescate,
-  confirmarAlerta,
-} from '../controllers/controladorRescate.js';
+  middlewareAutenticacion,
+  requerirRol,
+} from '../middleware/middlewareAutenticacion.js';
+import { crearControladorRescate } from '../controllers/controladorRescate.js';
+import { crearControladorBitacoraIncidente } from '../controllers/controladorBitacoraIncidente.js';
 import { crearControladorCoordinacion } from '../controllers/controladorCoordinacion.js';
+import {
+  crearModuloRescate,
+  type ModuloRescate,
+} from '../../../infrastructure/composicion/servicios.js';
 
-export type DependenciasRutasRescate = {
-  /** Ejecutor de HU-39. Por defecto, con el DAO de Supabase; las pruebas inyectan uno propio. */
-  asignarResponsable?: AsignarResponsable;
-};
+/** Los casos inyectados no se sustituyen ni construyen adaptadores innecesarios. */
+export type DependenciasRutasRescate = Partial<ModuloRescate>;
 
-export function crearRutasRescate(dependencias: DependenciasRutasRescate = {}): Router {
+export function crearRutasRescate(
+  dependencias: DependenciasRutasRescate = {},
+): Router {
+  const modulo = crearModuloRescate(dependencias);
+  const {
+    listarAlertas,
+    obtenerDetalleAlerta,
+    listarExpediciones,
+    listarHistorial,
+    actualizarBitacoraRescate,
+    confirmarAlerta,
+  } = crearControladorRescate(modulo.servicio);
   const router = Router();
-  // Ensamblaje: las clases concretas se crean solo aquí.
-  const coordinacion = crearControladorCoordinacion(
-    dependencias.asignarResponsable ?? new AsignarResponsable(new IncidenteDAOSupabase(getSupabaseAdmin())),
-  );
+  const coordinacion = crearControladorCoordinacion(modulo.asignarResponsable);
+  const bitacora = crearControladorBitacoraIncidente({
+    consultar: modulo.consultarBitacoraIncidente,
+    agregar: modulo.agregarEntradaBitacora,
+  });
 
   router.use(middlewareAutenticacion, requerirRol('rescatista'));
-
   router.get('/expediciones', asyncHandler(listarExpediciones));
   router.get('/historial', asyncHandler(listarHistorial));
   router.get('/alertas', asyncHandler(listarAlertas));
   router.get('/alertas/:expedicionId', asyncHandler(obtenerDetalleAlerta));
-  router.patch('/alertas/:expedicionId/bitacora', asyncHandler(actualizarBitacoraRescate));
-  router.post('/alertas/:expedicionId/confirmar', asyncHandler(confirmarAlerta));
+  router.patch(
+    '/alertas/:expedicionId/bitacora',
+    asyncHandler(actualizarBitacoraRescate),
+  );
+  router.post(
+    '/alertas/:expedicionId/confirmar',
+    asyncHandler(confirmarAlerta),
+  );
   // HU-39: coordinación (incidente), separada de la recepción histórica de HU-14.
-  router.post('/alertas/:expedicionId/coordinacion', asyncHandler(coordinacion.asumir));
-
+  router.post(
+    '/alertas/:expedicionId/coordinacion',
+    asyncHandler(coordinacion.asumir),
+  );
+  // HU-41: bitácora cronológica compartida; la bitácora personal anterior se conserva.
+  router.get(
+    '/incidentes/:incidenteId/bitacora',
+    asyncHandler(bitacora.consultar),
+  );
+  router.post(
+    '/incidentes/:incidenteId/bitacora',
+    asyncHandler(bitacora.agregar),
+  );
   return router;
 }

@@ -1,7 +1,12 @@
+import type {
+  UsuarioAutenticacion,
+  CredencialInstitucional,
+  IRepositorioAutenticacionPostgres,
+} from '../../application/ports/RepositorioAutenticacionPostgres.js';
 import { ErrorAplicacion } from '../../shared/errors/ErrorAplicacion.js';
 import { getSupabaseAdmin, type UsuarioBd } from '../database/supabase.js';
 
-export type CredencialInstitucional = {
+type FilaCredencialInstitucional = {
   institucion: string;
   numero_credencial: string;
   nombre_completo: string;
@@ -9,10 +14,29 @@ export type CredencialInstitucional = {
   esta_activo: boolean;
 };
 
-export class RepositorioAutenticacionPostgres {
-  private readonly supabase = getSupabaseAdmin();
+export function mapearUsuarioPersistido(fila: UsuarioBd): UsuarioAutenticacion {
+  return {
+    id: fila.id,
+    correoElectronico: fila.correo_electronico,
+    hashContrasena: fila.hash_contrasena,
+    rol: fila.rol,
+  };
+}
 
-  async buscarUsuarioPorCorreo(correo: string): Promise<UsuarioBd | null> {
+export function mapearCredencialPersistida(fila: FilaCredencialInstitucional): CredencialInstitucional {
+  return {
+    institucion: fila.institucion,
+    numeroCredencial: fila.numero_credencial,
+    nombreCompleto: fila.nombre_completo,
+    fechaNacimiento: fila.fecha_nacimiento,
+    estaActivo: fila.esta_activo,
+  };
+}
+
+export class RepositorioAutenticacionPostgres implements IRepositorioAutenticacionPostgres {
+  constructor(private readonly supabase = getSupabaseAdmin()) {}
+
+  async buscarUsuarioPorCorreo(correo: string): Promise<UsuarioAutenticacion | null> {
     const { data, error } = await this.supabase
       .from('usuarios')
       .select('id, correo_electronico, hash_contrasena, rol')
@@ -20,10 +44,10 @@ export class RepositorioAutenticacionPostgres {
       .maybeSingle();
 
     if (error) throw new ErrorAplicacion(500, `Error al consultar usuario: ${error.message}`);
-    return data as UsuarioBd | null;
+    return data ? mapearUsuarioPersistido(data as UsuarioBd) : null;
   }
 
-  async buscarUsuarioPorId(usuarioId: string): Promise<UsuarioBd | null> {
+  async buscarUsuarioPorId(usuarioId: string): Promise<UsuarioAutenticacion | null> {
     const { data, error } = await this.supabase
       .from('usuarios')
       .select('id, correo_electronico, hash_contrasena, rol')
@@ -31,7 +55,7 @@ export class RepositorioAutenticacionPostgres {
       .maybeSingle();
 
     if (error) throw new ErrorAplicacion(500, `Error al consultar usuario: ${error.message}`);
-    return data as UsuarioBd | null;
+    return data ? mapearUsuarioPersistido(data as UsuarioBd) : null;
   }
 
   async obtenerNombreCompletoPerfil(
@@ -77,7 +101,7 @@ export class RepositorioAutenticacionPostgres {
       .maybeSingle();
 
     if (error) throw new ErrorAplicacion(500, `Error al validar credencial: ${error.message}`);
-    return data as CredencialInstitucional | null;
+    return data ? mapearCredencialPersistida(data as FilaCredencialInstitucional) : null;
   }
 
   async registrarSenderista(datos: {
@@ -86,7 +110,7 @@ export class RepositorioAutenticacionPostgres {
     nombreCompleto: string;
     idDocumento: string;
     telefono: string;
-  }): Promise<{ id: string; correo_electronico: string; rol: 'senderista' }> {
+  }): Promise<{ id: string; correoElectronico: string; rol: 'senderista' }> {
     const { data: usuario, error: errorUsuario } = await this.supabase
       .from('usuarios')
       .insert({
@@ -113,7 +137,7 @@ export class RepositorioAutenticacionPostgres {
       throw new ErrorAplicacion(500, errorPerfil.message);
     }
 
-    return usuario as { id: string; correo_electronico: string; rol: 'senderista' };
+    return { id: usuario.id, correoElectronico: usuario.correo_electronico, rol: 'senderista' };
   }
 
   async registrarRescatista(datos: {
@@ -122,7 +146,7 @@ export class RepositorioAutenticacionPostgres {
     nombreCompleto: string;
     numeroCredencial: string;
     fechaNacimiento: string;
-  }): Promise<{ id: string; correo_electronico: string; rol: 'rescatista' }> {
+  }): Promise<{ id: string; correoElectronico: string; rol: 'rescatista' }> {
     const { data: usuario, error: errorUsuario } = await this.supabase
       .from('usuarios')
       .insert({
@@ -149,6 +173,6 @@ export class RepositorioAutenticacionPostgres {
       throw new ErrorAplicacion(500, errorPerfil.message);
     }
 
-    return usuario as { id: string; correo_electronico: string; rol: 'rescatista' };
+    return { id: usuario.id, correoElectronico: usuario.correo_electronico, rol: 'rescatista' };
   }
 }
