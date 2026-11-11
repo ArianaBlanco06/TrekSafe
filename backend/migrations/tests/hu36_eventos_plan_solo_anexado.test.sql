@@ -157,7 +157,8 @@ BEGIN
         format('UPDATE public.eventos_plan SET cambios = %L::jsonb, motivo = %L WHERE id = %L', '{}', 'otro', v_evento),
         format('UPDATE public.eventos_plan SET cambios = %L::jsonb, motivo = NULL, version_resultante = 9 WHERE id = %L', '{}', v_evento),
         format('DELETE FROM public.eventos_plan WHERE id = %L', v_evento),
-        'TRUNCATE public.eventos_plan'
+        -- CASCADE permite llegar al trigger aun cuando HU-37 referencia eventos_plan.
+        'TRUNCATE public.eventos_plan CASCADE'
     ] LOOP
         v_bloqueado := FALSE;
         BEGIN
@@ -187,7 +188,7 @@ BEGIN
     FOREACH v_sentencia IN ARRAY ARRAY[
         format('UPDATE public.eventos_plan SET tipo = %L WHERE id = %L', 'CANCELADA', v_evento),
         format('DELETE FROM public.eventos_plan WHERE id = %L', v_evento),
-        'TRUNCATE public.eventos_plan'
+        'TRUNCATE public.eventos_plan CASCADE'
     ] LOOP
         v_bloqueado := FALSE;
         BEGIN
