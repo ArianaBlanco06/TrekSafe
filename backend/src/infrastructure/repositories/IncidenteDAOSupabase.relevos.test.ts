@@ -2,7 +2,11 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ErrorCoordinacion, type CodigoErrorRelevo } from '../../domain/errors/ErrorCoordinacion.js';
-import type { SolicitudAceptarRelevo, SolicitudProponerRelevo } from '../../domain/repositories/IIncidenteDAO.js';
+import type {
+  SolicitudAceptarRelevo,
+  SolicitudProponerRelevo,
+  SolicitudResolverRelevo,
+} from '../../domain/repositories/IIncidenteDAO.js';
 import { ErrorAplicacion } from '../../shared/errors/ErrorAplicacion.js';
 import { IncidenteDAOSupabase } from './IncidenteDAOSupabase.js';
 
@@ -25,6 +29,13 @@ const aceptar: SolicitudAceptarRelevo = {
   rescatistaId: BETO,
   relevoId: RELEVO,
   operacionId: '88888888-8888-4888-8888-888888888888',
+};
+
+const resolver: SolicitudResolverRelevo = {
+  expedicionId: EXPEDICION,
+  rescatistaId: BETO,
+  relevoId: RELEVO,
+  operacionId: '99999999-9999-4999-8999-999999999999',
 };
 
 function clienteConRpc(respuesta: { data?: unknown; error?: { message: string; details?: unknown } }) {
@@ -54,6 +65,7 @@ const resultadoRpc = (extra: Record<string, unknown> = {}, relevo: Record<string
     motivo: 'Cambio de turno',
     solicitadoEn: '2030-01-15T14:00:00+00:00',
     resueltoEn: null,
+    resueltoPorId: null,
     versionIncidente: 1,
     ...relevo,
   },
@@ -112,6 +124,7 @@ describe('IncidenteDAOSupabase.proponerRelevo', () => {
         motivo: 'Cambio de turno',
         solicitadoEn: '2030-01-15T14:00:00.000Z',
         resueltoEn: null,
+        resueltoPorId: null,
         versionIncidente: 1,
       },
       repetido: false,
@@ -219,7 +232,9 @@ describe('IncidenteDAOSupabase.proponerRelevo', () => {
   for (const [descripcion, data] of [
     ['nula', null],
     ['sin relevo', resultadoRpc({ relevo: undefined })],
-    ['con estado de relevo inventado', resultadoRpc({}, { estado: 'cancelado' })],
+    ['con estado de relevo inventado', resultadoRpc({}, { estado: 'invalidado' })],
+    ['con resueltoPorId que no es texto', resultadoRpc({}, { resueltoPorId: 7 })],
+    ['sin resueltoPorId', resultadoRpc({}, { resueltoPorId: undefined })],
     ['con fecha de relevo inválida', resultadoRpc({}, { solicitadoEn: 'ayer' })],
     ['con resueltoEn inválido', resultadoRpc({}, { resueltoEn: 'mañana' })],
     ['sin destinatario', resultadoRpc({}, { destinatario: null })],
@@ -243,7 +258,7 @@ describe('IncidenteDAOSupabase.aceptarRelevo', () => {
     const { cliente, llamadas } = clienteConRpc({
       data: resultadoRpc(
         { version: 2, responsable: { id: BETO, nombreCompleto: 'Beto Rescate' } },
-        { estado: 'aceptado', resueltoEn: '2030-01-15T15:00:00+00:00' },
+        { estado: 'aceptado', resueltoEn: '2030-01-15T15:00:00+00:00', resueltoPorId: BETO },
       ),
     });
 
@@ -264,6 +279,7 @@ describe('IncidenteDAOSupabase.aceptarRelevo', () => {
     assert.equal(resultado.incidente.version, 2);
     assert.equal(resultado.relevo.estado, 'aceptado');
     assert.equal(resultado.relevo.resueltoEn, '2030-01-15T15:00:00.000Z');
+    assert.equal(resultado.relevo.resueltoPorId, BETO);
   });
 
   for (const codigo of [
@@ -271,7 +287,6 @@ describe('IncidenteDAOSupabase.aceptarRelevo', () => {
     'RELEVO_NO_ENCONTRADO',
     'NO_ES_RESCATISTA',
     'NO_ES_DESTINATARIO',
-    'RELEVO_YA_RESUELTO',
     'INCIDENTE_CERRADO',
     'DESTINATARIO_NO_VALIDADO',
   ] as const) {
@@ -285,6 +300,18 @@ describe('IncidenteDAOSupabase.aceptarRelevo', () => {
     });
   }
 
+  it('traduce RELEVO_YA_RESUELTO y conserva cómo quedó el relevo (DETAIL)', async () => {
+    const { cliente } = clienteConRpc({
+      error: { message: 'RELEVO_YA_RESUELTO', details: JSON.stringify({ estado: 'cancelado' }) },
+    });
+    await assert.rejects(new IncidenteDAOSupabase(cliente).aceptarRelevo(aceptar), (err) => {
+      assert.ok(err instanceof ErrorCoordinacion);
+      assert.equal(err.codigo, 'RELEVO_YA_RESUELTO');
+      assert.deepEqual(err.detalle, { estadoRelevo: 'cancelado' });
+      return true;
+    });
+  });
+
   it('un código que no es de la RPC (por ejemplo, de HU-39) da 500', async () => {
     const { cliente } = clienteConRpc({ error: { message: 'COORDINACION_YA_ASUMIDA' } });
     await conLogCapturado(async () => {
@@ -296,6 +323,116 @@ describe('IncidenteDAOSupabase.aceptarRelevo', () => {
     });
   });
 });
+
+for (const [metodo, rpc, final, actor] of [
+  ['rechazarRelevo', 'treksafe_rechazar_relevo', 'rechazado', BETO],
+  ['cancelarRelevo', 'treksafe_cancelar_relevo', 'cancelado', ANA],
+] as const) {
+  describe(`IncidenteDAOSupabase.${metodo}`, () => {
+    it(`invoca ${rpc} con sus cuatro parámetros, sin motivo ni versión, y mapea quién y cuándo`, async () => {
+      const { cliente, llamadas } = clienteConRpc({
+        data: resultadoRpc({}, { estado: final, resueltoEn: '2030-01-15T15:00:00+00:00', resueltoPorId: actor }),
+      });
+
+      const resultado = await new IncidenteDAOSupabase(cliente)[metodo]({ ...resolver, rescatistaId: actor });
+
+      assert.deepEqual(llamadas, [
+        {
+          nombre: rpc,
+          parametros: {
+            p_expedicion_id: EXPEDICION,
+            p_actor_id: actor,
+            p_relevo_id: RELEVO,
+            p_operacion_id: resolver.operacionId,
+          },
+        },
+      ]);
+      assert.equal(resultado.relevo.estado, final);
+      assert.equal(resultado.relevo.resueltoEn, '2030-01-15T15:00:00.000Z');
+      assert.equal(resultado.relevo.resueltoPorId, actor);
+      // El responsable y la versión no cambian.
+      assert.equal(resultado.incidente.responsableId, ANA);
+      assert.equal(resultado.incidente.version, 1);
+    });
+
+    it('conserva repetido=true de la RPC', async () => {
+      const { cliente } = clienteConRpc({
+        data: resultadoRpc({ repetido: true }, { estado: final, resueltoEn: '2030-01-15T15:00:00+00:00', resueltoPorId: actor }),
+      });
+      assert.equal((await new IncidenteDAOSupabase(cliente)[metodo](resolver)).repetido, true);
+    });
+
+    for (const codigo of [
+      'DATOS_INVALIDOS',
+      'RELEVO_NO_ENCONTRADO',
+      'NO_ES_RESCATISTA',
+      'NO_ES_DESTINATARIO',
+      'NO_ES_PROPONENTE',
+      'INCIDENTE_CERRADO',
+    ] as const) {
+      it(`traduce ${codigo} a ErrorCoordinacion sin detalle`, async () => {
+        const { cliente } = clienteConRpc({ error: { message: codigo } });
+        await assert.rejects(new IncidenteDAOSupabase(cliente)[metodo](resolver), (err) => {
+          assert.ok(err instanceof ErrorCoordinacion);
+          assert.equal(err.codigo, codigo);
+          assert.equal(err.detalle, undefined);
+          return true;
+        });
+      });
+    }
+
+    for (const estado of ['aceptado', 'rechazado', 'cancelado'] as const) {
+      it(`RELEVO_YA_RESUELTO conserva el estado ${estado} del DETAIL`, async () => {
+        const { cliente } = clienteConRpc({ error: { message: 'RELEVO_YA_RESUELTO', details: JSON.stringify({ estado }) } });
+        await assert.rejects(new IncidenteDAOSupabase(cliente)[metodo](resolver), (err) => {
+          assert.ok(err instanceof ErrorCoordinacion);
+          assert.equal(err.codigo, 'RELEVO_YA_RESUELTO');
+          assert.deepEqual(err.detalle, { estadoRelevo: estado });
+          return true;
+        });
+      });
+    }
+
+    for (const details of [undefined, 'no es json', JSON.stringify({ estado: 'pendiente' }), JSON.stringify({})]) {
+      it(`RELEVO_YA_RESUELTO con un DETAIL mal formado (${String(details).slice(0, 20)}) da 500`, async () => {
+        const { cliente } = clienteConRpc({ error: { message: 'RELEVO_YA_RESUELTO', details } });
+        const registros = await conLogCapturado(async () => {
+          await assert.rejects(new IncidenteDAOSupabase(cliente)[metodo](resolver), (err) => {
+            assert.ok(err instanceof ErrorAplicacion);
+            assert.equal(err.codigoEstado, 500);
+            return true;
+          });
+        });
+        assert.equal(registros.length, 1);
+      });
+    }
+
+    it('un error desconocido de la base da 500 sin exponer su mensaje', async () => {
+      const { cliente } = clienteConRpc({ error: { message: `permission denied for function ${rpc}` } });
+      await conLogCapturado(async () => {
+        await assert.rejects(new IncidenteDAOSupabase(cliente)[metodo](resolver), (err) => {
+          assert.ok(err instanceof ErrorAplicacion);
+          assert.equal(err.codigoEstado, 500);
+          assert.ok(!err.message.includes('permission'));
+          return true;
+        });
+      });
+    });
+
+    it('una respuesta nula o con la resolución incompleta da 500', async () => {
+      for (const data of [null, resultadoRpc({}, { estado: final, resueltoEn: '2030-01-15T15:00:00+00:00', resueltoPorId: undefined })]) {
+        const { cliente } = clienteConRpc({ data });
+        await conLogCapturado(async () => {
+          await assert.rejects(new IncidenteDAOSupabase(cliente)[metodo](resolver), (err) => {
+            assert.ok(err instanceof ErrorAplicacion);
+            assert.equal(err.codigoEstado, 500);
+            return true;
+          });
+        });
+      }
+    });
+  });
+}
 
 type PasoConsulta = { paso: string; args: unknown[] };
 
@@ -352,8 +489,14 @@ describe('IncidenteDAOSupabase.leerCoordinaciones: relevo pendiente', () => {
     assert.ok(!/ficha|medic|sangre|alergi|condicion/i.test(seleccion));
   });
 
-  it('sin relevos (o solo aceptados) la coordinación no lleva la clave relevoPendiente', async () => {
-    for (const relevos of [[], null, undefined, [relevoEmbebido({ estado: 'aceptado' })]]) {
+  it('sin relevos (o solo resueltos: aceptados, rechazados o cancelados) la coordinación no lleva la clave relevoPendiente', async () => {
+    for (const relevos of [
+      [],
+      null,
+      undefined,
+      [relevoEmbebido({ estado: 'aceptado' })],
+      [relevoEmbebido({ estado: 'rechazado' }), relevoEmbebido({ estado: 'cancelado', id: 'otro' })],
+    ]) {
       const { cliente } = clienteConConsulta([fila(relevos)]);
       const coordinacion = (await new IncidenteDAOSupabase(cliente).leerCoordinaciones(['e1'], ANA)).get('e1');
       assert.deepEqual(Object.keys(coordinacion ?? {}).sort(), [

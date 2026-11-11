@@ -15,6 +15,8 @@ Object.assign(process.env, {
 
 const { crearRutasRescate } = await import('./rutasRescate.js');
 const { AceptarRelevo } = await import('../../../application/use-cases/AceptarRelevo.js');
+const { CancelarRelevo } = await import('../../../application/use-cases/CancelarRelevo.js');
+const { RechazarRelevo } = await import('../../../application/use-cases/RechazarRelevo.js');
 const { AsignarResponsable } = await import('../../../application/use-cases/AsignarResponsable.js');
 const { ProponerRelevo } = await import('../../../application/use-cases/ProponerRelevo.js');
 const { IncidenteDAOMemoria } = await import('../../../infrastructure/repositories/memoria/IncidenteDAOMemoria.js');
@@ -47,7 +49,7 @@ const incidente = (expedicionId: string, estado: Incidente['estado'], id: string
 
 type Cuerpo = Record<string, unknown>;
 
-describe('POST /api/rescate/alertas/:expedicionId/coordinacion/relevos[/:relevoId/aceptar] (HU-40)', () => {
+describe('POST /api/rescate/alertas/:expedicionId/coordinacion/relevos[/:relevoId/aceptar|rechazar|cancelar] (HU-40)', () => {
   let dao = new IncidenteDAOMemoria(new Map(), new Map());
   // El servidor se crea una vez; cada prueba cambia el DAO al que delegan los casos de uso.
   const delegado = {
@@ -55,6 +57,8 @@ describe('POST /api/rescate/alertas/:expedicionId/coordinacion/relevos[/:relevoI
     leerCoordinaciones: (...a: Parameters<typeof dao.leerCoordinaciones>) => dao.leerCoordinaciones(...a),
     proponerRelevo: (s: Parameters<typeof dao.proponerRelevo>[0]) => dao.proponerRelevo(s),
     aceptarRelevo: (s: Parameters<typeof dao.aceptarRelevo>[0]) => dao.aceptarRelevo(s),
+    rechazarRelevo: (s: Parameters<typeof dao.rechazarRelevo>[0]) => dao.rechazarRelevo(s),
+    cancelarRelevo: (s: Parameters<typeof dao.cancelarRelevo>[0]) => dao.cancelarRelevo(s),
   };
   let servidor: ReturnType<ReturnType<typeof express>['listen']>;
   let base: string;
@@ -71,6 +75,15 @@ describe('POST /api/rescate/alertas/:expedicionId/coordinacion/relevos[/:relevoI
       headers: cabeceras(sub, rol),
       body: JSON.stringify(cuerpo),
     });
+  const resolver = (accion: 'rechazar' | 'cancelar') =>
+    (sub: string, relevoId: string, cuerpo: unknown, expedicion = ALERTA, rol: 'senderista' | 'rescatista' = 'rescatista') =>
+      fetch(`${base}/${expedicion}/coordinacion/relevos/${relevoId}/${accion}`, {
+        method: 'POST',
+        headers: cabeceras(sub, rol),
+        body: JSON.stringify(cuerpo),
+      });
+  const rechazar = resolver('rechazar');
+  const cancelar = resolver('cancelar');
   const cuerpoProponer = (extra: Cuerpo = {}) => ({
     operacionId: randomUUID(),
     destinatarioId: BETO,
@@ -94,6 +107,8 @@ describe('POST /api/rescate/alertas/:expedicionId/coordinacion/relevos[/:relevoI
         asignarResponsable: new AsignarResponsable(delegado),
         proponerRelevo: new ProponerRelevo(delegado),
         aceptarRelevo: new AceptarRelevo(delegado),
+        rechazarRelevo: new RechazarRelevo(delegado),
+        cancelarRelevo: new CancelarRelevo(delegado),
       }),
     );
     app.use(errorHandler);
@@ -119,13 +134,17 @@ describe('POST /api/rescate/alertas/:expedicionId/coordinacion/relevos[/:relevoI
   describe('autenticación y validación', () => {
     it('sin token, 401 (la única respuesta 401 de las rutas)', async () => {
       assert.equal((await fetch(`${base}/${ALERTA}/coordinacion/relevos`, { method: 'POST' })).status, 401);
-      assert.equal((await fetch(`${base}/${ALERTA}/coordinacion/relevos/${randomUUID()}/aceptar`, { method: 'POST' })).status, 401);
+      for (const accion of ['aceptar', 'rechazar', 'cancelar']) {
+        assert.equal((await fetch(`${base}/${ALERTA}/coordinacion/relevos/${randomUUID()}/${accion}`, { method: 'POST' })).status, 401);
+      }
     });
 
-    it('un senderista recibe 403 PROHIBIDO en ambas rutas', async () => {
+    it('un senderista recibe 403 PROHIBIDO en todas las rutas del relevo', async () => {
       for (const res of [
         await proponer(SENDERISTA, cuerpoProponer(), ALERTA, 'senderista'),
         await aceptar(SENDERISTA, randomUUID(), { operacionId: randomUUID() }, ALERTA, 'senderista'),
+        await rechazar(SENDERISTA, randomUUID(), { operacionId: randomUUID() }, ALERTA, 'senderista'),
+        await cancelar(SENDERISTA, randomUUID(), { operacionId: randomUUID() }, ALERTA, 'senderista'),
       ]) {
         assert.equal(res.status, 403);
         assert.equal(((await res.json()) as { codigo: string }).codigo, 'PROHIBIDO');
@@ -280,7 +299,9 @@ describe('POST /api/rescate/alertas/:expedicionId/coordinacion/relevos[/:relevoI
       assert.equal((await aceptar(BETO, relevoId, cuerpoAceptar)).status, 200);
       const otra = await aceptar(BETO, relevoId, { operacionId: randomUUID() });
       assert.equal(otra.status, 409);
-      assert.equal(((await otra.json()) as { codigo: string }).codigo, 'RELEVO_YA_RESUELTO');
+      const cuerpoOtra = (await otra.json()) as { codigo: string; estadoRelevo: string };
+      assert.equal(cuerpoOtra.codigo, 'RELEVO_YA_RESUELTO');
+      assert.equal(cuerpoOtra.estadoRelevo, 'aceptado');
       assert.equal(dao.transferencias.length, 1);
     });
 
@@ -329,7 +350,112 @@ describe('POST /api/rescate/alertas/:expedicionId/coordinacion/relevos[/:relevoI
     });
   });
 
-  it('ningún rechazo de negocio de proponer ni de aceptar responde 401', async () => {
+  for (const [accion, llamar, actor, intruso, codigoIntruso, final] of [
+    ['rechazar', rechazar, BETO, ANA, 'NO_ES_DESTINATARIO', 'rechazado'],
+    ['cancelar', cancelar, ANA, BETO, 'NO_ES_PROPONENTE', 'cancelado'],
+  ] as const) {
+    describe(accion, () => {
+      it(`200 con la coordinación sin relevo pendiente, con el mismo responsable y la misma versión (${final})`, async () => {
+        const relevoId = await relevoPendiente();
+        const res = await llamar(actor, relevoId, { operacionId: randomUUID() });
+        assert.equal(res.status, 200);
+        const cuerpo = (await res.json()) as { coordinacion: Record<string, unknown> };
+        assert.deepEqual(Object.keys(cuerpo), ['coordinacion']);
+        assert.deepEqual(Object.keys(cuerpo.coordinacion).sort(), CLAVES_COORDINACION.filter((k) => k !== 'relevoPendiente'));
+        assert.equal(cuerpo.coordinacion.responsableId, ANA);
+        assert.equal(cuerpo.coordinacion.esMia, actor === ANA);
+        assert.equal(cuerpo.coordinacion.version, 1);
+        assert.equal(dao.relevos[0].relevo.estado, final);
+        assert.equal(dao.relevos[0].relevo.resueltoPorId, actor);
+        assert.equal(dao.transferencias.length, 0);
+        assert.ok(!PATRON_MEDICO.test(JSON.stringify(cuerpo)));
+      });
+
+      it('queda libre para proponer otro relevo y la lectura de la consola ya no lo muestra pendiente', async () => {
+        const relevoId = await relevoPendiente();
+        await llamar(actor, relevoId, { operacionId: randomUUID() });
+        assert.equal('relevoPendiente' in ((await dao.leerCoordinaciones([ALERTA], ANA)).get(ALERTA) ?? {}), false);
+        const otro = await proponer(ANA, cuerpoProponer({ destinatarioId: CARLA }));
+        assert.equal(otro.status, 201);
+      });
+
+      it('repetir la misma operación responde 200 sin volver a escribir; otra operación, 409 RELEVO_YA_RESUELTO con el estado', async () => {
+        const relevoId = await relevoPendiente();
+        const cuerpoOp = { operacionId: randomUUID() };
+        assert.equal((await llamar(actor, relevoId, cuerpoOp)).status, 200);
+        const instante = dao.relevos[0].relevo.resueltoEn;
+        assert.equal((await llamar(actor, relevoId, cuerpoOp)).status, 200);
+        assert.equal(dao.relevos[0].relevo.resueltoEn, instante);
+        const otra = await llamar(actor, relevoId, { operacionId: randomUUID() });
+        assert.equal(otra.status, 409);
+        const cuerpo = (await otra.json()) as { codigo: string; estadoRelevo: string };
+        assert.equal(cuerpo.codigo, 'RELEVO_YA_RESUELTO');
+        assert.equal(cuerpo.estadoRelevo, final);
+      });
+
+      it(`403 ${codigoIntruso} para la otra parte y un tercero; 403 NO_ES_RESCATISTA sin perfil`, async () => {
+        const relevoId = await relevoPendiente();
+        for (const sub of [intruso, CARLA]) {
+          const res = await llamar(sub, relevoId, { operacionId: randomUUID() });
+          assert.equal(res.status, 403);
+          assert.equal(((await res.json()) as { codigo: string }).codigo, codigoIntruso);
+        }
+        const sinPerfil = await llamar(SIN_PERFIL, relevoId, { operacionId: randomUUID() });
+        assert.equal(sinPerfil.status, 403);
+        assert.equal(((await sinPerfil.json()) as { codigo: string }).codigo, 'NO_ES_RESCATISTA');
+        assert.equal(dao.relevos[0].relevo.estado, 'pendiente');
+      });
+
+      it('relevo inexistente o de otra alerta: 404 RELEVO_NO_ENCONTRADO', async () => {
+        const relevoId = await relevoPendiente();
+        for (const res of [
+          await llamar(actor, randomUUID(), { operacionId: randomUUID() }),
+          await llamar(actor, relevoId, { operacionId: randomUUID() }, CERRADA),
+        ]) {
+          assert.equal(res.status, 404);
+          assert.equal(((await res.json()) as { codigo: string }).codigo, 'RELEVO_NO_ENCONTRADO');
+        }
+      });
+
+      it('cuerpo inválido o identificadores que no son UUID: 400 ErrorValidacion', async () => {
+        const relevoId = await relevoPendiente();
+        for (const [rel, cuerpo, exp] of [
+          [relevoId, {}, ALERTA],
+          [relevoId, { operacionId: 'no-es-uuid' }, ALERTA],
+          ['no-es-uuid', { operacionId: randomUUID() }, ALERTA],
+          [relevoId, { operacionId: randomUUID() }, 'no-es-uuid'],
+        ] as [string, Cuerpo, string][]) {
+          const res = await llamar(actor, rel, cuerpo, exp);
+          assert.equal(res.status, 400);
+          assert.equal(((await res.json()) as { error: string }).error, 'ErrorValidacion');
+        }
+        assert.equal(dao.relevos[0].relevo.estado, 'pendiente');
+      });
+
+      it('caso cerrado tras la propuesta: 409 INCIDENTE_CERRADO y el relevo sigue pendiente', async () => {
+        const relevoId = await relevoPendiente();
+        dao.filas[0].incidente = { ...dao.filas[0].incidente, estado: 'cerrado' };
+        const res = await llamar(actor, relevoId, { operacionId: randomUUID() });
+        assert.equal(res.status, 409);
+        assert.equal(((await res.json()) as { codigo: string }).codigo, 'INCIDENTE_CERRADO');
+        assert.equal(dao.relevos[0].relevo.estado, 'pendiente');
+      });
+
+      it('aceptar contra la resolución por HTTP: una responde 200 y la otra 409 RELEVO_YA_RESUELTO', async () => {
+        const relevoId = await relevoPendiente();
+        const [acep, resol] = await Promise.all([
+          aceptar(BETO, relevoId, { operacionId: randomUUID() }),
+          llamar(actor, relevoId, { operacionId: randomUUID() }),
+        ]);
+        assert.deepEqual([acep.status, resol.status].sort(), [200, 409]);
+        const perdedora = acep.status === 409 ? acep : resol;
+        assert.equal(((await perdedora.json()) as { codigo: string }).codigo, 'RELEVO_YA_RESUELTO');
+        assert.equal(dao.transferencias.length, dao.relevos[0].relevo.estado === 'aceptado' ? 1 : 0);
+      });
+    });
+  }
+
+  it('ningún rechazo de negocio de proponer, aceptar, rechazar ni cancelar responde 401', async () => {
     const relevoId = await relevoPendiente();
     const respuestas = [
       await proponer(SIN_PERFIL, cuerpoProponer()),
@@ -341,6 +467,10 @@ describe('POST /api/rescate/alertas/:expedicionId/coordinacion/relevos[/:relevoI
       await proponer(ANA, cuerpoProponer({ destinatarioId: CARLA })),
       await aceptar(CARLA, relevoId, { operacionId: randomUUID() }),
       await aceptar(BETO, randomUUID(), { operacionId: randomUUID() }),
+      await rechazar(CARLA, relevoId, { operacionId: randomUUID() }),
+      await cancelar(CARLA, relevoId, { operacionId: randomUUID() }),
+      await rechazar(BETO, randomUUID(), { operacionId: randomUUID() }),
+      await cancelar(ANA, randomUUID(), { operacionId: randomUUID() }),
     ];
     for (const res of respuestas) assert.ok([400, 403, 404, 409].includes(res.status), `estado ${res.status}`);
   });

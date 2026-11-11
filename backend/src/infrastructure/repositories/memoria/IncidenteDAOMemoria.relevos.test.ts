@@ -39,6 +39,12 @@ const proponer = (dao: IncidenteDAOMemoria, extra: Partial<Parameters<IncidenteD
 const aceptar = (dao: IncidenteDAOMemoria, relevoId: string, extra: Partial<Parameters<IncidenteDAOMemoria['aceptarRelevo']>[0]> = {}) =>
   dao.aceptarRelevo({ expedicionId: E1, rescatistaId: BETO, relevoId, operacionId: randomUUID(), ...extra });
 
+const rechazar = (dao: IncidenteDAOMemoria, relevoId: string, extra: Partial<Parameters<IncidenteDAOMemoria['rechazarRelevo']>[0]> = {}) =>
+  dao.rechazarRelevo({ expedicionId: E1, rescatistaId: BETO, relevoId, operacionId: randomUUID(), ...extra });
+
+const cancelar = (dao: IncidenteDAOMemoria, relevoId: string, extra: Partial<Parameters<IncidenteDAOMemoria['cancelarRelevo']>[0]> = {}) =>
+  dao.cancelarRelevo({ expedicionId: E1, rescatistaId: ANA, relevoId, operacionId: randomUUID(), ...extra });
+
 const rechaza = (codigo: CodigoErrorRelevo) => (e: unknown) => {
   assert.ok(e instanceof ErrorCoordinacion, `se esperaba ErrorCoordinacion y llegó ${String(e)}`);
   assert.equal(e.codigo, codigo);
@@ -69,6 +75,7 @@ describe('IncidenteDAOMemoria: relevo de la coordinación (HU-40)', () => {
       assert.equal(relevo.nombreDestinatario, 'Beto Rescate');
       assert.equal(relevo.motivo, 'Cambio de turno');
       assert.equal(relevo.resueltoEn, null);
+      assert.equal(relevo.resueltoPorId, null);
       assert.equal(relevo.versionIncidente, 1);
       assert.ok(!Number.isNaN(Date.parse(relevo.solicitadoEn)));
       // CA-02: mientras está pendiente, el responsable anterior conserva el caso.
@@ -176,6 +183,7 @@ describe('IncidenteDAOMemoria: relevo de la coordinación (HU-40)', () => {
       assert.equal(inc.version, 2);
       assert.equal(relevo.estado, 'aceptado');
       assert.ok(relevo.resueltoEn);
+      assert.equal(relevo.resueltoPorId, BETO, 'queda registrado quién aceptó');
       assert.equal(inc.asumidoEn, relevo.resueltoEn, 'asumidoEn = desde cuándo coordina el responsable actual');
       assert.equal(dao.filas[0].incidente.responsableId, BETO);
       // Ambos responsables, el motivo y la hora quedan registrados.
@@ -231,7 +239,11 @@ describe('IncidenteDAOMemoria: relevo de la coordinación (HU-40)', () => {
       const repetida = await aceptar(dao, relevo.id, { operacionId });
       assert.equal(repetida.repetido, true);
       assert.equal(repetida.incidente.version, primero.incidente.version);
-      await assert.rejects(aceptar(dao, relevo.id), rechaza('RELEVO_YA_RESUELTO'));
+      await assert.rejects(aceptar(dao, relevo.id), (e) => {
+        rechaza('RELEVO_YA_RESUELTO')(e);
+        assert.deepEqual((e as ErrorCoordinacion<CodigoErrorRelevo>).detalle, { estadoRelevo: 'aceptado' });
+        return true;
+      });
       // La operación vale solo para su destinatario y su relevo.
       await assert.rejects(aceptar(dao, relevo.id, { operacionId, rescatistaId: CARLA }), rechaza('RELEVO_NO_ENCONTRADO'));
       assert.equal(dao.transferencias.length, 1);
@@ -302,6 +314,155 @@ describe('IncidenteDAOMemoria: relevo de la coordinación (HU-40)', () => {
       const segundo = await proponer(dao, { versionIncidente: 2, rescatistaId: BETO, destinatarioId: CARLA });
       assert.equal(segundo.relevo.versionIncidente, 2);
       await assert.rejects(proponer(dao, { versionIncidente: 2, destinatarioId: CARLA }), rechaza('NO_ES_RESPONSABLE'));
+    });
+  });
+
+  describe('rechazarRelevo y cancelarRelevo', () => {
+    it('rechazar: el destinatario resuelve el relevo; el responsable, la versión y las transferencias no cambian', async () => {
+      const { relevo: propuesto } = await proponer(dao);
+      const { incidente: inc, relevo, repetido } = await rechazar(dao, propuesto.id);
+      assert.equal(repetido, false);
+      assert.equal(relevo.estado, 'rechazado');
+      assert.equal(relevo.resueltoPorId, BETO);
+      assert.ok(relevo.resueltoEn && !Number.isNaN(Date.parse(relevo.resueltoEn)));
+      assert.equal(inc.responsableId, ANA);
+      assert.equal(inc.version, 1);
+      assert.equal(dao.filas[0].incidente.responsableId, ANA);
+      assert.equal(dao.transferencias.length, 0);
+    });
+
+    it('cancelar: quien propuso resuelve el relevo; el responsable, la versión y las transferencias no cambian', async () => {
+      const { relevo: propuesto } = await proponer(dao);
+      const { incidente: inc, relevo } = await cancelar(dao, propuesto.id);
+      assert.equal(relevo.estado, 'cancelado');
+      assert.equal(relevo.resueltoPorId, ANA);
+      assert.ok(relevo.resueltoEn);
+      assert.equal(inc.responsableId, ANA);
+      assert.equal(inc.version, 1);
+      assert.equal(dao.transferencias.length, 0);
+    });
+
+    it('tras rechazar o cancelar se puede proponer otro relevo y se conserva el historial', async () => {
+      const primero = await proponer(dao);
+      await rechazar(dao, primero.relevo.id);
+      const segundo = await proponer(dao, { destinatarioId: CARLA });
+      assert.equal(segundo.relevo.estado, 'pendiente');
+      await cancelar(dao, segundo.relevo.id);
+      const tercero = await proponer(dao, { destinatarioId: BETO });
+      assert.equal(tercero.relevo.estado, 'pendiente');
+      assert.deepEqual(
+        dao.relevos.map((r) => [r.relevo.estado, r.relevo.resueltoPorId]),
+        [['rechazado', BETO], ['cancelado', ANA], ['pendiente', null]],
+      );
+    });
+
+    it('rechazar lo hace solo el destinatario; cancelar, solo quien propuso', async () => {
+      const { relevo } = await proponer(dao);
+      await assert.rejects(rechazar(dao, relevo.id, { rescatistaId: ANA }), rechaza('NO_ES_DESTINATARIO'));
+      await assert.rejects(rechazar(dao, relevo.id, { rescatistaId: CARLA }), rechaza('NO_ES_DESTINATARIO'));
+      await assert.rejects(cancelar(dao, relevo.id, { rescatistaId: BETO }), rechaza('NO_ES_PROPONENTE'));
+      await assert.rejects(cancelar(dao, relevo.id, { rescatistaId: CARLA }), rechaza('NO_ES_PROPONENTE'));
+      await assert.rejects(rechazar(dao, relevo.id, { rescatistaId: SIN_PERFIL }), rechaza('NO_ES_RESCATISTA'));
+      await assert.rejects(cancelar(dao, relevo.id, { rescatistaId: SIN_PERFIL }), rechaza('NO_ES_RESCATISTA'));
+      assert.equal(dao.relevos[0].relevo.estado, 'pendiente');
+      assert.equal(dao.relevos[0].relevo.resueltoPorId, null);
+    });
+
+    it('relevo inexistente o de otra expedición: RELEVO_NO_ENCONTRADO', async () => {
+      const { relevo } = await proponer(dao);
+      await assert.rejects(rechazar(dao, randomUUID()), rechaza('RELEVO_NO_ENCONTRADO'));
+      await assert.rejects(cancelar(dao, randomUUID()), rechaza('RELEVO_NO_ENCONTRADO'));
+      await assert.rejects(rechazar(dao, relevo.id, { expedicionId: E4 }), rechaza('RELEVO_NO_ENCONTRADO'));
+      await assert.rejects(cancelar(dao, relevo.id, { expedicionId: E4 }), rechaza('RELEVO_NO_ENCONTRADO'));
+    });
+
+    it('la operación de la propuesta, de una asunción o de otro tipo no sirve: DATOS_INVALIDOS', async () => {
+      const operacionId = randomUUID();
+      const { relevo } = await proponer(dao, { operacionId });
+      await assert.rejects(rechazar(dao, relevo.id, { operacionId }), rechaza('DATOS_INVALIDOS'));
+      await assert.rejects(cancelar(dao, relevo.id, { operacionId }), rechaza('DATOS_INVALIDOS'));
+      await assert.rejects(cancelar(dao, relevo.id, { operacionId: dao.filas[0].operacionId }), rechaza('DATOS_INVALIDOS'));
+      assert.equal(dao.relevos[0].relevo.estado, 'pendiente');
+    });
+
+    for (const tipo of ['rechazar', 'cancelar'] as const) {
+      const resolver = tipo === 'rechazar' ? rechazar : cancelar;
+      const final = tipo === 'rechazar' ? 'rechazado' : 'cancelado';
+      const actor = tipo === 'rechazar' ? BETO : ANA;
+
+      it(`${tipo} dos veces: la misma operación repite sin escribir; otra operación da RELEVO_YA_RESUELTO con el estado`, async () => {
+        const { relevo } = await proponer(dao);
+        const operacionId = randomUUID();
+        const primero = await resolver(dao, relevo.id, { operacionId });
+        const repetida = await resolver(dao, relevo.id, { operacionId });
+        assert.equal(repetida.repetido, true);
+        assert.equal(repetida.relevo.resueltoEn, primero.relevo.resueltoEn);
+        await assert.rejects(resolver(dao, relevo.id), (e) => {
+          rechaza('RELEVO_YA_RESUELTO')(e);
+          assert.deepEqual((e as ErrorCoordinacion<CodigoErrorRelevo>).detalle, { estadoRelevo: final });
+          return true;
+        });
+        // La operación vale solo para su actor y su relevo.
+        await assert.rejects(resolver(dao, relevo.id, { operacionId, rescatistaId: CARLA }), rechaza('RELEVO_NO_ENCONTRADO'));
+        await assert.rejects(resolver(dao, randomUUID(), { operacionId }), rechaza('RELEVO_NO_ENCONTRADO'));
+        assert.equal(dao.relevos[0].relevo.estado, final);
+      });
+
+      it(`${tipo} en un caso cerrado: INCIDENTE_CERRADO y el relevo queda pendiente e inerte`, async () => {
+        const { relevo } = await proponer(dao);
+        dao.filas[0].incidente = { ...dao.filas[0].incidente, estado: 'cerrado' };
+        await assert.rejects(resolver(dao, relevo.id, { rescatistaId: actor }), rechaza('INCIDENTE_CERRADO'));
+        assert.equal(dao.relevos[0].relevo.estado, 'pendiente');
+        assert.equal(dao.relevos[0].relevo.resueltoEn, null);
+        assert.equal(dao.relevos[0].relevo.resueltoPorId, null);
+        // Un relevo pendiente de un caso cerrado tampoco se acepta.
+        await assert.rejects(aceptar(dao, relevo.id), rechaza('INCIDENTE_CERRADO'));
+        assert.equal(dao.transferencias.length, 0);
+      });
+
+      it(`aceptar contra ${tipo} (20 rondas): gana una sola, la otra recibe RELEVO_YA_RESUELTO y no hay transferencia sobre un relevo no aceptado`, async () => {
+        for (let ronda = 0; ronda < 20; ronda += 1) {
+          const incidenteId = randomUUID();
+          const expedicionId = randomUUID();
+          dao.sembrar(incidente(incidenteId, expedicionId, 'abierto', ANA));
+          const { relevo } = await proponer(dao, { expedicionId });
+          const resultados = await Promise.allSettled(
+            ronda % 2 === 0
+              ? [aceptar(dao, relevo.id, { expedicionId }), resolver(dao, relevo.id, { expedicionId })]
+              : [resolver(dao, relevo.id, { expedicionId }), aceptar(dao, relevo.id, { expedicionId })],
+          );
+          assert.equal(resultados.filter((r) => r.status === 'fulfilled').length, 1, `ronda ${ronda}`);
+          const mala = resultados.find((r): r is PromiseRejectedResult => r.status === 'rejected')!;
+          rechaza('RELEVO_YA_RESUELTO')(mala.reason);
+          const fila = dao.relevos.find((r) => r.relevo.id === relevo.id)!;
+          assert.equal((mala.reason as ErrorCoordinacion<CodigoErrorRelevo>).detalle?.estadoRelevo, fila.relevo.estado);
+          assert.equal(dao.transferencias.filter((t) => t.incidenteId === incidenteId).length, fila.relevo.estado === 'aceptado' ? 1 : 0);
+          assert.equal(dao.filas.find((x) => x.incidente.id === incidenteId)!.incidente.responsableId, fila.relevo.estado === 'aceptado' ? BETO : ANA);
+        }
+      });
+    }
+
+    it('rechazar contra cancelar (20 rondas): gana uno solo y el relevo queda resuelto una vez', async () => {
+      for (let ronda = 0; ronda < 20; ronda += 1) {
+        const expedicionId = randomUUID();
+        dao.sembrar(incidente(randomUUID(), expedicionId, 'abierto', ANA));
+        const { relevo } = await proponer(dao, { expedicionId });
+        const resultados = await Promise.allSettled([
+          rechazar(dao, relevo.id, { expedicionId }),
+          cancelar(dao, relevo.id, { expedicionId }),
+        ]);
+        assert.equal(resultados.filter((r) => r.status === 'fulfilled').length, 1, `ronda ${ronda}`);
+        rechaza('RELEVO_YA_RESUELTO')((resultados.find((r) => r.status === 'rejected') as PromiseRejectedResult).reason);
+      }
+    });
+
+    it('tras rechazar o cancelar, la coordinación deja de mostrar relevoPendiente', async () => {
+      const { relevo } = await proponer(dao);
+      await rechazar(dao, relevo.id);
+      const coordinacion = (await dao.leerCoordinaciones([E1], ANA)).get(E1);
+      assert.equal('relevoPendiente' in (coordinacion ?? {}), false);
+      assert.equal(coordinacion?.responsableId, ANA);
+      assert.equal(coordinacion?.version, 1);
     });
   });
 

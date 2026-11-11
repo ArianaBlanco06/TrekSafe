@@ -8,9 +8,13 @@ import type { Incidente, IRelevoDAO } from '../../domain/repositories/IIncidente
 import { IncidenteDAOMemoria } from '../../infrastructure/repositories/memoria/IncidenteDAOMemoria.js';
 import { ErrorAplicacion } from '../../shared/errors/ErrorAplicacion.js';
 import { ComandoAceptarRelevo } from '../commands/ComandoAceptarRelevo.js';
+import { ComandoCancelarRelevo } from '../commands/ComandoCancelarRelevo.js';
 import { ComandoProponerRelevo } from '../commands/ComandoProponerRelevo.js';
+import { ComandoRechazarRelevo } from '../commands/ComandoRechazarRelevo.js';
 import { AceptarRelevo } from './AceptarRelevo.js';
+import { CancelarRelevo } from './CancelarRelevo.js';
 import { ProponerRelevo } from './ProponerRelevo.js';
+import { RechazarRelevo } from './RechazarRelevo.js';
 import { RESPUESTAS_RELEVO } from './respuestasRelevo.js';
 
 const ANA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'; // responsable
@@ -42,6 +46,11 @@ const proponerCmd = (rescatista: string, extra: Record<string, unknown> = {}, ex
 const aceptarCmd = (rescatista: string, relevoId: string, expedicion = ALERTA, operacionId = crypto.randomUUID()) =>
   ComandoAceptarRelevo.crear(rescatista, expedicion, relevoId, { operacionId });
 
+const rechazarCmd = (rescatista: string, relevoId: string, expedicion = ALERTA, operacionId = crypto.randomUUID()) =>
+  ComandoRechazarRelevo.crear(rescatista, expedicion, relevoId, { operacionId });
+const cancelarCmd = (rescatista: string, relevoId: string, expedicion = ALERTA, operacionId = crypto.randomUUID()) =>
+  ComandoCancelarRelevo.crear(rescatista, expedicion, relevoId, { operacionId });
+
 /** Verifica que el rechazo sea un ErrorAplicacion con ese estado, código y extras. */
 const rechazo = (estado: number, codigo: string, extras?: Record<string, unknown>) => (e: unknown) => {
   assert.ok(e instanceof ErrorAplicacion, `se esperaba ErrorAplicacion y llegó ${String(e)}`);
@@ -51,10 +60,12 @@ const rechazo = (estado: number, codigo: string, extras?: Record<string, unknown
   return true;
 };
 
-describe('ProponerRelevo y AceptarRelevo (HU-40)', () => {
+describe('ProponerRelevo, AceptarRelevo, RechazarRelevo y CancelarRelevo (HU-40)', () => {
   let dao: IncidenteDAOMemoria;
   let proponer: ProponerRelevo;
   let aceptar: AceptarRelevo;
+  let rechazar: RechazarRelevo;
+  let cancelar: CancelarRelevo;
 
   beforeEach(() => {
     dao = new IncidenteDAOMemoria(
@@ -65,6 +76,8 @@ describe('ProponerRelevo y AceptarRelevo (HU-40)', () => {
     dao.sembrar(incidente(CERRADA, 'cerrado', '00000000-0000-4000-8000-000000000003'));
     proponer = new ProponerRelevo(dao);
     aceptar = new AceptarRelevo(dao);
+    rechazar = new RechazarRelevo(dao);
+    cancelar = new CancelarRelevo(dao);
   });
 
   describe('ProponerRelevo', () => {
@@ -139,6 +152,12 @@ describe('ProponerRelevo y AceptarRelevo (HU-40)', () => {
         aceptarRelevo: async () => {
           throw new Error('no se usa');
         },
+        rechazarRelevo: async () => {
+          throw new Error('no se usa');
+        },
+        cancelarRelevo: async () => {
+          throw new Error('no se usa');
+        },
       };
       await assert.rejects(new ProponerRelevo(dao500).ejecutar(proponerCmd(ANA)), rechazo(500, undefined as unknown as string));
     });
@@ -179,7 +198,10 @@ describe('ProponerRelevo y AceptarRelevo (HU-40)', () => {
       await aceptar.ejecutar(comando);
       const repetida = await aceptar.ejecutar(comando);
       assert.equal(repetida.repetido, true);
-      await assert.rejects(aceptar.ejecutar(aceptarCmd(BETO, relevo.id)), rechazo(409, 'RELEVO_YA_RESUELTO'));
+      await assert.rejects(
+        aceptar.ejecutar(aceptarCmd(BETO, relevo.id)),
+        rechazo(409, 'RELEVO_YA_RESUELTO', { estadoRelevo: 'aceptado' }),
+      );
       assert.equal(dao.transferencias.length, 1);
       assert.equal(dao.filas[0].incidente.version, 2);
     });
@@ -206,6 +228,115 @@ describe('ProponerRelevo y AceptarRelevo (HU-40)', () => {
     });
   });
 
+  describe('RechazarRelevo', () => {
+    it('el destinatario rechaza: el relevo queda rechazado y el responsable y la versión no cambian', async () => {
+      const { relevo } = await proponer.ejecutar(proponerCmd(ANA));
+      const resultado = await rechazar.ejecutar(rechazarCmd(BETO, relevo.id));
+      assert.equal(resultado.repetido, false);
+      assert.equal(resultado.relevo.estado, 'rechazado');
+      assert.equal(resultado.relevo.resueltoPorId, BETO);
+      assert.equal(resultado.incidente.responsableId, ANA);
+      assert.equal(resultado.incidente.version, 1);
+      assert.equal(dao.transferencias.length, 0);
+    });
+
+    it('403 NO_ES_DESTINATARIO para quien propuso y para un tercero; 403 NO_ES_RESCATISTA sin perfil', async () => {
+      const { relevo } = await proponer.ejecutar(proponerCmd(ANA));
+      await assert.rejects(rechazar.ejecutar(rechazarCmd(ANA, relevo.id)), rechazo(403, 'NO_ES_DESTINATARIO'));
+      await assert.rejects(rechazar.ejecutar(rechazarCmd(CARLA, relevo.id)), rechazo(403, 'NO_ES_DESTINATARIO'));
+      await assert.rejects(rechazar.ejecutar(rechazarCmd(SIN_PERFIL, relevo.id)), rechazo(403, 'NO_ES_RESCATISTA'));
+      assert.equal(dao.relevos[0].relevo.estado, 'pendiente');
+    });
+
+    it('404 RELEVO_NO_ENCONTRADO si no existe o es de otra alerta', async () => {
+      const { relevo } = await proponer.ejecutar(proponerCmd(ANA));
+      await assert.rejects(rechazar.ejecutar(rechazarCmd(BETO, crypto.randomUUID())), rechazo(404, 'RELEVO_NO_ENCONTRADO'));
+      await assert.rejects(rechazar.ejecutar(rechazarCmd(BETO, relevo.id, CERRADA)), rechazo(404, 'RELEVO_NO_ENCONTRADO'));
+    });
+
+    it('la misma operación repite; otra da 409 RELEVO_YA_RESUELTO con el estado; después se puede proponer otro', async () => {
+      const { relevo } = await proponer.ejecutar(proponerCmd(ANA));
+      const comando = rechazarCmd(BETO, relevo.id);
+      await rechazar.ejecutar(comando);
+      assert.equal((await rechazar.ejecutar(comando)).repetido, true);
+      await assert.rejects(
+        rechazar.ejecutar(rechazarCmd(BETO, relevo.id)),
+        rechazo(409, 'RELEVO_YA_RESUELTO', { estadoRelevo: 'rechazado' }),
+      );
+      await assert.rejects(
+        aceptar.ejecutar(aceptarCmd(BETO, relevo.id)),
+        rechazo(409, 'RELEVO_YA_RESUELTO', { estadoRelevo: 'rechazado' }),
+      );
+      const otro = await proponer.ejecutar(proponerCmd(ANA, { destinatarioId: CARLA }));
+      assert.equal(otro.relevo.estado, 'pendiente');
+    });
+
+    it('un caso cerrado tras la propuesta: 409 INCIDENTE_CERRADO y el relevo no cambia', async () => {
+      const { relevo } = await proponer.ejecutar(proponerCmd(ANA));
+      dao.filas[0].incidente = { ...dao.filas[0].incidente, estado: 'cerrado' };
+      await assert.rejects(rechazar.ejecutar(rechazarCmd(BETO, relevo.id)), rechazo(409, 'INCIDENTE_CERRADO'));
+      assert.equal(dao.relevos[0].relevo.estado, 'pendiente');
+    });
+  });
+
+  describe('CancelarRelevo', () => {
+    it('quien propuso cancela: el relevo queda cancelado y el responsable y la versión no cambian', async () => {
+      const { relevo } = await proponer.ejecutar(proponerCmd(ANA));
+      const resultado = await cancelar.ejecutar(cancelarCmd(ANA, relevo.id));
+      assert.equal(resultado.repetido, false);
+      assert.equal(resultado.relevo.estado, 'cancelado');
+      assert.equal(resultado.relevo.resueltoPorId, ANA);
+      assert.equal(resultado.incidente.responsableId, ANA);
+      assert.equal(resultado.incidente.version, 1);
+    });
+
+    it('403 NO_ES_PROPONENTE para el destinatario y para un tercero; 403 NO_ES_RESCATISTA sin perfil', async () => {
+      const { relevo } = await proponer.ejecutar(proponerCmd(ANA));
+      await assert.rejects(cancelar.ejecutar(cancelarCmd(BETO, relevo.id)), rechazo(403, 'NO_ES_PROPONENTE'));
+      await assert.rejects(cancelar.ejecutar(cancelarCmd(CARLA, relevo.id)), rechazo(403, 'NO_ES_PROPONENTE'));
+      await assert.rejects(cancelar.ejecutar(cancelarCmd(SIN_PERFIL, relevo.id)), rechazo(403, 'NO_ES_RESCATISTA'));
+      assert.equal(dao.relevos[0].relevo.estado, 'pendiente');
+    });
+
+    it('la misma operación repite; otra da 409 RELEVO_YA_RESUELTO con el estado; después se puede proponer otro', async () => {
+      const { relevo } = await proponer.ejecutar(proponerCmd(ANA));
+      const comando = cancelarCmd(ANA, relevo.id);
+      await cancelar.ejecutar(comando);
+      assert.equal((await cancelar.ejecutar(comando)).repetido, true);
+      await assert.rejects(
+        cancelar.ejecutar(cancelarCmd(ANA, relevo.id)),
+        rechazo(409, 'RELEVO_YA_RESUELTO', { estadoRelevo: 'cancelado' }),
+      );
+      await assert.rejects(
+        aceptar.ejecutar(aceptarCmd(BETO, relevo.id)),
+        rechazo(409, 'RELEVO_YA_RESUELTO', { estadoRelevo: 'cancelado' }),
+      );
+      assert.equal((await proponer.ejecutar(proponerCmd(ANA, { destinatarioId: CARLA }))).relevo.estado, 'pendiente');
+    });
+
+    it('un relevo ya aceptado no se cancela: 409 RELEVO_YA_RESUELTO con estado aceptado', async () => {
+      const { relevo } = await proponer.ejecutar(proponerCmd(ANA));
+      await aceptar.ejecutar(aceptarCmd(BETO, relevo.id));
+      await assert.rejects(
+        cancelar.ejecutar(cancelarCmd(ANA, relevo.id)),
+        rechazo(409, 'RELEVO_YA_RESUELTO', { estadoRelevo: 'aceptado' }),
+      );
+      assert.equal(dao.transferencias.length, 1);
+    });
+
+    it('un caso cerrado tras la propuesta: 409 INCIDENTE_CERRADO y el relevo no cambia', async () => {
+      const { relevo } = await proponer.ejecutar(proponerCmd(ANA));
+      dao.filas[0].incidente = { ...dao.filas[0].incidente, estado: 'cerrado' };
+      await assert.rejects(cancelar.ejecutar(cancelarCmd(ANA, relevo.id)), rechazo(409, 'INCIDENTE_CERRADO'));
+      assert.equal(dao.relevos[0].relevo.estado, 'pendiente');
+    });
+
+    it('un error inesperado del DAO se propaga sin traducirse', async () => {
+      const dao500 = { cancelarRelevo: async () => { throw new ErrorAplicacion(500, 'fallo interno'); } } as unknown as IRelevoDAO;
+      await assert.rejects(new CancelarRelevo(dao500).ejecutar(cancelarCmd(ANA, crypto.randomUUID())), rechazo(500, undefined as unknown as string));
+    });
+  });
+
   describe('RESPUESTAS_RELEVO: estados HTTP coherentes con HU-39', () => {
     const esperados: Record<CodigoErrorRelevo, number> = {
       DATOS_INVALIDOS: 400,
@@ -214,6 +345,7 @@ describe('ProponerRelevo y AceptarRelevo (HU-40)', () => {
       NO_ES_RESCATISTA: 403,
       NO_ES_RESPONSABLE: 403,
       NO_ES_DESTINATARIO: 403,
+      NO_ES_PROPONENTE: 403,
       INCIDENTE_NO_ENCONTRADO: 404,
       RELEVO_NO_ENCONTRADO: 404,
       INCIDENTE_CERRADO: 409,

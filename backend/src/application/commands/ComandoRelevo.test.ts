@@ -2,7 +2,9 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { ZodError } from 'zod';
 import { ComandoAceptarRelevo } from './ComandoAceptarRelevo.js';
+import { ComandoCancelarRelevo } from './ComandoCancelarRelevo.js';
 import { ComandoProponerRelevo } from './ComandoProponerRelevo.js';
+import { ComandoRechazarRelevo } from './ComandoRechazarRelevo.js';
 
 const RESCATISTA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const DESTINATARIO = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
@@ -144,3 +146,62 @@ describe('ComandoAceptarRelevo', () => {
     assert.throws(() => ComandoAceptarRelevo.crear('no-es-uuid', EXPEDICION, RELEVO, cuerpo), ZodError);
   });
 });
+
+for (const [nombre, Comando, actor] of [
+  ['ComandoRechazarRelevo', ComandoRechazarRelevo, DESTINATARIO],
+  ['ComandoCancelarRelevo', ComandoCancelarRelevo, RESCATISTA],
+] as const) {
+  describe(nombre, () => {
+    it('se crea con identidad y operación válidas, sin motivo ni versión', () => {
+      const comando = Comando.crear(actor, EXPEDICION, RELEVO, { operacionId: OPERACION });
+      assert.equal(comando.operacionId, OPERACION);
+      assert.equal(comando.expedicionId, EXPEDICION);
+      assert.equal(comando.relevoId, RELEVO);
+      assert.equal(comando.rescatistaId, actor);
+      assert.equal('versionIncidente' in comando, false, 'no lleva versión');
+      assert.equal('motivo' in comando, false, 'no lleva motivo');
+    });
+
+    it('es inmutable', () => {
+      const comando = Comando.crear(actor, EXPEDICION, RELEVO, { operacionId: OPERACION });
+      assert.equal(Object.isFrozen(comando), true);
+      assert.throws(() => {
+        (comando as { operacionId: string }).operacionId = '22222222-2222-4222-8222-222222222222';
+      }, TypeError);
+      assert.equal(comando.operacionId, OPERACION);
+    });
+
+    it('el actor, la expedición y el relevo vienen del JWT y de la ruta; un motivo del cuerpo se ignora', () => {
+      const comando = Comando.crear(actor, EXPEDICION, RELEVO, {
+        operacionId: OPERACION,
+        motivo: 'no se usa',
+        rescatistaId: '99999999-9999-4999-8999-999999999999',
+        expedicionId: '88888888-8888-4888-8888-888888888888',
+        relevoId: '77777777-7777-4777-8777-777777777777',
+      });
+      assert.equal(comando.rescatistaId, actor);
+      assert.equal(comando.expedicionId, EXPEDICION);
+      assert.equal(comando.relevoId, RELEVO);
+      assert.equal('motivo' in comando, false);
+    });
+
+    for (const [descripcion, cuerpo] of [
+      ['sin cuerpo', undefined],
+      ['cuerpo nulo', null],
+      ['sin operacionId', {}],
+      ['operacionId que no es UUID', { operacionId: 'no-es-uuid' }],
+      ['operacionId que no es texto', { operacionId: 7 }],
+    ] as [string, unknown][]) {
+      it(`rechaza con ZodError: ${descripcion}`, () => {
+        assert.throws(() => Comando.crear(actor, EXPEDICION, RELEVO, cuerpo), ZodError);
+      });
+    }
+
+    it('rechaza un relevo, una expedición o un actor que no son UUID', () => {
+      const cuerpo = { operacionId: OPERACION };
+      assert.throws(() => Comando.crear(actor, EXPEDICION, 'no-es-uuid', cuerpo), ZodError);
+      assert.throws(() => Comando.crear(actor, 'no-es-uuid', RELEVO, cuerpo), ZodError);
+      assert.throws(() => Comando.crear('no-es-uuid', EXPEDICION, RELEVO, cuerpo), ZodError);
+    });
+  });
+}
