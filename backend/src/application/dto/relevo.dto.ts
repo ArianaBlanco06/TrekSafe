@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-/** Largo máximo del motivo del relevo (igual que `chk_relevos_motivo` de la migración 019). */
+/** Largo máximo del motivo del relevo (igual que `chk_relevos_motivo` de la migración 021). */
 export const MOTIVO_RELEVO_MAXIMO = 280;
 
 /** Cuerpo de POST /api/rescate/alertas/:expedicionId/coordinacion/relevos. */

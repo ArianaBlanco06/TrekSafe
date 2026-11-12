@@ -33,7 +33,7 @@ const CODIGOS_RPC = new Set<string>([
   'COORDINACION_YA_ASUMIDA',
 ] satisfies CodigoErrorCoordinacion[]);
 
-/** Códigos de negocio que lanzan las cuatro RPC de relevo (019: proponer, aceptar, rechazar y cancelar) en `error.message`. */
+/** Códigos de negocio que lanzan las cuatro RPC de relevo (021: proponer, aceptar, rechazar y cancelar) en `error.message`. */
 const CODIGOS_RELEVO = new Set<string>([
   'DATOS_INVALIDOS',
   'INCIDENTE_NO_ENCONTRADO',

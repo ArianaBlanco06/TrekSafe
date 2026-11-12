@@ -1,10 +1,13 @@
 -- =============================================================================
--- 019 · HU-40: transferir la coordinación de una alerta (relevo propuesto y aceptado)
+-- 021 · HU-40: transferir la coordinación de una alerta (proponer, aceptar, rechazar y cancelar)
 -- Requiere: 017_hu39_asumir_coordinacion.sql (tabla incidentes) y, por ella, 002.
+-- Se aplica después de 019_hu41_bitacora_incidente.sql sin pisar sus permisos: no hace REVOKE ALL
+-- sobre incidentes y vuelve a conceder UPDATE (version), que la 019 de HU-41 necesita.
 -- No depende de 000: registra la aplicación solo si treksafe_migraciones existe.
 -- No es re-ejecutable: CREATE TABLE falla si la tabla ya existe, para no ocultar
 -- diferencias de esquema. Aplicar una sola vez por entorno.
--- La 015 está reservada para HU-45, la 017 es de HU-39 y la 018 de HU-27.
+-- Numeración: la 015 es de HU-45, la 017 de HU-39, la 018 de HU-27 y la 019 de HU-41; la 020
+-- la usa la rama de HU-49 y de la 022 a la 024 es DEP-04. HU-40 usa la 021, que estaba libre.
 --
 -- 1) public.relevos_coordinacion: estado del relevo (pendiente | aceptado | rechazado |
 --    cancelado) e historial de quién lo resolvió y cuándo. El índice único parcial
@@ -206,10 +209,16 @@ REVOKE ALL ON FUNCTION public.treksafe_transferencias_solo_anexado()
     FROM PUBLIC, anon, authenticated;
 
 -- 3) Permisos sobre incidentes: UPDATE solo de las columnas que cambia un relevo.
---    estado y cerrado_en (cierre, HU-42) no se abren aquí. REVOKE primero porque Supabase
---    concede ALL a service_role por defecto y el REVOKE de tabla retira las columnas.
-REVOKE ALL ON public.incidentes FROM PUBLIC, anon, authenticated, service_role;
-GRANT SELECT, INSERT ON public.incidentes TO service_role;
+--    estado y cerrado_en (cierre, HU-42) no se abren aquí. Aditivo: no se hace REVOKE ALL
+--    (SELECT e INSERT de la 017 y UPDATE (version) de la 019 de HU-41 se conservan) ni se
+--    tocan anon, authenticated ni PUBLIC, que la 017 ya dejó sin acceso.
+--    Único REVOKE, y solo sobre service_role: UPDATE, DELETE y TRUNCATE de tabla completa.
+--    Supabase concede ALL por defecto sobre las tablas nuevas y la 017 no lo quitó, así que,
+--    mientras existan, limitar el UPDATE por columna de nada sirve (permitiría cambiar estado
+--    y cerrado_en) y service_role podría borrar incidentes. Quitar el UPDATE de tabla retira
+--    también los permisos de UPDATE por columna, así que se vuelven a conceder a continuación
+--    (incluida version, la columna que necesita la 019 de HU-41).
+REVOKE UPDATE, DELETE, TRUNCATE ON public.incidentes FROM service_role;
 GRANT UPDATE (responsable_id, version, asumido_en) ON public.incidentes TO service_role;
 
 COMMENT ON COLUMN public.incidentes.asumido_en IS
@@ -719,7 +728,7 @@ BEGIN
     IF to_regclass('public.treksafe_migraciones') IS NOT NULL THEN
         EXECUTE $sql$
             INSERT INTO public.treksafe_migraciones (version, nombre, hu)
-            VALUES ('019', 'hu40_transferir_coordinacion', 'HU-40')
+            VALUES ('021', 'hu40_transferir_coordinacion', 'HU-40')
             ON CONFLICT (version) DO NOTHING
         $sql$;
     END IF;

@@ -23,15 +23,15 @@ const MIN = 60_000;
 const fila = (id: string) => ({
   id,
   estado: 'alerta' as const,
-  lugar_inicio: 'Inicio',
-  lugar_fin: 'Destino',
-  coordenadas_inicio: null,
-  coordenadas_fin: null,
-  hora_inicio: new Date(Date.now() - 300 * MIN).toISOString(),
-  hora_retorno_estimada: new Date(Date.now() - 120 * MIN).toISOString(),
-  minutos_tolerancia: 30,
-  actualizado_en: new Date(Date.now() - 60 * MIN).toISOString(),
-  perfiles_senderista: { nombre_completo: 'Senderista Ficticio', telefono: '999999999' },
+  lugarInicio: 'Inicio',
+  lugarFin: 'Destino',
+  coordenadasInicio: null,
+  coordenadasFin: null,
+  horaInicio: new Date(Date.now() - 300 * MIN).toISOString(),
+  horaRetornoEstimada: new Date(Date.now() - 120 * MIN).toISOString(),
+  minutosTolerancia: 30,
+  actualizadoEn: new Date(Date.now() - 60 * MIN).toISOString(),
+  senderista: { nombreCompleto: 'Senderista Ficticio', telefono: '999999999' },
 });
 
 const PATRON_MEDICO = /sangre|alergi|condicion|medicament|salud|consentimiento/i;

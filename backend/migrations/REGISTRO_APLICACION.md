@@ -24,6 +24,11 @@ Solo se anotan aplicaciones reales sobre un entorno (DEV, producción u otro). L
 | `20261101_hu30_operaciones_equipo.sql` | hu30_operaciones | entre 2026-11-02 03:19 y 2026-11-04 00:07 UTC (hora exacta no registrada) · asiento conciliado 2026-11-10 14:12 UTC | DEV | 6dbd632 | Ariana | OK (TECH-56) |
 | `018_hu27_cancelar_salida_futura.sql` | 018 | 2026-11-10 20:43 UTC | DEV | 9b43f46 | Marko | OK |
 | `017_hu39_asumir_coordinacion.sql` | 017 | 2026-11-10 22:51 UTC | DEV | 257b2e2 | Ariana | OK |
+| `015_hu45_outbox.sql` | 015 | 2026-11-11 12:57:25 UTC | DEV | a988637 | Marko (PO), mediante Codex/Supabase | OK: esquema y RLS; procesador no activado |
+| `022_dep108_crear_expedicion_atomica.sql` | 022 | 2026-11-11 12:57:41 UTC | DEV | a988637 | Marko (PO), mediante Codex/Supabase | OK: creación por RPC y unicidad de bloqueantes |
+| `023_dep108_avisos_transaccionales.sql` | 023 | 2026-11-11 12:57:45 UTC | DEV | a988637 | Marko (PO), mediante Codex/Supabase | OK: evento y aviso transaccionales |
+| `024_dep108_vencimientos_outbox.sql` | 024 | 2026-11-11 12:57:50 UTC | DEV | a988637 | Marko (PO), mediante Codex/Supabase | OK: productor SQL futuro; cron legado sin cambios |
+| `019_hu41_bitacora_incidente.sql` | 019 | 2026-11-11 17:46 UTC | DEV | 2deb4af | Ariana | OK |
 
 HU-32: la estructura final está aplicada y verificada en Supabase DEV.
 El asiento administrativo 010 fue registrado correctamente en public.treksafe_migraciones el 2026-11-06 a las 05:23 UTC.
@@ -33,3 +38,5 @@ TECH-56 (conciliación del 2026-11-10): 002, 003 y las dos migraciones de HU-30 
 Se verificó con consultas de solo lectura que las tablas y columnas coinciden con los archivos y que las funciones son idénticas a su commit salvo los saltos de línea de Windows (\r) con que se pegaron.
 HU-30 está en DEV en la versión 6dbd632; la versión actual del archivo (2a633b6) solo elimina una línea de comentario, sin cambio funcional.
 Solo se insertaron los 4 asientos (ON CONFLICT DO NOTHING). No volver a ejecutar estos DDL en DEV.
+
+DEP-04 / #108 (2026-11-11): se aplicaron únicamente `015`, `022`, `023` y `024` después de las pruebas desechables. `017` y `018` ya existían y sus cuerpos normalizados coincidían con el repositorio; no se repitieron. El chequeo con datos ficticios pasó dentro de una transacción revertida, con cero usuarios ficticios restantes, sin correo ni cron. [Evidencia, versiones Supabase y hashes](../../docs/dep-108/evidencia-dev.md). No volver a aplicar estas migraciones de una sola ejecución.

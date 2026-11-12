@@ -4,6 +4,8 @@ Responsable: Andriy Hitoshi Enciso Rojas (@Hitoshi). Issue #33, 3 SP. 8 de novie
 
 La pantalla `/senderista/expedicion/:id/recorrido`, accesible mediante «Ver recorrido», reúne el plan, puntos numerados y resumen de preparación HU-31. Muestra líneas rectas de referencia inicio → puntos → destino, sin navegación real. La lista ordenada con coordenadas está disponible aunque fallen las teselas, la carga del módulo del mapa o la conexión; las coordenadas ausentes se indican sin inventarlas.
 
+La [corrección de teselas](fix-teselas.md) conserva el mapa si falla una imagen y otras siguen disponibles. Cambia automáticamente a la lista cuando la carga visible falla por completo, y mantiene el reintento.
+
 ## API y SOLID
 
 `GET /api/expediciones/:id/recorrido` requiere JWT senderista y propiedad. La fachada usa `ILectorPlan`, `ILectorPuntos` e `ILectorPreparacion`, conectados con `ExpedicionDAOSupabase`, `RepositorioPuntosRuta` y el servicio HU-31 existentes. No hay migraciones ni escrituras. Se conserva la API de las otras historias.

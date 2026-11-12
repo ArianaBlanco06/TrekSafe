@@ -1,3 +1,10 @@
+import type {
+  ExpedicionAlertaLeida,
+  ExpedicionMonitorLeida,
+  BitacoraRescateLeida,
+  HistorialRescatistaLeido,
+  IRepositorioRescate,
+} from '../../application/ports/RepositorioRescate.js';
 import { ErrorAplicacion } from '../../shared/errors/ErrorAplicacion.js';
 import { getSupabaseAdmin } from '../database/supabase.js';
 
@@ -53,8 +60,52 @@ export type FilaHistorialRescatista = {
   };
 };
 
-export class RepositorioRescate {
-  private readonly supabase = getSupabaseAdmin();
+export function mapearExpedicionAlertaPersistida(fila: FilaExpedicionAlerta): ExpedicionAlertaLeida {
+  const perfil = Array.isArray(fila.perfiles_senderista)
+    ? fila.perfiles_senderista[0]
+    : fila.perfiles_senderista;
+  return {
+    id: fila.id,
+    lugarInicio: fila.lugar_inicio,
+    lugarFin: fila.lugar_fin,
+    horaInicio: fila.hora_inicio,
+    horaRetornoEstimada: fila.hora_retorno_estimada,
+    minutosTolerancia: fila.minutos_tolerancia,
+    actualizadoEn: fila.actualizado_en,
+    senderista: perfil ? { nombreCompleto: perfil.nombre_completo, telefono: perfil.telefono } : null,
+  };
+}
+
+export function mapearExpedicionMonitorPersistida(fila: FilaExpedicionMonitor): ExpedicionMonitorLeida {
+  return {
+    ...mapearExpedicionAlertaPersistida(fila),
+    estado: fila.estado,
+    coordenadasInicio: fila.coordenadas_inicio,
+    coordenadasFin: fila.coordenadas_fin,
+  };
+}
+
+export function mapearBitacoraRescatePersistida(fila: FilaBitacoraRescate): BitacoraRescateLeida {
+  return {
+    id: fila.id,
+    expedicionId: fila.expedicion_id,
+    estadoRescate: fila.estado_rescate,
+    actualizadoEn: fila.actualizado_en,
+    notas: fila.notas,
+  };
+}
+
+export function mapearHistorialRescatistaPersistido(fila: FilaHistorialRescatista): HistorialRescatistaLeido {
+  return {
+    ...mapearBitacoraRescatePersistida(fila),
+    expedicion: fila.expediciones
+      ? { ...mapearExpedicionAlertaPersistida(fila.expediciones), estado: fila.expediciones.estado }
+      : null,
+  };
+}
+
+export class RepositorioRescate implements IRepositorioRescate {
+  constructor(private readonly supabase = getSupabaseAdmin()) {}
 
   async verificarEsRescatista(rescatistaId: string): Promise<void> {
     const { data, error } = await this.supabase
@@ -97,7 +148,7 @@ export class RepositorioRescate {
     return destinatarios;
   }
 
-  async listarExpedicionesMonitor(zona?: string): Promise<FilaExpedicionMonitor[]> {
+  async listarExpedicionesMonitor(zona?: string): Promise<ExpedicionMonitorLeida[]> {
     let query = this.supabase
       .from('expediciones')
       .select(
@@ -117,13 +168,13 @@ export class RepositorioRescate {
 
     const { data, error } = await query;
     if (error) throw new ErrorAplicacion(500, error.message);
-    return (data ?? []) as unknown as FilaExpedicionMonitor[];
+    return ((data ?? []) as unknown as FilaExpedicionMonitor[]).map(mapearExpedicionMonitorPersistida);
   }
 
   async buscarConfirmacionesPorExpediciones(
     expedicionIds: string[],
     rescatistaId: string,
-  ): Promise<Map<string, FilaBitacoraRescate>> {
+  ): Promise<Map<string, BitacoraRescateLeida>> {
     if (expedicionIds.length === 0) return new Map();
 
     const { data, error } = await this.supabase
@@ -134,14 +185,14 @@ export class RepositorioRescate {
 
     if (error) throw new ErrorAplicacion(500, error.message);
 
-    const mapa = new Map<string, FilaBitacoraRescate>();
+    const mapa = new Map<string, BitacoraRescateLeida>();
     for (const fila of data ?? []) {
-      mapa.set(fila.expedicion_id, fila);
+      mapa.set(fila.expedicion_id, mapearBitacoraRescatePersistida(fila));
     }
     return mapa;
   }
 
-  async listarExpedicionesEnAlerta(): Promise<FilaExpedicionAlerta[]> {
+  async listarExpedicionesEnAlerta(): Promise<ExpedicionAlertaLeida[]> {
     const { data, error } = await this.supabase
       .from('expediciones')
       .select(
@@ -155,13 +206,13 @@ export class RepositorioRescate {
       .order('actualizado_en', { ascending: false });
 
     if (error) throw new ErrorAplicacion(500, error.message);
-    return (data ?? []) as unknown as FilaExpedicionAlerta[];
+    return ((data ?? []) as unknown as FilaExpedicionAlerta[]).map(mapearExpedicionAlertaPersistida);
   }
 
   async buscarConfirmacion(
     expedicionId: string,
     rescatistaId: string,
-  ): Promise<FilaBitacoraRescate | null> {
+  ): Promise<BitacoraRescateLeida | null> {
     const { data, error } = await this.supabase
       .from('bitacoras_rescate')
       .select('id, expedicion_id, estado_rescate, actualizado_en, notas')
@@ -170,10 +221,10 @@ export class RepositorioRescate {
       .maybeSingle();
 
     if (error) throw new ErrorAplicacion(500, error.message);
-    return data;
+    return data ? mapearBitacoraRescatePersistida(data) : null;
   }
 
-  async buscarExpedicionEnAlerta(expedicionId: string): Promise<FilaExpedicionAlerta | null> {
+  async buscarExpedicionEnAlerta(expedicionId: string): Promise<ExpedicionAlertaLeida | null> {
     const { data, error } = await this.supabase
       .from('expediciones')
       .select(
@@ -188,14 +239,14 @@ export class RepositorioRescate {
       .maybeSingle();
 
     if (error) throw new ErrorAplicacion(500, error.message);
-    return data as unknown as FilaExpedicionAlerta | null;
+    return data ? mapearExpedicionAlertaPersistida(data as unknown as FilaExpedicionAlerta) : null;
   }
 
   async crearConfirmacion(
     expedicionId: string,
     rescatistaId: string,
     notas?: string,
-  ): Promise<FilaBitacoraRescate> {
+  ): Promise<BitacoraRescateLeida> {
     const { data, error } = await this.supabase
       .from('bitacoras_rescate')
       .insert({
@@ -214,14 +265,14 @@ export class RepositorioRescate {
       throw new ErrorAplicacion(500, error.message);
     }
 
-    return data;
+    return mapearBitacoraRescatePersistida(data);
   }
 
   async actualizarBitacoraRescate(
     expedicionId: string,
     rescatistaId: string,
     input: { estadoRescate?: string; notas?: string },
-  ): Promise<FilaBitacoraRescate> {
+  ): Promise<BitacoraRescateLeida> {
     const actualizaciones: Record<string, string | null> = {
       actualizado_en: new Date().toISOString(),
     };
@@ -241,10 +292,10 @@ export class RepositorioRescate {
       throw new ErrorAplicacion(404, 'Debes confirmar la alerta antes de actualizar la bitácora', 'NO_ENCONTRADO');
     }
 
-    return data;
+    return mapearBitacoraRescatePersistida(data);
   }
 
-  async listarHistorialCompletadas(rescatistaId: string): Promise<FilaHistorialRescatista[]> {
+  async listarHistorialCompletadas(rescatistaId: string): Promise<HistorialRescatistaLeido[]> {
     const { data, error } = await this.supabase
       .from('bitacoras_rescate')
       .select(
@@ -262,6 +313,6 @@ export class RepositorioRescate {
       .order('actualizado_en', { ascending: false });
 
     if (error) throw new ErrorAplicacion(500, error.message);
-    return (data ?? []) as unknown as FilaHistorialRescatista[];
+    return ((data ?? []) as unknown as FilaHistorialRescatista[]).map(mapearHistorialRescatistaPersistido);
   }
 }

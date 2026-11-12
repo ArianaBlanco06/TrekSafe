@@ -4,7 +4,7 @@ export type CodigoErrorCoordinacion =
   | 'NO_ES_RESCATISTA'
   | 'COORDINACION_YA_ASUMIDA';
 
-/** Códigos de rechazo de proponer, aceptar, rechazar o cancelar un relevo (HU-40, migración 019). */
+/** Códigos de rechazo de proponer, aceptar, rechazar o cancelar un relevo (HU-40, migración 021). */
 export type CodigoErrorRelevo =
   | 'DATOS_INVALIDOS'
   | 'INCIDENTE_NO_ENCONTRADO'

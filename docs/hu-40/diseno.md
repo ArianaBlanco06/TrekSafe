@@ -8,7 +8,7 @@ Como rescatista responsable quiero solicitar y confirmar el relevo por otro resc
 2. **CA-02 Aceptación explícita:** el relevo se aplica cuando el destinatario lo acepta. Mientras esté pendiente, el responsable anterior conserva el caso.
 3. **CA-03 Registro y bloqueo:** guarda ambos responsables, el motivo y la hora. Impide relevos simultáneos y relevos en casos cerrados.
 
-Este documento nació como diseño (Fase 1) y ahora también describe lo implementado: migración 019, RPC, DAO, casos de uso, rutas y frontend mínimo (estado en la sección 12). El PO (Marko) aprobó después un alcance adicional, que está integrado en todo el documento y se resume aquí. Parte de HU-39, que ya está en `develop` (migración 017): reutiliza `incidentes`, `IIncidenteDAO`, `ErrorCoordinacion`, el objeto `coordinacion` y `BloqueCoordinacion`.
+Este documento nació como diseño (Fase 1) y ahora también describe lo implementado: migración 021, RPC, DAO, casos de uso, rutas y frontend mínimo (estado en la sección 12). El PO (Marko) aprobó después un alcance adicional, que está integrado en todo el documento y se resume aquí. Parte de HU-39, que ya está en `develop` (migración 017): reutiliza `incidentes`, `IIncidenteDAO`, `ErrorCoordinacion`, el objeto `coordinacion` y `BloqueCoordinacion`.
 
 **Alcance adicional aprobado por el PO (Marko)**
 
@@ -44,7 +44,7 @@ Este documento nació como diseño (Fase 1) y ahora también describe lo impleme
 | Datos médicos | Ninguno en tabla, RPC, lecturas ni respuestas. El motivo es texto libre y solo lo ven las dos partes (ver API). |
 | Errores | Nunca 401 en errores de negocio (400/403/404/409). |
 
-## 1. Modelo de datos (migración `019_hu40_transferir_coordinacion.sql`)
+## 1. Modelo de datos (migración `021_hu40_transferir_coordinacion.sql`)
 
 ### 1.1 `public.relevos_coordinacion` (estado y historial del relevo, mutable solo por la RPC)
 
@@ -187,7 +187,7 @@ Decisiones:
 
 ### 2.4 Al cerrar el incidente: estado derivado (sin trigger, sin tocar el cierre)
 
-**Cómo se cierra hoy un incidente.** En `develop` no existe código de cierre: ni RPC, ni caso de uso, ni ruta (`feat/hu-42-cerrar-incidente` no tiene commits propios). Lo único que existe es el esquema de la 017: `incidentes.estado = 'cerrado'` y `cerrado_en` van juntos en un solo `UPDATE` (`chk_incidentes_cierre`), y la 019 **no** concede a `service_role` `UPDATE` sobre `estado` ni `cerrado_en`, así que HU-42 tendrá que pedirlo. Las pruebas de concurrencia simulan el cierre con ese `UPDATE` desde el superusuario. Este diseño no modifica el código ni las RPC del cierre (es de HU-42).
+**Cómo se cierra hoy un incidente.** En `develop` no existe código de cierre: ni RPC, ni caso de uso, ni ruta (`feat/hu-42-cerrar-incidente` no tiene commits propios). Lo único que existe es el esquema de la 017: `incidentes.estado = 'cerrado'` y `cerrado_en` van juntos en un solo `UPDATE` (`chk_incidentes_cierre`), y la 021 **no** concede a `service_role` `UPDATE` sobre `estado` ni `cerrado_en`, así que HU-42 tendrá que pedirlo. Las pruebas de concurrencia simulan el cierre con ese `UPDATE` desde el superusuario. Este diseño no modifica el código ni las RPC del cierre (es de HU-42).
 
 | | (1) Trigger sobre `incidentes` que marca el relevo como `invalidado` | (2) Estado derivado (**adoptada**) |
 |---|---|---|
@@ -372,21 +372,22 @@ Queda fuera: notificaciones o avisos al destinatario (decidido: sin notificació
 
 | Archivo | Contenido |
 |---|---|
-| `019_hu40_transferir_coordinacion.sql` | `relevos_coordinacion` (estados, historial de quién resolvió y cuándo), `transferencias_coordinacion` y sus triggers de solo anexar, `GRANT UPDATE` por columna sobre `incidentes`, `treksafe_resultado_relevo`, `treksafe_proponer_relevo`, `treksafe_aceptar_relevo`, `treksafe_resolver_relevo`, `treksafe_rechazar_relevo` y `treksafe_cancelar_relevo`. Requiere la 017 (e indirectamente la 002). Aplicar una sola vez; registra en `treksafe_migraciones` solo si existe. |
+| `021_hu40_transferir_coordinacion.sql` | `relevos_coordinacion` (estados, historial de quién resolvió y cuándo), `transferencias_coordinacion` y sus triggers de solo anexar, `GRANT UPDATE` por columna sobre `incidentes`, `treksafe_resultado_relevo`, `treksafe_proponer_relevo`, `treksafe_aceptar_relevo`, `treksafe_resolver_relevo`, `treksafe_rechazar_relevo` y `treksafe_cancelar_relevo`. Requiere la 017 (e indirectamente la 002). Aplicar una sola vez; registra en `treksafe_migraciones` solo si existe. |
 
-- La fila 019 está en `backend/migrations/README.md`, después de la 017 (HU-39) y la 018 (HU-27), ambas ya en `develop`.
-- **La 019 se corrigió en sitio para ampliar el relevo (rechazar y cancelar), igual que se hizo con la 018 en HU-27.** Se eligió así, y no una 020, porque la 019 nunca llegó a `develop` ni a un entorno compartido (no está en `origin/develop` ni en `REGISTRO_APLICACION.md`): una 020 habría dejado en el historial una 019 con el `CHECK` y las columnas anteriores y habría obligado a reescribir tablas y funciones en caliente. **El PR queda pendiente de que Ariana confirme que la 019 no está aplicada en DEV.** Mientras tanto no se aplica en ningún entorno.
-- El único entorno que tuvo la versión anterior es el proyecto Supabase personal de pruebas. Para ese caso existe [`evidencias/reinicio-019-personal.sql`](evidencias/reinicio-019-personal.sql): borra solo los objetos de HU-40 (funciones y las dos tablas, con sus datos de prueba), devuelve a `incidentes` los permisos de la 017 y quita el asiento `019`, para reaplicar la 019 corregida una sola vez. **No es una migración y no se ejecuta en DEV ni en producción.** Validado en PostgreSQL desechable: 019 anterior, reinicio, 019 nueva y suite SQL de 23 casos (23 de 23).
-- No se editan otras migraciones. La 015 sigue reservada para HU-45.
-- Ariana aplica la 019 en DEV antes del merge, una vez confirmado lo anterior. No se vuelve a ejecutar `init_schema.sql` en DEV.
+- La fila 021 está en `backend/migrations/README.md`, entre la 019 (HU-41) y la 022 (DEP-04), todas ya en `develop` salvo la 021.
+- **Numeración.** La migración se llamó `019_hu40_transferir_coordinacion.sql` hasta el merge con `develop` (2026-11-11), cuando HU-41 ya había usado la 019 y la había aplicado en DEV (17:46 UTC). Pasó a la **021** porque la 020 la usa la rama `feat/hu-49-sincronizacion-offline` (`020_hu49_creacion_plan_idempotente.sql`) y de la 022 a la 024 es DEP-04. `develop` dice que la 020 y la 021 «no forman parte de esta entrega» (DEP-04): significa que DEP-04 las dejó sin usar y pide comprobar su disponibilidad contra las ramas pendientes antes de asignarlas; no las reserva para nadie. La 021 estaba libre en todas las ramas remotas. El proyecto personal de pruebas la tiene registrada todavía con el número anterior (`019`, nombre `hu40_transferir_coordinacion`); ver `evidencias/reinicio-021-personal.sql`.
+- **La migración de HU-40 se corrigió en sitio para ampliar el relevo (rechazar y cancelar), igual que se hizo con la 018 en HU-27.** Se eligió así, y no una migración nueva encima, porque nunca llegó a `develop` ni a un entorno compartido (no está en `origin/develop` ni en `REGISTRO_APLICACION.md`): una migración adicional habría dejado en el historial una versión con el `CHECK` y las columnas anteriores y habría obligado a reescribir tablas y funciones en caliente. **El PR queda pendiente de que Ariana confirme que la migración de HU-40 (ni como 019 ni como 021) no está aplicada en DEV.** Mientras tanto no se aplica en ningún entorno compartido.
+- El único entorno que tuvo la versión anterior es el proyecto Supabase personal de pruebas. Para ese caso existe [`evidencias/reinicio-021-personal.sql`](evidencias/reinicio-021-personal.sql): borra solo los objetos de HU-40 (funciones y las dos tablas, con sus datos de prueba), devuelve a `incidentes` los permisos de la 017 (sin tocar `UPDATE (version)` de la 019 de HU-41) y quita el asiento de HU-40 (`019` o `021`, siempre filtrado por el nombre `hu40_transferir_coordinacion`), para reaplicar la 021 corregida una sola vez. **No es una migración y no se ejecuta en DEV ni en producción.** Validado en PostgreSQL desechable: 021 anterior, reinicio, 021 nueva y suite SQL de 23 casos (23 de 23).
+- No se editan otras migraciones. La 021 es **aditiva** sobre `incidentes`: no hace `REVOKE ALL`, solo quita a `service_role` el `UPDATE`, `DELETE` y `TRUNCATE` de tabla completa (los que Supabase concede por defecto y la 017 no retiró; sin quitarlos, la suite SQL falla: `service_role` podría cambiar `estado` y borrar incidentes) y vuelve a conceder `UPDATE (responsable_id, version, asumido_en)`, de modo que conserva el `UPDATE (version)` de la 019 de HU-41 (probado aplicando develop completo y después la 021).
+- Ariana aplica la 021 en DEV, después de la 019 (HU-41) y de las migraciones de DEP-04 ya aplicadas, una vez confirmado lo anterior. No se vuelve a ejecutar `init_schema.sql` en DEV.
 
 ## 10. Plan de verificación
 
 - **Regresión de HU-39:** sus pruebas (suite SQL, concurrencia, backend y frontend) se ejecutan sin modificarlas.
 - **Pruebas automáticas:** comandos, `ProponerRelevo`, `AceptarRelevo`, `RechazarRelevo`, `CancelarRelevo`, `IncidenteDAOMemoria`, `IncidenteDAOSupabase` (cliente simulado), `coordinacion.relevoPendiente` en las lecturas, HTTP con JWT real y frontend (lógica y bloque).
-- **Suite SQL** en PostgreSQL desechable (Docker `postgres:18`, puerto 55432, solo `127.0.0.1`/`localhost` y base con "desechable" en el nombre), con las migraciones hasta la 019. Casos: aceptación feliz y atómica; rechazo por actor incorrecto (propone un no responsable, acepta un no destinatario); destinatario igual al actor o sin perfil; incidente inexistente y cerrado; relevo duplicado; versión desactualizada; relevo ya resuelto; idempotencia de ambas RPC; evento de transferencia inmutable; rollback si falla un paso; rechazar y cancelar (quién puede, idempotencia, `RELEVO_YA_RESUELTO` con estado, caso cerrado, historial de quién y cuándo, y restricciones de la base).
+- **Suite SQL** en PostgreSQL desechable (Docker `postgres:18`, puerto 55432, solo `127.0.0.1`/`localhost` y base con "desechable" en el nombre), con las migraciones hasta la 021. Casos: aceptación feliz y atómica; rechazo por actor incorrecto (propone un no responsable, acepta un no destinatario); destinatario igual al actor o sin perfil; incidente inexistente y cerrado; relevo duplicado; versión desactualizada; relevo ya resuelto; idempotencia de ambas RPC; evento de transferencia inmutable; rollback si falla un paso; rechazar y cancelar (quién puede, idempotencia, `RELEVO_YA_RESUELTO` con estado, caso cerrado, historial de quién y cuándo, y restricciones de la base).
 - **Concurrencia con sesiones reales** (como `test-hu39-postgres.mjs`): dos propuestas, proponer contra aceptar, aceptar dos veces, aceptar contra rechazar, aceptar contra cancelar, rechazar contra cancelar y aceptar, rechazar y cancelar contra el cierre, con barrera de bloqueo y rondas repetidas (sección 5).
-- **Prueba manual solo en el Supabase personal** (`wwan…`). Nunca el DEV del equipo (`ibnw…`). Se verifica el destino antes de escribir. Debe confirmar, como en HU-39: que el código del `RAISE EXCEPTION` llega en `error.message` y el JSON en `error.details` (también el `DETAIL {"estado": …}` de `RELEVO_YA_RESUELTO`), y que los embeds de `perfiles_rescatista` funcionan con `service_role` con el esquema recargado. Antes de ejecutar el reinicio de la 019 se confirma con quien prueba la referencia del proyecto; quien prueba lo ejecuta en el panel.
+- **Prueba manual solo en el Supabase personal** (`wwan…`). Nunca el DEV del equipo (`ibnw…`). Se verifica el destino antes de escribir. Debe confirmar, como en HU-39: que el código del `RAISE EXCEPTION` llega en `error.message` y el JSON en `error.details` (también el `DETAIL {"estado": …}` de `RELEVO_YA_RESUELTO`), y que los embeds de `perfiles_rescatista` funcionan con `service_role` con el esquema recargado. Antes de ejecutar el reinicio de la 021 se confirma con quien prueba la referencia del proyecto; quien prueba lo ejecuta en el panel.
 
 ## 11. Decisiones del Product Owner y preguntas abiertas
 
@@ -407,31 +408,33 @@ Queda fuera: notificaciones o avisos al destinatario (decidido: sin notificació
 
 1. **Caso reabierto.** Con estado derivado, un incidente que se reabra haría revivir su relevo pendiente. Quien implemente reabrir (HU-42 u otra) debe decidir si lo cancela en la misma operación (sección 2.4). Hoy no existe reapertura.
 2. **Destinatario que pierde el perfil validado.** La clave foránea `fk_relevos_destinatario` es `ON DELETE RESTRICT`, así que mientras exista el relevo no se puede borrar su perfil; el paso 9b de aceptar es una defensa adicional. Si en el futuro se permite revocar o quitar perfiles, hay que decidir si los relevos pendientes de esa persona se cancelan o invalidan solos. Mientras tanto no se cambia nada.
-3. **Permiso de cierre.** HU-42 debe pedir `UPDATE (estado, cerrado_en)` sobre `incidentes` para `service_role`; la 019 no lo concede (coordinar con Sebastian).
+3. **Permiso de cierre.** HU-42 debe pedir `UPDATE (estado, cerrado_en)` sobre `incidentes` para `service_role`; la 021 no lo concede (coordinar con Sebastian).
 4. **¿Se exige `alerta` para relevar?** Se decidió solo "no cerrado" (los estados de incidente abierto de HU-39). Si el PO prefiere exigir `alerta`, es un paso más de la RPC.
 5. **Versión.** Decidido: proponer la compara; aceptar, rechazar y cancelar no (razón en 2.2 y 2.3). Confirmar con Sebastian y HU-42 que todo cambio relevante del incidente (por ejemplo `localizado`) sube `version`, para que la comparación al proponer sea útil.
 6. **Nombre y alcance de `transferencias_coordinacion`.** Confirmar con Sebastian que HU-41 no define una bitácora propia que deba absorberla.
 7. **Operaciones entre tablas.** Se mantiene la nota de HU-39: la unicidad de `operacion_id` es por tabla. Las RPC de HU-40 revisan `eventos_plan` e `incidentes` y `relevos_coordinacion`; las RPC antiguas no revisan las tablas nuevas.
-8. **Confirmación de Ariana** de que la 019 no está aplicada en DEV (sección 9).
+8. **Confirmación de Ariana** de que la 021 no está aplicada en DEV (sección 9).
 
 ## 12. Estado de implementación
 
-Resultados reales de lo ya ejecutado (2026-11-11); lo manual está pendiente.
+Resultados reales de lo ya ejecutado (2026-11-11), incluida la prueba manual de la API contra el Supabase personal; queda pendiente la del navegador y la aplicación en DEV.
 
 | Parte | Estado | Dónde / resultado |
 |---|---|---|
-| Migración 019 corregida (relevo con rechazar y cancelar) y suite SQL | Hecho; **no aplicada en ningún entorno** (pendiente de que Ariana confirme DEV) | `backend/migrations/019_hu40_transferir_coordinacion.sql`, `backend/migrations/tests/hu40_transferir_coordinacion.test.sql`. Suite SQL de HU-40: 23 de 23; regresión SQL de HU-39 con la 019: 12 de 12 |
-| SQL de reinicio para el Supabase personal | Hecho y validado en Docker; **sin ejecutar** en Supabase | `docs/hu-40/evidencias/reinicio-019-personal.sql` |
-| Concurrencia con sesiones reales (incluidas aceptar contra rechazar, cancelar y cierre) | Hecho | `backend/scripts/test-hu40-postgres.mjs`: 61 casos, 61 pasan, 0 fallan |
-| Backend: comandos, casos de uso, DAO (memoria y Supabase) y rutas de proponer, aceptar, rechazar y cancelar | Hecho | `backend/src/application/`, `backend/src/infrastructure/repositories/`, `backend/src/presentation/http/`. `npx tsc --noEmit` sin errores; `npm test` del backend: 787 pruebas, 787 pasan (las suites de relevo pasaron de 142 a 237) |
+| Migración 021 corregida (relevo con rechazar y cancelar) y suite SQL | Hecho; **no aplicada en ningún entorno** (pendiente de que Ariana confirme DEV) | `backend/migrations/021_hu40_transferir_coordinacion.sql`, `backend/migrations/tests/hu40_transferir_coordinacion.test.sql`. Con develop completo y la 021 (PostgreSQL 17.11): suite SQL de HU-40 23 de 23; regresión SQL de HU-39 12 de 12; suite SQL de HU-41 16 de 16 |
+| SQL de reinicio para el Supabase personal | Hecho y validado en Docker; **sin ejecutar** en Supabase | `docs/hu-40/evidencias/reinicio-021-personal.sql` |
+| Concurrencia con sesiones reales (incluidas aceptar contra rechazar, cancelar y cierre) | Hecho | `backend/scripts/test-hu40-postgres.mjs --imagen postgres:17`: 26 casos de concurrencia, 77 casos en total (con las tres suites SQL), 77 pasan, 0 fallan |
+| Backend: comandos, casos de uso, DAO (memoria y Supabase) y rutas de proponer, aceptar, rechazar y cancelar | Hecho | `backend/src/application/`, `backend/src/infrastructure/repositories/`, `backend/src/presentation/http/`. `npx tsc --noEmit` sin errores; `npm test` del backend tras el merge con `develop`: 879 pruebas, 878 pasan; la que falla es `importaciones.test.ts` (aviso DEP0169 de Node 24.14 que emite `bcrypt`, ajeno a HU-40; con `NODE_OPTIONS=--no-deprecation` pasa) |
 | `relevoPendiente` en las lecturas | Hecho | `IncidenteDAOSupabase.leerCoordinaciones` (no muestra relevos resueltos) |
 | `GET /api/rescate/rescatistas` | Hecho | `RescatistasDAOSupabase`, `controladorRescatistas` |
-| Frontend: transferir, aceptar, rechazar y cancelar | Hecho (sección 8) | `frontend/src/components/rescate/BloqueRelevo.tsx`, `frontend/src/lib/coordinacionRescate.ts`, `frontend/src/services/rescate.ts`. `npm run test:equipo`: 182 pruebas, 180 pasan, 0 fallan, 2 omitidas (HU-30 y HU-31, que requieren PostgreSQL); `npm run typecheck` sin errores |
-| Prueba manual contra Supabase real | La parte de proponer y aceptar se ejecutó contra la **versión anterior** de la 019; **pendiente repetirla** y ejecutar rechazar, cancelar y caso cerrado contra la 019 corregida | [`evidencias/prueba-manual.md`](evidencias/prueba-manual.md) |
-| Aplicar la 019 en DEV y registrarla | Pendiente (Ariana, tras confirmar que no estaba aplicada) | `backend/migrations/REGISTRO_APLICACION.md` |
+| Frontend: transferir, aceptar, rechazar y cancelar | Hecho (sección 8) | `frontend/src/components/rescate/BloqueRelevo.tsx`, `frontend/src/lib/coordinacionRescate.ts`, `frontend/src/services/rescate.ts`. `npm run test:equipo` tras el merge: 209 pruebas, 207 pasan, 0 fallan, 2 omitidas (HU-30 y HU-31, que requieren PostgreSQL) |
+| Prueba manual contra Supabase real | API y Supabase real **ejecutados** el 2026-11-11 contra la versión corregida (entonces numerada 019): los 20 escenarios, RC1–RC23 y V1–V12, todo PASS. **Pendiente** la parte del navegador (N1–N13) y repetirla si cambia el SQL | [`evidencias/prueba-manual.md`](evidencias/prueba-manual.md) |
+| Aplicar la 021 en DEV y registrarla | Pendiente (Ariana, tras confirmar que no estaba aplicada) | `backend/migrations/REGISTRO_APLICACION.md` |
 | Invalidar el relevo al cerrar el caso | Resuelto como estado derivado, sin tocar el cierre de HU-42 | Sección 2.4 |
 | Aviso al destinatario, historial en pantalla o endpoint | No hay: decidido por el PO | — |
 
 Cambio sobre HU-39: `BloqueCoordinacion` ahora incluye `BloqueRelevo`, así que el responsable ve "Transferir coordinación". La prueba de HU-39 "esMia muestra Tú coordinas…" exigía cero botones y se ajustó para exigir solo que no aparezca "Asumir coordinación". El resto de las pruebas de HU-39 no se modificó.
+
+Pruebas de HU-40 que cambiaron con el merge con `develop` (2026-11-11): `servicioRescate.relevo.test.ts` usa filas en camelCase (`senderista`, `horaRetornoEstimada`…), como las de `servicioRescate.coordinacion.test.ts` de HU-39, porque `ServicioRescate` ya no recibe filas de persistencia; `hu40_transferir_coordinacion.test.sql` y `test-hu40-postgres.mjs` dan a cada expedición su propio senderista (DEP-04, migración 022, impide dos expediciones bloqueantes de un mismo senderista); ninguna aserción se quitó ni se debilitó.
 
 Pruebas de HU-40 existentes que cambiaron con esta ampliación (detalle en [prueba-manual.md](evidencias/prueba-manual.md)): tres de `BloqueRelevo.test.tsx` por los botones nuevos, y en el backend las que fijaban el contrato anterior (el estado `cancelado` ya es válido, `RELEVO_YA_RESUELTO` lleva `estadoRelevo`, el relevo lleva `resueltoPorId` y `NO_ES_PROPONENTE` es un código más).

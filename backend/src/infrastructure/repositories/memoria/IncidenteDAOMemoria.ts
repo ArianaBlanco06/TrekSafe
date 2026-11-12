@@ -370,7 +370,7 @@ export class IncidenteDAOMemoria implements IIncidenteDAO, IRelevoDAO {
     return { incidente, relevo: fila.relevo, repetido: false };
   }
 
-  /** Rechazar o cancelar: mismo orden que la RPC treksafe_resolver_relevo (019). */
+  /** Rechazar o cancelar: mismo orden que la RPC treksafe_resolver_relevo (021). */
   private async resolverRelevoBloqueado(
     s: SolicitudResolverRelevo,
     final: 'rechazado' | 'cancelado',

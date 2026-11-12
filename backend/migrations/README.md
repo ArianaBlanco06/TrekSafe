@@ -41,13 +41,19 @@ Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos
 | `012_hu36_eventos_plan_solo_anexado.sql` | `eventos_plan` solo anexado: lista blanca de `cambios`, `ocurrido_en` del servidor, sin UPDATE salvo anonimización ARCO, sin DELETE salvo la cascada (detectada porque la expedición ya no existe), sin TRUNCATE | `002` y `006` |
 | `013_hu37_avisos.sql` | Tabla `avisos_usuario` (bandeja in-app) con `clave_evento` única por usuario | `002` |
 | `014_hu38_minutos_recordatorio.sql` | Columna `expediciones.minutos_recordatorio` (15, 30 o 60; por defecto 30) | Esquema inicial |
-| `015` | **Reservada para HU-45** (outbox, PR #90). Aún no existe en el repositorio: no es un hueco, no usar este número | |
+| `015_hu45_outbox.sql` | Outbox canónica con identidad estable de evento/destinatario/canal, normalización, restricciones e índices. No activa el procesador | `000` |
 | `016_hu34_avances_expedicion.sql` | Tabla `avances_expedicion` y RPC de registro idempotente y último avance. Aplicar una sola vez | `002` y `010` |
 | `017_hu39_asumir_coordinacion.sql` | Tabla `incidentes` (un incidente no cerrado por expedición) y RPC `treksafe_asumir_coordinacion`. Aplicar una sola vez | `002` |
 | `018_hu27_cancelar_salida_futura.sql` | Sustituye `treksafe_cancelar_expedicion` de la `005`: solo cancela una expedición programada con salida futura (`hora_inicio > clock_timestamp()` tomado tras el bloqueo de la fila, no `now()`; sin códigos de error nuevos). Re-ejecutable. **No ejecutar la `005` después de esta migración**: restauraría la función anterior | `005` |
-| `019_hu40_transferir_coordinacion.sql` | Relevo de la coordinación: tablas `relevos_coordinacion` (estados `pendiente`, `aceptado`, `rechazado` y `cancelado`; historial de quién resolvió y cuándo; un solo pendiente por incidente) y `transferencias_coordinacion` (solo anexar), `UPDATE` de `service_role` limitado a `responsable_id`, `version` y `asumido_en` de `incidentes`, y RPC `treksafe_proponer_relevo`, `treksafe_aceptar_relevo`, `treksafe_rechazar_relevo` y `treksafe_cancelar_relevo` (estas dos sobre `treksafe_resolver_relevo`). Aplicar una sola vez. **Corregida en sitio** para ampliar el relevo: no está en `develop` ni aplicada en DEV, **pendiente de que Ariana lo confirme antes del merge**; mientras tanto no aplicarla en ningún entorno. Para el proyecto personal que tuvo la versión anterior, `docs/hu-40/evidencias/reinicio-019-personal.sql` (no es una migración) | `017` |
+| `019_hu41_bitacora_incidente.sql` | Tabla `entradas_bitacora_incidente` (solo anexado, hora del servidor, corrección como entrada nueva, un cierre por incidente), `UPDATE (version)` sobre `incidentes` para `service_role` (bloqueo `FOR SHARE` frente al relevo), `treksafe_anexar_entrada_bitacora_interna` (para HU-42) y RPC `treksafe_agregar_entrada_bitacora`. Aplicar una sola vez | `017` |
+| `021_hu40_transferir_coordinacion.sql` | Relevo de la coordinación: tablas `relevos_coordinacion` (estados `pendiente`, `aceptado`, `rechazado` y `cancelado`; historial de quién resolvió y cuándo; un solo pendiente por incidente) y `transferencias_coordinacion` (solo anexar), `UPDATE` de `service_role` limitado a `responsable_id`, `version` y `asumido_en` de `incidentes` (aditivo: sin `REVOKE ALL`; conserva el `UPDATE (version)` de la `019` de HU-41), y RPC `treksafe_proponer_relevo`, `treksafe_aceptar_relevo`, `treksafe_rechazar_relevo` y `treksafe_cancelar_relevo` (estas dos sobre `treksafe_resolver_relevo`). Aplicar una sola vez. **Antes se llamó `019_hu40_…`**; pasó a `021` porque HU-41 ya usó la `019` y la `020` es de la rama de HU-49. **Corregida en sitio** para ampliar el relevo: no está en `develop` ni aplicada en DEV, **pendiente de que Ariana lo confirme antes del merge**; mientras tanto no aplicarla en ningún entorno compartido. Para el proyecto personal que tuvo la versión anterior, `docs/hu-40/evidencias/reinicio-021-personal.sql` (no es una migración) | `017` |
+| `022_dep108_crear_expedicion_atomica.sql` | Creación compuesta por RPC y unicidad de expedición bloqueante por senderista; aborta ante duplicados existentes | `000`, `002`, `014` |
+| `023_dep108_avisos_transaccionales.sql` | Trigger que guarda el aviso in-app en la transacción de edición/cancelación/ampliación | `000`, `012`, `013` |
+| `024_dep108_vencimientos_outbox.sql` | RPC nueva de vencimientos con estado y pendientes atómicos; no sustituye el cron legado | `000`, `015`, `022` |
 
-Para nuevas migraciones, usar el siguiente número libre al momento del merge (hoy, `020`).
+`015` es el esquema canónico de HU-45 preparado en DEP-04 (#108). El PR #90 contiene una propuesta llamada `012_hu45_outbox.sql`: **no aplicarla encima de esta tabla ni repetir su registro**. #109 debe conservar la identidad lógica obligatoria y adaptar el encolado/procesador al contrato canónico. Para nuevas migraciones, comprobar el siguiente número libre al momento del merge: hoy la `020` está en la rama de HU-49 (`020_hu49_creacion_plan_idempotente.sql`) y la `021` es de HU-40; el siguiente libre en las ramas remotas conocidas es la `025`.
+
+Para DEP-04, instalar primero la base y dependencias históricas (las dos HU-30 con fecha preceden a `008`/`009`). Después aplicar solo archivos realmente pendientes: `015`, `017`, `018`, `019`, `022`, `023`, `024`; no ordenarlos mediante glob alfabético. Los archivos nuevos son de una sola aplicación: abortan ante objetos/versiones ocupados, sin borrar ni ocultar divergencias. `020` y `021` no forman parte de esta entrega; comprobar disponibilidad de cualquier número contra las ramas pendientes antes de asignarlo. Detalle, pruebas y recuperación: [dossier DEP-04](../../docs/dep-108/README.md).
 
 Las migraciones `002` a `007` y `012` son re-ejecutables. No dependen de
 `000_registro_migraciones.sql`: si la tabla `treksafe_migraciones` existe, registran
@@ -69,6 +75,21 @@ selecciona `expediciones.version`, por lo que sin `002` también fallarían los
 listados y `GET /api/expediciones/activa`. La API de HU-30 requiere sus tablas y RPC.
 La API `/api/plantillas` de HU-29 requiere `000` y `001`.
 La API de puntos de HU-32 requiere además `010_hu32_puntos_ruta.sql`.
+
+## HU-41: bitácora cronológica del incidente
+
+`019` no es re-ejecutable (el `CREATE TABLE` falla si la tabla ya existe) y requiere `017` (`incidentes`) y `002` (`eventos_plan`, para la idempotencia entre tipos de operación). Solo `service_role` ejecuta las funciones.
+
+**Aviso para HU-40 y HU-42:** `SELECT ... FOR SHARE` sobre `incidentes` exige, además de `SELECT`, el privilegio `UPDATE` sobre al menos una columna. La `019` concede `UPDATE (version)` a `service_role`. Si una migración posterior hace `REVOKE UPDATE` de tabla sobre `incidentes`, debe volver a conceder al menos esa columna; de lo contrario la RPC de la bitácora responde `permission denied`.
+
+Suite contra una base local desechable (Docker o PostgreSQL instalado; no toca Supabase ni DEV):
+
+```bash
+node backend/scripts/test-hu41-postgres.mjs                    # Docker: postgres:18, puerto 55432
+node backend/scripts/test-hu41-postgres.mjs --pg-bin "C:\Program Files\PostgreSQL\17\bin"
+```
+
+El script aplica `init_schema.sql` y las migraciones hasta la `018`, después la `019`, y ejecuta `tests/hu41_bitacora_incidente.test.sql` (16 casos), seis pruebas de concurrencia con sesiones reales y la suite TypeScript `hu41Postgres.integration.test.ts`. `REGISTRO_APLICACION.md` lo actualiza quien aplique la migración en cada entorno.
 
 ## HU-29: plantillas personales de ruta
 

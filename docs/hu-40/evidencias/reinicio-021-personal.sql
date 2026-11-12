@@ -1,25 +1,30 @@
 -- =============================================================================
--- Reinicio de la 019 (HU-40) SOLO para el proyecto Supabase PERSONAL de pruebas.
+-- Reinicio de la migración de HU-40 (021; antes 019) SOLO para el proyecto Supabase PERSONAL de pruebas.
 --
 -- NO ejecutar en el DEV del equipo ni en producción. No es una migración: no va en
 -- backend/migrations y no se registra en REGISTRO_APLICACION.md.
 --
--- Por qué existe: la 019 se corrigió en sitio (HU-40 amplía el relevo con rechazar y
+-- Por qué existe: la migración de HU-40 se corrigió en sitio (HU-40 amplía el relevo con rechazar y
 -- cancelar) porque nunca llegó a develop ni a un entorno compartido. El proyecto personal
--- sí tiene la versión anterior, y la 019 no es re-ejecutable (CREATE TABLE falla si ya
--- existe). Este script deja ese proyecto como estaba justo antes de la 019 (017 + 018).
+-- sí tiene la versión anterior (registrada entonces como 019, hoy 021 porque HU-41 usó la 019),
+-- y la migración no es re-ejecutable (CREATE TABLE falla si ya
+-- existe). Este script deja ese proyecto como estaba justo antes de HU-40 (017 + 018, y la 019 de HU-41
+-- si la tuviera).
 --
 -- Alcance: únicamente objetos de HU-40.
 --   * Borra las dos tablas de HU-40 y, con ellas, TODOS los relevos y transferencias de
 --     prueba (marca HU40-PRUEBA). No toca incidentes, expediciones, usuarios ni perfiles.
---   * Borra las funciones de HU-40, incluidas las nuevas si ya se hubiera aplicado la 019
+--   * Borra las funciones de HU-40, incluidas las nuevas si ya se hubiera aplicado la 021
 --     corregida.
---   * Devuelve a service_role los permisos de incidentes que dejó la 017 (SELECT e INSERT)
---     y quita el comentario que añadió la 019.
---   * Quita el asiento '019' de treksafe_migraciones para poder reaplicarla.
+--   * Quita a service_role el UPDATE de incidentes que añadió HU-40 (deja SELECT e INSERT de
+--     la 017 y, si existe la bitácora de HU-41, su UPDATE (version)) y el comentario de la
+--     columna asumido_en. No hace REVOKE ALL, para no tocar permisos de otras migraciones.
+--   * Quita el asiento de HU-40 de treksafe_migraciones (versión '019' o '021', siempre por el
+--     nombre hu40_transferir_coordinacion, para no borrar el asiento '019' de HU-41).
 --
 -- Después de ejecutarlo:
---   1. Aplicar backend/migrations/019_hu40_transferir_coordinacion.sql UNA sola vez.
+--   1. Aplicar backend/migrations/021_hu40_transferir_coordinacion.sql UNA sola vez
+--      (o, si el proyecto ya tiene exactamente esa versión de HU-40, no hace falta reiniciar).
 --   2. Ejecutar:  NOTIFY pgrst, 'reload schema';
 --
 -- Comprobación previa (solo lectura): confirmar en el panel que la referencia del proyecto
@@ -42,17 +47,29 @@ DROP TABLE IF EXISTS public.transferencias_coordinacion;
 DROP TABLE IF EXISTS public.relevos_coordinacion;
 DROP FUNCTION IF EXISTS public.treksafe_transferencias_solo_anexado();
 
--- incidentes: de vuelta a los permisos de la 017 (SELECT e INSERT) y sin el comentario
--- que añadió la 019.
-REVOKE ALL ON public.incidentes FROM PUBLIC, anon, authenticated, service_role;
-GRANT SELECT, INSERT ON public.incidentes TO service_role;
+-- incidentes: sin el UPDATE que añadió HU-40 y sin su comentario. Solo se revoca UPDATE (no
+-- ALL): SELECT e INSERT de la 017 se conservan. Quitar el UPDATE de tabla retira también los
+-- permisos de UPDATE por columna, así que, si existe la bitácora de HU-41, se devuelve su
+-- UPDATE (version).
+REVOKE UPDATE ON public.incidentes FROM service_role;
+DO $$
+BEGIN
+    IF to_regclass('public.entradas_bitacora_incidente') IS NOT NULL THEN
+        GRANT UPDATE (version) ON public.incidentes TO service_role;
+    END IF;
+END
+$$;
 COMMENT ON COLUMN public.incidentes.asumido_en IS NULL;
 
--- Asiento de la 019 (si existe el registro de migraciones).
+-- Asiento de HU-40 (si existe el registro de migraciones), por nombre: en el proyecto personal
+-- quedó como '019'; con la numeración actual es '021'. El asiento '019' de HU-41 no se toca.
 DO $$
 BEGIN
     IF to_regclass('public.treksafe_migraciones') IS NOT NULL THEN
-        EXECUTE $sql$ DELETE FROM public.treksafe_migraciones WHERE version = '019' $sql$;
+        EXECUTE $sql$
+            DELETE FROM public.treksafe_migraciones
+             WHERE nombre = 'hu40_transferir_coordinacion' AND version IN ('019', '021')
+        $sql$;
     END IF;
 END
 $$;

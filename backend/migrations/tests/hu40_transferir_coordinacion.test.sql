@@ -1,6 +1,6 @@
 -- Solo PostgreSQL local desechable; todos los datos de prueba se revierten (ROLLBACK final).
 -- Requiere: los roles anon, authenticated y service_role con los privilegios por defecto
--- de Supabase, el esquema base, las migraciones 000 a 016 y la 017 y la 019 aplicadas.
+-- de Supabase, el esquema base, las migraciones 000 a 018, la 019 de HU-41, la 022 a la 024 de DEP-04 y la 021 aplicadas.
 -- Cubre proponer, aceptar, rechazar y cancelar el relevo (casos 1 a 23).
 -- Se ejecuta con backend/scripts/test-hu40-postgres.mjs, que prepara ese entorno. Cada caso
 -- imprime un aviso "OK n: ..."; el primero que falla aborta el archivo con su mensaje.
@@ -115,9 +115,18 @@ INSERT INTO public.perfiles_rescatista (usuario_id, numero_credencial, nombre_co
     (hu40_prueba.u(2), 'CRED-2', 'Rescatista Dos', '1991-02-02'),
     (hu40_prueba.u(3), 'CRED-3', 'Rescatista Tres', '1992-03-03');
 
+-- Un propietario por expedición: compatible con DEP-04 (022), que impide dos planes
+-- bloqueantes de un mismo senderista. No cambia los actores del relevo.
+INSERT INTO public.usuarios (id, correo_electronico, hash_contrasena, rol)
+SELECT ('b0000000-0000-4000-8000-' || lpad(n::text, 12, '0'))::uuid, 'send' || n || '@example.invalid', 'fixture', 'senderista'
+FROM generate_series(2, 8) AS n;
+INSERT INTO public.perfiles_senderista (usuario_id, nombre_completo, telefono, id_documento)
+SELECT ('b0000000-0000-4000-8000-' || lpad(n::text, 12, '0'))::uuid, 'Senderista Ficticio', '999999999', lpad(n::text, 8, '0')
+FROM generate_series(2, 8) AS n;
+
 INSERT INTO public.expediciones
     (id, senderista_id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada, estado)
-SELECT hu40_prueba.e(n), 'b0000000-0000-4000-8000-000000000001', 'Inicio', 'Destino',
+SELECT hu40_prueba.e(n), ('b0000000-0000-4000-8000-' || lpad(n::text, 12, '0'))::uuid, 'Inicio', 'Destino',
        now() - interval '5 hours', now() - interval '2 hours', 'alerta'::public.estado_expedicion_enum
 FROM generate_series(1, 8) AS n;
 

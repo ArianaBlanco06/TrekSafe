@@ -22,7 +22,7 @@ URLs históricas: [PWA](https://treksafe-app.vercel.app) · [API /salud](https:/
 
 > **Continuidad ISW2 — HU-32:** gestión de puntos intermedios implementada y validada localmente. [Dossier, demostración y evidencia](docs/hu-32/README.md). Su migración `010_hu32_puntos_ruta.sql` está aplicada y registrada en Supabase DEV.
 
-> **Continuidad ISW2 — HU-40:** transferir la coordinación de una alerta: proponer, aceptar, rechazar y cancelar el relevo entre rescatistas validados, con historial de quién resolvió y cuándo. [Diseño y estado](docs/hu-40/diseno.md) · [prueba manual](docs/hu-40/evidencias/prueba-manual.md). Su migración `019_hu40_transferir_coordinacion.sql` (corregida en sitio para ampliar el relevo) no está aplicada en ningún entorno y queda pendiente de que Ariana confirme que no está en Supabase DEV. La prueba manual de rechazar, cancelar y caso cerrado está pendiente. El relevo pendiente de un caso cerrado queda inerte (sin trigger; el riesgo de reabrir casos está en el diseño). Sin notificación adicional al destinatario.
+> **Continuidad ISW2 — HU-40:** transferir la coordinación de una alerta: proponer, aceptar, rechazar y cancelar el relevo entre rescatistas validados, con historial de quién resolvió y cuándo. [Diseño y estado](docs/hu-40/diseno.md) · [prueba manual](docs/hu-40/evidencias/prueba-manual.md). Su migración `021_hu40_transferir_coordinacion.sql` (antes `019`, que ocupó HU-41; corregida en sitio para ampliar el relevo) no está aplicada en ningún entorno compartido y queda pendiente de que Ariana confirme que no está en Supabase DEV. La prueba manual de la API contra Supabase real (proyecto personal) se ejecutó con la versión corregida y dio todo PASS; queda pendiente la del navegador. El relevo pendiente de un caso cerrado queda inerte (sin trigger; el riesgo de reabrir casos está en el diseño). Sin notificación adicional al destinatario.
 
 ## Contenido
 
@@ -64,13 +64,13 @@ URLs históricas: [PWA](https://treksafe-app.vercel.app) · [API /salud](https:/
 
 ## Arquitectura
 
-Monorepo con PWA estática en Vercel y backend Node/Express para Fly.io. La base inspeccionada es `develop` en `8508bb4`: API, temporizador y correo se inician juntos. Esa configuración no acredita el inventario publicado.
+Monorepo con PWA estática en Vercel y backend Node/Express para Fly.io. El código incorpora entradas independientes [api.ts](backend/src/api.ts) y [worker.ts](backend/src/worker.ts), con composición e inyección de dependencias. [main.ts](backend/src/main.ts) conserva temporalmente el arranque histórico de API y cron juntos. Esta implementación no acredita el inventario publicado. La fotografía anterior en `8508bb4` se conserva en [estado actual al corte de #106](docs/arquitectura/estado-actual.md).
 
-**Objetivo R2:** una imagen Docker compartida y dos grupos Fly, `api` y `worker`, con una máquina activa por grupo en `iad`; únicamente API expone HTTP. Ambos acceden a PostgreSQL mediante la Data API/RPC de Supabase. El procesador evaluará plazos y enviará notificaciones desde una outbox transaccional. Las entradas separadas y esa integración aún requieren implementación.
+**Objetivo de despliegue R2:** una imagen Docker compartida y dos grupos Fly, `api` y `worker`, con una máquina activa por grupo en `iad`; únicamente API expone HTTP. Ambos acceden a PostgreSQL mediante la Data API/RPC de Supabase. Las entradas separadas ya existen; la configuración publicada de dos grupos corresponde a #110 y la integración del procesador con outbox a #109. El worker actual conserva los flujos históricos. [Alcance y pruebas de #107](docs/dep-107/README.md).
 
 El navegador usa REST y JWT propios. `service_role` permanece en servidor y evita RLS; API/RPC deben aplicar autorización de actor y propietario. El correo es un adaptador dentro del backend, sin un servicio TCP interno adicional.
 
-**Backend:** carpetas `presentation`, `application`, `domain` e `infrastructure`; parte del código aún depende directamente de infraestructura. La inversión de dependencias y composición se completan en #107. **Frontend:** pages / components / services / lib / context / hooks / features.
+**Backend:** carpetas `presentation`, `application`, `domain` e `infrastructure`. Los servicios de aplicación dependen de puertos; la construcción de adaptadores se concentra en `infrastructure/composicion`. Las fábricas HTTP permiten inyectar servicios y los módulos se importan sin iniciar conexiones o tareas. **Frontend:** pages / components / services / lib / context / hooks / features.
 
 Diagramas y contratos: [estado actual](docs/arquitectura/estado-actual.md), [objetivo](docs/arquitectura/arquitectura-objetivo.md), [decisiones y costos](docs/arquitectura/decisiones.md), [transición](docs/arquitectura/transicion-y-validacion.md) y [matriz de tareas/pruebas](docs/arquitectura/matriz-trazabilidad.md).
 
@@ -88,7 +88,7 @@ Diagramas y contratos: [estado actual](docs/arquitectura/estado-actual.md), [obj
 
 ```
 TrekSafe/
-├── backend/            # API + cron + correo actuales; separación futura api/worker
+├── backend/            # Entradas api/worker independientes; main mantiene compatibilidad
 │   ├── src/            # Presentación, aplicación, dominio e infraestructura
 │   ├── migrations/     # SQL incremental y registro por entorno
 │   ├── Dockerfile
@@ -132,7 +132,7 @@ npm run dev:frontend   # http://localhost:5173
 | `BREVO_API_KEY` o `SMTP_*` | Alertas por correo |
 | `CORS_ORIGIN` | Origen del frontend |
 | `MAIL_DEV_FALLBACK` | `true` en dev · `false` en prod |
-| `CRON_ENABLED` | Control actual del motor; fijar `false` en DEV compartido. API/worker separados son objetivo pendiente |
+| `CRON_ENABLED` | Fijar `false` en DEV compartido. `api.ts` no inicia cron; `worker.ts` respeta el interruptor |
 | `VITE_API_URL` | URL del API (build-time en Vercel) |
 
 Referencia completa: [`.env.example`](.env.example).
@@ -146,7 +146,11 @@ Referencia completa: [`.env.example`](.env.example).
 | --- | --- |
 | `npm run install:all` | Dependencias backend + frontend |
 | `npm run dev:backend` / `dev:frontend` | Desarrollo |
+| `npm run dev:api --prefix backend` | API independiente con recarga; sin cron ni verificación SMTP |
+| `npm run dev:worker --prefix backend` | Tareas con recarga; comprobar destino y `CRON_ENABLED` antes de habilitarlas |
 | `npm run build:backend` / `build:frontend` | Build producción |
+| `npm run start:api --prefix backend` | Ejecuta `dist/api.js` después del build |
+| `npm run start:worker --prefix backend` | Ejecuta `dist/worker.js` después del build, sin servidor HTTP |
 | `npm test --prefix backend` | Tests |
 | `npm run test:mail --prefix backend` | Verifica correo |
 | `npm run test:rescue-alert --prefix backend` | Simula alerta |
@@ -166,7 +170,7 @@ La siguiente tabla recoge **destinos históricos declarados**, no disponibilidad
 
 **Secuencia R2 objetivo:** esquema compatible → API/procesador → frontend → comprobaciones y recuperación. Ver [procedimiento y condiciones](docs/arquitectura/transicion-y-validacion.md).
 
-El diseño de dos máquinas se implementará en #107/#109/#110. El costo base de cómputo y sus exclusiones están en [decisiones](docs/arquitectura/decisiones.md); el costo total de las cuentas no está verificado.
+Las entradas independientes están implementadas en #107; la configuración y publicación de dos máquinas se realiza en #110 y su integración con outbox en #109. El costo base de cómputo y sus exclusiones están en [decisiones](docs/arquitectura/decisiones.md); el costo total de las cuentas no está verificado.
 
 **Referencia histórica de una sola API:** los comandos siguientes no despliegan la arquitectura R2 objetivo. `set-fly-secrets.ps1` utiliza una app fija e importa valores del `.env`; revisar destino y configuración por entorno antes de cualquier uso. La guía operativa final pertenece a #110.
 

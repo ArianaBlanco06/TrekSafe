@@ -1,17 +1,19 @@
-// PostgreSQL desechable para HU-40 (019_hu40_transferir_coordinacion.sql).
+// PostgreSQL desechable para HU-40 (021_hu40_transferir_coordinacion.sql).
 //
 // Uso (desde la raíz del repositorio):
 //   node backend/scripts/test-hu40-postgres.mjs                    // Docker: postgres:18, puerto 55432
 //   node backend/scripts/test-hu40-postgres.mjs --pg-bin <carpeta> // PostgreSQL instalado (initdb/pg_ctl)
-//   Opcional: --port <n> (por defecto 55432)
+//   Opcional: --port <n> (por defecto 55432) y --imagen postgres:<versión> (por defecto postgres:18;
+//   develop validó sus suites en PostgreSQL 17.6, donde el error de una FK RESTRICT es 23503)
 //
 // Seguridad: NO lee .env, DATABASE_URL ni SUPABASE_*, ignora las variables PG* del entorno
 // y se niega a conectarse a cualquier host que no sea 127.0.0.1/localhost o a una base cuyo
 // nombre no contenga "desechable". No puede tocar Supabase ni el DEV del equipo.
 //
-// Aplica init_schema.sql completo y las migraciones reales hasta la 016, más la 017 y la 019.
-// Ejecuta la suite SQL de HU-39 sin modificarla (regresión con la 019 aplicada), la suite SQL
-// de HU-40 y las pruebas de concurrencia con sesiones reales. Detiene y borra el servidor al
+// Aplica init_schema.sql completo y TODAS las migraciones de develop (000 a 018, la 019 de HU-41
+// y la 022 a la 024 de DEP-04), y después la 021 de HU-40. Ejecuta la suite SQL de HU-39 (regresión
+// con la 021 aplicada), la suite SQL de HU-40, la suite SQL de HU-41 (con la 021 aplicada) y las
+// pruebas de concurrencia con sesiones reales de HU-40. Detiene y borra el servidor al
 // terminar, aunque falle.
 import assert from 'node:assert/strict';
 import { execFile, spawn } from 'node:child_process';
@@ -40,10 +42,12 @@ const valorDe = (bandera) => {
   return argumentos[i + 1];
 };
 for (const a of argumentos) {
-  if (a.startsWith('--') && !['--pg-bin', '--port'].includes(a)) throw new Error(`Argumento desconocido: ${a}`);
+  if (a.startsWith('--') && !['--pg-bin', '--port', '--imagen'].includes(a)) throw new Error(`Argumento desconocido: ${a}`);
 }
 const binPg = valorDe('--pg-bin') ? path.resolve(valorDe('--pg-bin')) : null;
 const puerto = Number(valorDe('--port') ?? 55432);
+const imagenPg = valorDe('--imagen') ?? 'postgres:18';
+assert.match(imagenPg, /^postgres:\d+(\.\d+)?$/, 'La imagen debe ser postgres:<versión> (solo la oficial)');
 assert.ok(Number.isInteger(puerto) && puerto > 1024 && puerto < 65536 && puerto !== 5432, 'Puerto inválido (no usar 5432)');
 
 const NOMBRE_CONTENEDOR = 'treksafe-hu40-pg';
@@ -72,13 +76,13 @@ let detener = async () => {};
 async function iniciarDocker() {
   const password = randomBytes(12).toString('hex');
   await ejecutar('docker', ['rm', '-f', NOMBRE_CONTENEDOR]).catch(() => {}); // resto de una ejecución anterior
-  console.log(`Iniciando contenedor ${NOMBRE_CONTENEDOR} (postgres:18) en 127.0.0.1:${puerto}...`);
+  console.log(`Iniciando contenedor ${NOMBRE_CONTENEDOR} (${imagenPg}) en 127.0.0.1:${puerto}...`);
   await ejecutar(
     'docker',
     [
       'run', '--rm', '-d', '--name', NOMBRE_CONTENEDOR,
       '-e', `POSTGRES_PASSWORD=${password}`, '-e', `POSTGRES_DB=${BASE}`,
-      '-p', `127.0.0.1:${puerto}:5432`, 'postgres:18',
+      '-p', `127.0.0.1:${puerto}:5432`, imagenPg,
     ],
     { timeout: 5 * 60_000 },
   );
@@ -148,8 +152,14 @@ const MIGRACIONES_PREVIAS = [
   '20261101_hu30_listas_equipo.sql', '20261101_hu30_operaciones_equipo.sql',
   '008_hu31_preparacion_expedicion.sql', '009_hu31_operaciones_preparacion.sql', '010_hu32_puntos_ruta.sql',
   '011_hu29_endurecer_permisos.sql', '012_hu36_eventos_plan_solo_anexado.sql', '013_hu37_avisos.sql',
-  '014_hu38_minutos_recordatorio.sql', '016_hu34_avances_expedicion.sql',
+  '014_hu38_minutos_recordatorio.sql', '015_hu45_outbox.sql', '016_hu34_avances_expedicion.sql',
 ];
+// Resto de develop, en el orden de migrations/README.md (no por glob), y después la de HU-40.
+const MIGRACIONES_DEVELOP = [
+  '017_hu39_asumir_coordinacion.sql', '018_hu27_cancelar_salida_futura.sql', '019_hu41_bitacora_incidente.sql',
+  '022_dep108_crear_expedicion_atomica.sql', '023_dep108_avisos_transaccionales.sql', '024_dep108_vencimientos_outbox.sql',
+];
+const MIGRACION_HU40 = '021_hu40_transferir_coordinacion.sql';
 
 // ---------------------------------------------------------------------------
 // Utilidades de prueba
@@ -211,9 +221,17 @@ async function crearRescatista(nombre) {
   return id;
 }
 
-let senderista;
+// DEP-04 (022) permite una sola expedición bloqueante (alerta o en curso) por senderista: cada
+// alerta de prueba lleva su propio senderista. No cambia los rescatistas ni las reglas del relevo.
 async function crearAlerta(estado = 'alerta') {
   const id = randomUUID();
+  const senderista = randomUUID();
+  await q(`INSERT INTO usuarios (id, correo_electronico, hash_contrasena, rol) VALUES ($1, $2, 'fixture', 'senderista')`, [
+    senderista, `${senderista.slice(0, 8)}@example.invalid`,
+  ]);
+  await q(`INSERT INTO perfiles_senderista (usuario_id, nombre_completo, telefono, id_documento) VALUES ($1, 'Senderista JS', '999999999', $2)`, [
+    senderista, senderista.replace(/-/g, '').slice(0, 20),
+  ]);
   await q(
     `INSERT INTO expediciones (id, senderista_id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada, estado)
      VALUES ($1, $2, 'Inicio', 'Destino', now() - interval '5 hours', now() - interval '2 hours', $3)`,
@@ -336,26 +354,50 @@ async function principal() {
 
   versionPg = (await q('SELECT version() AS v')).rows[0].v;
   console.log(`\nPostgreSQL: ${versionPg}`);
-  console.log(`Modo: ${binPg ? `--pg-bin ${binPg}` : 'Docker postgres:18'} · ${config.host}:${config.port}/${config.database}\n`);
+  console.log(`Modo: ${binPg ? `--pg-bin ${binPg}` : `Docker ${imagenPg}`} · ${config.host}:${config.port}/${config.database}\n`);
 
   await q(EMULACION_ROLES);
   await q(await readFile(path.join(root, 'init_schema.sql'), 'utf8'));
-  for (const archivo of [...MIGRACIONES_PREVIAS, '017_hu39_asumir_coordinacion.sql', '019_hu40_transferir_coordinacion.sql']) {
+  for (const archivo of [...MIGRACIONES_PREVIAS, ...MIGRACIONES_DEVELOP]) {
     await q(await readFile(path.join(migraciones, archivo), 'utf8'));
   }
-  console.log(`init_schema.sql y ${MIGRACIONES_PREVIAS.length} migraciones previas aplicados, más la 017 y la 019.\n`);
+  // Por qué la 021 hace REVOKE UPDATE (y no solo GRANT): con los privilegios por defecto de Supabase
+  // (emulados arriba), develop completo deja a service_role con UPDATE de tabla sobre incidentes;
+  // limitar el UPDATE por columna no serviría de nada mientras exista.
+  const antes = (await q(
+    `SELECT has_table_privilege('service_role', 'public.incidentes', 'UPDATE') AS tabla,
+            has_column_privilege('service_role', 'public.incidentes', 'version', 'UPDATE') AS version,
+            has_column_privilege('service_role', 'public.incidentes', 'estado', 'UPDATE') AS estado`,
+  )).rows[0];
+  console.log(`Antes de la 021 (develop completo): service_role UPDATE de tabla=${antes.tabla}, de version=${antes.version}, de estado=${antes.estado}`);
+  await q(await readFile(path.join(migraciones, MIGRACION_HU40), 'utf8'));
+  const despues = (await q(
+    `SELECT has_table_privilege('service_role', 'public.incidentes', 'UPDATE') AS tabla,
+            has_column_privilege('service_role', 'public.incidentes', 'version', 'UPDATE') AS version,
+            has_column_privilege('service_role', 'public.incidentes', 'responsable_id', 'UPDATE') AS responsable,
+            has_column_privilege('service_role', 'public.incidentes', 'estado', 'UPDATE') AS estado,
+            has_column_privilege('service_role', 'public.incidentes', 'cerrado_en', 'UPDATE') AS cerrado,
+            has_table_privilege('service_role', 'public.incidentes', 'SELECT') AS sel,
+            has_table_privilege('service_role', 'public.incidentes', 'INSERT') AS ins`,
+  )).rows[0];
+  console.log(`Después de la 021: tabla=${despues.tabla}, version=${despues.version}, responsable_id=${despues.responsable}, estado=${despues.estado}, cerrado_en=${despues.cerrado}, SELECT=${despues.sel}, INSERT=${despues.ins}`);
+  assert.deepEqual(
+    { ...despues },
+    { tabla: false, version: true, responsable: true, estado: false, cerrado: false, sel: true, ins: true },
+    'permisos de service_role sobre incidentes tras la 021',
+  );
+  console.log(`init_schema.sql y ${MIGRACIONES_PREVIAS.length + MIGRACIONES_DEVELOP.length} migraciones de develop aplicados (incluida la 019 de HU-41), más la 021 de HU-40.
+`);
 
   // --- Suites SQL de una sola sesión --------------------------------------
-  await ejecutarSuiteSql('hu39_asumir_coordinacion.test.sql', 12, 'HU-39 (regresión, sin modificar, con la 019 aplicada)');
+  await ejecutarSuiteSql('hu39_asumir_coordinacion.test.sql', 12, 'HU-39 (regresión, con la 021 aplicada)');
   console.log('');
   await ejecutarSuiteSql('hu40_transferir_coordinacion.test.sql', 23, 'HU-40');
+  console.log('');
+  await ejecutarSuiteSql('hu41_bitacora_incidente.test.sql', 16, 'HU-41 (regresión, con la 021 aplicada)');
 
   // --- Concurrencia con sesiones reales -----------------------------------
   console.log('\n== Concurrencia con sesiones reales ==');
-  await q(`INSERT INTO usuarios (id, correo_electronico, hash_contrasena, rol) VALUES ($1, 'senderista.js@example.invalid', 'fixture', 'senderista')`, [
-    (senderista = randomUUID()),
-  ]);
-  await q(`INSERT INTO perfiles_senderista (usuario_id, nombre_completo, telefono, id_documento) VALUES ($1, 'Senderista JS', '999999999', '00000099')`, [senderista]);
   const rA = await crearRescatista('Rescatista A');
   const rB = await crearRescatista('Rescatista B');
   const rC = await crearRescatista('Rescatista C');
