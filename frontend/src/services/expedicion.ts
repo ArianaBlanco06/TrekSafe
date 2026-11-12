@@ -1,4 +1,5 @@
 import { api, peticionApi } from './clienteApi';
+import type { PuntoRuta } from './puntosRuta';
 
 export type Expedicion = {
   id: string;
@@ -46,6 +47,7 @@ export type DatosCrearExpedicion = {
   horaInicio: string;
   horaRetornoEstimada: string;
   minutosTolerancia: number;
+  minutosRecordatorio?: number;
   idsContactos: string[];
   nombresAcompanantes: string[];
 };
@@ -70,6 +72,7 @@ export type DatosEdicionExpedicion = {
   horaInicio: string;
   horaRetornoEstimada: string;
   minutosTolerancia: number;
+  minutosRecordatorio?: number;
   idsContactos: string[];
   nombresAcompanantes: string[];
   versionEsperada: number;
@@ -185,12 +188,15 @@ export type BorradorDesdeHistorial = {
   coordenadasInicio: string | null;
   coordenadasFin: string | null;
   minutosTolerancia: number;
+  minutosRecordatorio?: number;
   idsContactos: string[];
   cantidadContactosNoVigentes: number;
   nombresAcompanantes: string[];
   horaInicio: null;
   horaRetornoEstimada: null;
   requiereFechasNuevas: true;
+  /** Puntos del origen consultados por la preparación de HU-28. */
+  puntos?: PuntoRuta[];
 };
 
 export function obtenerBorradorDesdeHistorial(id: string) {

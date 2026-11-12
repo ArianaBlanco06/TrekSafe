@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { ChevronLeft, Route } from 'lucide-react';
 import { useAutenticacion } from '@/context/ContextoAutenticacion';
 import { useEditorPuntosRuta } from '@/hooks/useEditorPuntosRuta';
@@ -12,6 +12,7 @@ export function PaginaPuntosRuta() {
 }
 
 function ContenidoPuntosRuta({ id }: { id: string }) {
+  const { state } = useLocation();
   const editor = useEditorPuntosRuta(id);
   const { ruta } = editor;
 
@@ -37,6 +38,12 @@ function ContenidoPuntosRuta({ id }: { id: string }) {
         <p className="mt-2 text-sm text-muted-foreground">Organiza hasta 20 paradas intermedias antes de iniciar tu expedición.</p>
       </div>
       {editor.cargando && <p role="status" className="text-sm text-muted-foreground">Cargando puntos…</p>}
+      {state?.copiaPuntosNoConfirmada === true && (
+        <p role="alert" className="error-banner">
+          La expedición ya se creó, pero no pudimos confirmar la copia de sus puntos.
+          Revisa la lista guardada y completa los puntos que falten. No necesitas registrar otra expedición.
+        </p>
+      )}
       {editor.errorCarga && (
         <div role="alert" className="error-banner space-y-2">
           <p>{editor.errorCarga}</p>

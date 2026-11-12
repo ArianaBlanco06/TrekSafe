@@ -3,6 +3,20 @@ import { isValidPeruLatitude, isValidPeruLongitude } from './coordinates';
 
 export const MAX_PUNTOS_RUTA = 20;
 
+/** Copia independiente para HU-28; conserva la ruta y genera identidades nuevas. */
+export function copiarPuntosParaPlanNuevo(
+  puntos: readonly PuntoRuta[],
+  nuevoId: () => string = () => crypto.randomUUID(),
+): PuntoRuta[] {
+  return [...puntos].sort((a, b) => a.orden - b.orden).map((punto, indice) => ({
+    id: nuevoId(),
+    nombre: punto.nombre,
+    latitud: punto.latitud,
+    longitud: punto.longitud,
+    orden: indice + 1,
+  }));
+}
+
 // Las cadenas permiten conservar entradas vacias o incompletas mientras se edita.
 export type PuntoEditable = {
   id: string;

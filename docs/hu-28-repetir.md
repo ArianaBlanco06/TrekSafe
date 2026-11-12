@@ -204,10 +204,15 @@ ejecuta como parte de las suites ordinarias ni introduce rutas de prueba en la A
 
 ## Pendientes para completar HU-28
 
-1. Coordinar los puntos intermedios con su responsable. El contrato actual de
-   HU-29 no tiene ese campo: esta entrega conserva el contrato existente. La copia
-   de puntos disponibles sigue pendiente y debe validarse antes de aceptar el
-   alcance completo. No se reemplazarán puntos existentes por una colección vacía.
+1. Validar en DEV la copia de puntos incorporada el 8 de noviembre de 2026 tras
+   disponer de HU-32. La PWA consulta los puntos del origen autorizado y los
+   guarda en la nueva expedición mediante la API de HU-32, con identidades nuevas
+   y el mismo orden, nombres y coordenadas. No requiere otra migración propia.
+   Un fallo de consulta permite reintentar y no se interpreta como lista vacía.
+   Si no se confirma el guardado, se abre el editor del plan ya creado con un
+   aviso para consultar lo persistido y completar lo que falte, sin crear otro plan.
+   Con puntos, el registro requiere conexión: el borrador offline actual no los
+   conserva. La copia permanece en memoria mientras siga abierto el formulario.
 2. Adjuntar la evidencia al issue y al PR de HU-28, recibir la revisión técnica y
    la aceptación del equipo, y coordinar la integración del contrato con HU-29.
 

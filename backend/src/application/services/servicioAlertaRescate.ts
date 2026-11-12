@@ -1,9 +1,9 @@
-import { buildCorreoAlertaRescate } from '../../infrastructure/email/templates/rescueAlertEmail.js';
-import { RepositorioAlerta } from '../../infrastructure/repositories/RepositorioAlerta.js';
-import { RepositorioDespachoCorreo } from '../../infrastructure/repositories/RepositorioDespachoCorreo.js';
-import { RepositorioRescate } from '../../infrastructure/repositories/RepositorioRescate.js';
-import { RepositorioUsuario } from '../../infrastructure/repositories/RepositorioUsuario.js';
-import { RepositorioOutboxSupabase } from '../../infrastructure/repositories/RepositorioOutboxSupabase.js';
+import { buildCorreoAlertaRescate } from '../mensajes/rescueAlertEmail.js';
+import type { ICorreo } from '../ports/correo.js';
+import type { IRepositorioAlerta } from '../ports/RepositorioAlerta.js';
+import type { IRepositorioDespachoCorreo } from '../ports/RepositorioDespachoCorreo.js';
+import type { IRepositorioRescate } from '../ports/RepositorioRescate.js';
+import type { IRepositorioUsuario } from '../ports/RepositorioUsuario.js';
 import type { IRepositorioOutbox } from '../../domain/repositories/IRepositorioOutbox.js';
 
 export type ResultadoAlertaRescate = {
@@ -16,11 +16,12 @@ export type ResultadoAlertaRescate = {
 
 export class ServicioAlertaRescate {
   constructor(
-    private readonly repoAlerta = new RepositorioAlerta(),
-    private readonly repoRescate = new RepositorioRescate(),
-    private readonly repoUsuario = new RepositorioUsuario(),
-    private readonly repoDespacho = new RepositorioDespachoCorreo(),
-    private readonly repoOutbox: IRepositorioOutbox = new RepositorioOutboxSupabase(),
+    private readonly repoAlerta: IRepositorioAlerta,
+    private readonly repoRescate: IRepositorioRescate,
+    private readonly repoUsuario: IRepositorioUsuario,
+    private readonly correo: ICorreo,
+    private readonly repoDespacho: IRepositorioDespachoCorreo,
+    private readonly repoOutbox?: IRepositorioOutbox,
   ) {}
 
   async notificarEquiposRescate(expedicionId: string): Promise<ResultadoAlertaRescate> {
@@ -46,7 +47,8 @@ export class ServicioAlertaRescate {
           }
         : null;
 
-    let encolados = 0;
+    let enviados = 0;
+    let registrados = 0;
     let fallidos = 0;
     let omitidos = 0;
 
@@ -70,30 +72,45 @@ export class ServicioAlertaRescate {
         fichaMedica,
       });
 
-      try {
-        await this.repoOutbox.guardar({
-          tipoEvento: 'ALERTA_RESCATE',
-          destinatario: rescatista.correoElectronico,
-          asunto: subject,
-          cuerpo: text,
-          cuerpoHtml: html,
-          metadata: {
-            expedicionId,
-            tipoDespacho: 'alerta_rescate',
-            nombreRescatista: rescatista.nombreCompleto,
-          },
-        });
-        encolados++;
-      } catch (err) {
-        fallidos++;
-        console.error(`[Rescate] fallo al encolar en outbox para ${rescatista.correoElectronico}:`, err);
+      if (this.repoOutbox) {
+        try {
+          await this.repoOutbox.guardar({
+            claveEvento: `ALERTA_RESCATE:${expedicionId}`,
+            canal: 'correo',
+            tipoEvento: 'ALERTA_RESCATE',
+            destinatario: rescatista.correoElectronico,
+            asunto: subject,
+            cuerpo: text,
+            cuerpoHtml: html,
+            metadata: { expedicionId, tipoDespacho: 'alerta_rescate' },
+          });
+          registrados++;
+          await this.repoDespacho.registrarEnvio(expedicionId, 'alerta_rescate', rescatista.correoElectronico);
+        } catch (err) {
+          fallidos++;
+          console.error(`[Rescate] fallo al encolar outbox para ${rescatista.correoElectronico}:`, err);
+        }
+      } else {
+        try {
+          const resultado = await this.correo.enviar({ to: rescatista.correoElectronico, subject, html, text });
+          if (resultado === 'enviado') {
+            enviados++;
+            await this.repoDespacho.registrarEnvio(expedicionId, 'alerta_rescate', rescatista.correoElectronico);
+          } else {
+            registrados++;
+          }
+        } catch (err) {
+          fallidos++;
+          console.error(`[Rescate] fallo envío a ${rescatista.correoElectronico}:`, err);
+        }
       }
     }
 
+    const modo = this.correo?.getModoTransporte ? this.correo.getModoTransporte() : 'outbox';
     console.log(
-      `[Rescate] expedición ${expedicionId}: rescatistas encolados=${encolados} fallidos=${fallidos} omitidos=${omitidos}`,
+      `[Rescate] expedición ${expedicionId}: rescatistas enviados=${enviados} registrados=${registrados} fallidos=${fallidos} omitidos=${omitidos} modo=${modo}`,
     );
 
-    return { expedicionId, enviados: encolados, registrados: encolados, fallidos, omitidos };
+    return { expedicionId, enviados, registrados, fallidos, omitidos };
   }
 }

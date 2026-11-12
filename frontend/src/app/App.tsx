@@ -18,6 +18,7 @@ import { PaginaContactos } from '@/pages/PaginaContactos';
 import { PaginaListasEquipo } from '@/pages/PaginaListasEquipo';
 import { PaginaHistorialExpediciones } from '@/pages/PaginaHistorialExpediciones';
 import { PaginaPlantillas } from '@/pages/PaginaPlantillas';
+import { PaginaAvisos } from '@/pages/PaginaAvisos';
 import { PaginaPrivacidad } from '@/pages/PaginaPrivacidad';
 import { PaginaRevocacionDatos } from '@/pages/PaginaRevocacionDatos';
 import { PaginaListaExpediciones } from '@/pages/PaginaListaExpediciones';
@@ -27,6 +28,8 @@ import { PaginaExpedicionActiva } from '@/pages/PaginaExpedicionActiva';
 import { PaginaRetornoConfirmado } from '@/pages/PaginaRetornoConfirmado';
 import { PaginaPuntosRuta } from '@/pages/PaginaPuntosRuta';
 import { PaginaEquipoExpedicion } from '@/pages/PaginaEquipoExpedicion';
+import { PaginaRecorrido } from '@/pages/PaginaRecorrido';
+import { PaginaHistorialCambiosPlan } from '@/pages/PaginaHistorialCambiosPlan';
 
 function RedireccionRaiz() {
   const { estaAutenticado, usuario } = useAutenticacion();
@@ -70,6 +73,7 @@ export function App() {
               <Route path="perfil/equipo" element={<PaginaListasEquipo />} />
               <Route path="perfil/historial" element={<PaginaHistorialExpediciones />} />
               <Route path="perfil/plantillas" element={<PaginaPlantillas />} />
+              <Route path="avisos" element={<PaginaAvisos />} />
               <Route path="perfil/privacidad" element={<PaginaPrivacidad />} />
               <Route path="perfil/privacidad/solicitud" element={<PaginaRevocacionDatos />} />
               <Route path="expedicion" element={<PaginaListaExpediciones />} />
@@ -77,7 +81,9 @@ export function App() {
               <Route path="expedicion/confirmada" element={<PaginaRetornoConfirmado />} />
               <Route path="expedicion/nueva" element={<PaginaCrearExpedicion />} />
               <Route path="expedicion/:id/puntos" element={<PaginaPuntosRuta />} />
+              <Route path="expedicion/:id/recorrido" element={<PaginaRecorrido />} />
               <Route path="expedicion/:id/equipo" element={<PaginaEquipoExpedicion />} />
+              <Route path="expedicion/:id/cambios" element={<PaginaHistorialCambiosPlan />} />
             </Route>
 
             <Route

@@ -2,13 +2,12 @@ import { ampliacionesRestantes } from '../../domain/value-objects/ampliacionReto
 import { ErrorAplicacion } from '../../shared/errors/ErrorAplicacion.js';
 import type { EntradaConfirmarRetorno } from '../dto/expedicion.dto.js';
 import type { EntradaCrearExpedicion } from '../dto/usuario.dto.js';
-import {
-  calcularFechaLimite,
-  RepositorioExpedicion,
-} from '../../infrastructure/repositories/RepositorioExpedicion.js';
-import { RepositorioAutenticacionPostgres } from '../../infrastructure/repositories/RepositorioAutenticacionPostgres.js';
-import { RepositorioUsuario } from '../../infrastructure/repositories/RepositorioUsuario.js';
-import { verificarContrasena } from '../../infrastructure/security/password.js';
+import { calcularFechaLimite } from '../../domain/entities/Expedicion.js';
+import type { IRepositorioExpedicion } from '../ports/RepositorioExpedicion.js';
+import type { IRepositorioAutenticacionPostgres } from '../ports/RepositorioAutenticacionPostgres.js';
+import type { IRepositorioUsuario } from '../ports/RepositorioUsuario.js';
+import type { VerificarContrasena } from '../ports/seguridad.js';
+import type { IReloj } from '../../domain/services/IReloj.js';
 
 export type ResumenExpedicionActiva = {
   id: string;
@@ -30,9 +29,11 @@ export type ResumenExpedicionActiva = {
 
 export class ServicioExpedicion {
   constructor(
-    private readonly repoExpedicion = new RepositorioExpedicion(),
-    private readonly repoUsuario = new RepositorioUsuario(),
-    private readonly repoAuth = new RepositorioAutenticacionPostgres(),
+    private readonly repoExpedicion: IRepositorioExpedicion,
+    private readonly repoUsuario: IRepositorioUsuario,
+    private readonly repoAuth: IRepositorioAutenticacionPostgres,
+    private readonly verificarContrasena: VerificarContrasena,
+    private readonly reloj: IReloj,
   ) {}
 
   async crearExpedicion(senderistaId: string, entrada: EntradaCrearExpedicion) {
@@ -46,7 +47,7 @@ export class ServicioExpedicion {
       );
     }
 
-    const ahora = Date.now();
+    const ahora = this.reloj.ahora().getTime();
     const inicioMs = new Date(entrada.horaInicio).getTime();
     const retornoMs = new Date(entrada.horaRetornoEstimada).getTime();
 
@@ -73,17 +74,18 @@ export class ServicioExpedicion {
       horaInicio: entrada.horaInicio,
       horaRetornoEstimada: entrada.horaRetornoEstimada,
       minutosTolerancia: entrada.minutosTolerancia,
+      minutosRecordatorio: entrada.minutosRecordatorio ?? 30,
       estado: estado as 'programada' | 'en_progreso',
       idsContactos: entrada.idsContactos,
       nombresAcompanantes: entrada.nombresAcompanantes,
     });
-    return mapearExpedicion(creada);
+    return creada;
   }
 
   async listarExpediciones(senderistaId: string) {
     await this.repoUsuario.verificarEsSenderista(senderistaId);
     const filas = await this.repoExpedicion.listarExpediciones(senderistaId);
-    return filas.map(mapearExpedicion);
+    return filas;
   }
 
   async obtenerExpedicionActiva(senderistaId: string): Promise<ResumenExpedicionActiva | null> {
@@ -92,22 +94,16 @@ export class ServicioExpedicion {
     const fila = await this.repoExpedicion.buscarActivaPorSenderista(senderistaId);
     if (!fila) return null;
 
-    const acompanantes = fila.acompanantes_expedicion.map((a) => a.nombre_acompanante);
-    const contactos = fila.vinculos_expedicion_contacto
-      .map((enlace) => enlace.contactos_emergencia)
-      .filter(
-        (c): c is { nombre_completo: string; correo_electronico: string } => c !== null,
-      )
-      .map((c) => ({ nombreCompleto: c.nombre_completo, correoElectronico: c.correo_electronico }));
+    const { acompanantes, contactos } = fila;
 
     return {
       id: fila.id,
-      lugarInicio: fila.lugar_inicio,
-      lugarFin: fila.lugar_fin,
-      horaInicio: fila.hora_inicio,
-      horaRetornoEstimada: fila.hora_retorno_estimada,
-      minutosTolerancia: fila.minutos_tolerancia,
-      fechaLimite: calcularFechaLimite(fila.hora_retorno_estimada, fila.minutos_tolerancia),
+      lugarInicio: fila.lugarInicio,
+      lugarFin: fila.lugarFin,
+      horaInicio: fila.horaInicio,
+      horaRetornoEstimada: fila.horaRetornoEstimada,
+      minutosTolerancia: fila.minutosTolerancia,
+      fechaLimite: calcularFechaLimite(fila.horaRetornoEstimada, fila.minutosTolerancia),
       estado: fila.estado,
       version: fila.version,
       cantidadAcompanantes: acompanantes.length,
@@ -115,7 +111,7 @@ export class ServicioExpedicion {
       acompanantes,
       contactos,
       ampliacionesRestantes: ampliacionesRestantes(
-        (fila.eventos_plan ?? []).filter((evento) => evento.tipo === 'RETORNO_AMPLIADO').length,
+        fila.cantidadAmpliaciones,
       ),
     };
   }
@@ -140,7 +136,7 @@ export class ServicioExpedicion {
       throw new ErrorAplicacion(401, 'Usuario no encontrado', 'NO_AUTORIZADO');
     }
 
-    const valida = await verificarContrasena(entrada.contrasena, usuario.hash_contrasena);
+    const valida = await this.verificarContrasena(entrada.contrasena, usuario.hashContrasena);
     if (!valida) {
       throw new ErrorAplicacion(401, 'Contraseña incorrecta', 'CONTRASENA_INVALIDA');
     }
@@ -148,8 +144,8 @@ export class ServicioExpedicion {
     const completada = await this.repoExpedicion.completarConfirmacionRetorno(expedicionId, senderistaId);
 
     return {
-      expedicion: mapearExpedicion(completada),
-      confirmadoEn: completada.actualizado_en ?? new Date().toISOString(),
+      expedicion: completada,
+      confirmadoEn: completada.actualizadoEn ?? this.reloj.ahora().toISOString(),
     };
   }
 
@@ -157,7 +153,7 @@ export class ServicioExpedicion {
     await this.repoUsuario.verificarEsSenderista(senderistaId);
 
     const filas = await this.repoExpedicion.listarExpedicionesCompletadas(senderistaId);
-    const expediciones = filas.map(mapearExpedicion);
+    const expediciones = filas;
     const destinos = new Set(expediciones.map((e) => e.lugarFin));
 
     let totalHoras = 0;
@@ -180,30 +176,4 @@ export class ServicioExpedicion {
       },
     };
   }
-}
-
-function mapearExpedicion(fila: {
-  id: string;
-  lugar_inicio: string;
-  lugar_fin: string;
-  hora_inicio: string;
-  hora_retorno_estimada: string;
-  minutos_tolerancia: number;
-  estado: string;
-  version: number;
-  creado_en?: string;
-  actualizado_en?: string;
-}) {
-  return {
-    id: fila.id,
-    lugarInicio: fila.lugar_inicio,
-    lugarFin: fila.lugar_fin,
-    horaInicio: fila.hora_inicio,
-    horaRetornoEstimada: fila.hora_retorno_estimada,
-    minutosTolerancia: fila.minutos_tolerancia,
-    estado: fila.estado,
-    version: fila.version,
-    creadoEn: fila.creado_en,
-    actualizadoEn: fila.actualizado_en,
-  };
 }

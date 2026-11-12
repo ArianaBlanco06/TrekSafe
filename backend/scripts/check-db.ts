@@ -1,6 +1,7 @@
-import { loadEnv } from '../src/infrastructure/config/env.js';
+import { inicializarEntorno, loadEnv } from '../src/infrastructure/config/env.js';
 import { verificarConexionBaseDatos } from '../src/infrastructure/database/supabase.js';
 
+inicializarEntorno();
 loadEnv();
 
 verificarConexionBaseDatos()

@@ -4,7 +4,9 @@ Sistema Automatizado de Monitoreo y Gestión de Seguridad para Turismo de Aventu
 
 El senderista registra su plan de expedición y confirma el retorno seguro. Si no lo hace a tiempo, TrekSafe escala alertas automáticas a contactos de emergencia y equipos de rescate, con ubicación y ficha médica.
 
-[Demo](https://treksafe-app.vercel.app) · [API /salud](https://treksafe-api.fly.dev/api/salud) · [`.env.example`](.env.example)
+[Arquitectura y estado R2](docs/arquitectura/README.md) · [`.env.example`](.env.example)
+
+URLs históricas: [PWA](https://treksafe-app.vercel.app) · [API /salud](https://treksafe-api.fly.dev/api/salud). Consulta del 2026-11-10: PWA respondió 404 y el host de API no se resolvió desde el entorno de comprobación. La versión publicada y la configuración de las cuentas no están verificadas. [Evidencia y límites](docs/arquitectura/estado-actual.md).
 
 ![Node](https://img.shields.io/badge/Node.js-22-339933?logo=nodedotjs&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
@@ -15,10 +17,12 @@ El senderista registra su plan de expedición y confirma el retorno seguro. Si n
 ![Fly.io](https://img.shields.io/badge/API-Fly.io-24175B?logo=flydotio&logoColor=white)
 ![Vercel](https://img.shields.io/badge/PWA-Vercel-000000?logo=vercel&logoColor=white)
 
-> Proyecto académico — **Universidad de Lima** · Ingeniería de Software 1 · 2026  
-> Release 01–02 · **25/25** historias de usuario · **96** story points
+> Proyecto académico — **Universidad de Lima** · Continuidad de Ingeniería de Software 1 a Ingeniería de Software 2 · 2026.
+> **Release 2 (ISW2):** arquitectura objetivo con API y tareas en máquinas separadas y monitoreo continuo. El diseño de [#106](https://github.com/ArianaBlanco06/TrekSafe/issues/106) guía las tareas de implementación y despliegue; la validación integral corresponde a [#112](https://github.com/ArianaBlanco06/TrekSafe/issues/112). No se declara aquí un cierre funcional de las 25 HU R2.
 
 > **Continuidad ISW2 — HU-32:** gestión de puntos intermedios implementada y validada localmente. [Dossier, demostración y evidencia](docs/hu-32/README.md). Su migración `010_hu32_puntos_ruta.sql` está aplicada y registrada en Supabase DEV.
+
+> **Continuidad ISW2 — HU-40:** transferir la coordinación de una alerta: proponer, aceptar, rechazar y cancelar el relevo entre rescatistas validados, con historial de quién resolvió y cuándo. [Diseño y estado](docs/hu-40/diseno.md) · [prueba manual](docs/hu-40/evidencias/prueba-manual.md). Su migración `021_hu40_transferir_coordinacion.sql` (antes `019`, que ocupó HU-41; corregida en sitio para ampliar el relevo) no está aplicada en ningún entorno compartido y queda pendiente de que Ariana confirme que no está en Supabase DEV. La prueba manual de la API contra Supabase real (proyecto personal) se ejecutó con la versión corregida y dio todo PASS; queda pendiente la del navegador. El relevo pendiente de un caso cerrado queda inerte (sin trigger; el riesgo de reabrir casos está en el diseño). Sin notificación adicional al destinatario.
 
 ## Contenido
 
@@ -60,51 +64,22 @@ El senderista registra su plan de expedición y confirma el retorno seguro. Si n
 
 ## Arquitectura
 
-Monorepo: el frontend **nunca** expone claves de Supabase; toda la persistencia pasa por la API con `service_role`.
+Monorepo con PWA estática en Vercel y backend Node/Express para Fly.io. El código incorpora entradas independientes [api.ts](backend/src/api.ts) y [worker.ts](backend/src/worker.ts), con composición e inyección de dependencias. [main.ts](backend/src/main.ts) conserva temporalmente el arranque histórico de API y cron juntos. Esta implementación no acredita el inventario publicado. La fotografía anterior en `8508bb4` se conserva en [estado actual al corte de #106](docs/arquitectura/estado-actual.md).
 
-```mermaid
-flowchart TB
-  subgraph Users [Usuarios]
-    Senderista[Senderista]
-    Rescatista[Rescatista]
-  end
+**Objetivo de despliegue R2:** una imagen Docker compartida y dos grupos Fly, `api` y `worker`, con una máquina activa por grupo en `iad`; únicamente API expone HTTP. Ambos acceden a PostgreSQL mediante la Data API/RPC de Supabase. Las entradas separadas ya existen; la configuración publicada de dos grupos corresponde a #110 y la integración del procesador con outbox a #109. El worker actual conserva los flujos históricos. [Alcance y pruebas de #107](docs/dep-107/README.md).
 
-  subgraph Vercel [Vercel]
-    PWA["PWA React / Vite<br/>treksafe-app.vercel.app"]
-  end
+El navegador usa REST y JWT propios. `service_role` permanece en servidor y evita RLS; API/RPC deben aplicar autorización de actor y propietario. El correo es un adaptador dentro del backend, sin un servicio TCP interno adicional.
 
-  subgraph Fly [Fly.io - region iad]
-    API["Express API + Cron<br/>treksafe-api.fly.dev"]
-    MailSvc[ServicioCorreo]
-  end
+**Backend:** carpetas `presentation`, `application`, `domain` e `infrastructure`. Los servicios de aplicación dependen de puertos; la construcción de adaptadores se concentra en `infrastructure/composicion`. Las fábricas HTTP permiten inyectar servicios y los módulos se importan sin iniciar conexiones o tareas. **Frontend:** pages / components / services / lib / context / hooks / features.
 
-  subgraph Supabase [Supabase]
-    PG[(PostgreSQL)]
-  end
-
-  subgraph Brevo [Brevo]
-    EmailAPI[Transactional Email API]
-    SMTP[SMTP Relay]
-  end
-
-  Senderista -->|"TCP/HTTPS :443"| PWA
-  Rescatista -->|"TCP/HTTPS :443"| PWA
-  PWA -->|"TCP/HTTPS :443<br/>JWT REST"| API
-  API -->|"TCP/HTTPS :443<br/>Supabase JS / service_role"| PG
-  API -->|"TCP interno"| MailSvc
-  MailSvc -->|"TCP/HTTPS :443<br/>Brevo API"| EmailAPI
-  MailSvc -->|"TCP/SMTP :587 STARTTLS<br/>o TCP/SMTPS :465"| SMTP
-```
-
-**Backend (Clean Architecture):** `presentation` → `application` → `domain` ← `infrastructure`  
-**Frontend:** pages / components / services / lib / context
+Diagramas y contratos: [estado actual](docs/arquitectura/estado-actual.md), [objetivo](docs/arquitectura/arquitectura-objetivo.md), [decisiones y costos](docs/arquitectura/decisiones.md), [transición](docs/arquitectura/transicion-y-validacion.md) y [matriz de tareas/pruebas](docs/arquitectura/matriz-trazabilidad.md).
 
 ## Stack
 
 | Capa | Tecnologías |
 | --- | --- |
-| Frontend | React 18 · Vite 6 · TypeScript · Tailwind 4 · React Router · PWA |
-| Backend | Node.js 22 · Express · Zod · bcrypt · JWT · Helmet · CORS |
+| Frontend | React 18 · Vite 6 · TypeScript 5 · Tailwind 4 · React Router 7 · PWA/Workbox · Leaflet/OpenStreetMap |
+| Backend | Node.js 22 · Express 4 · Zod · bcrypt · JWT propio · Helmet · CORS |
 | Datos | PostgreSQL (Supabase) · RLS deny-by-default |
 | Email | Brevo API · Nodemailer (SMTP) |
 | Seguridad | AES-256-GCM · rate limiting · auditoría de acceso médico |
@@ -112,21 +87,26 @@ flowchart TB
 ## Estructura
 
 ```
-treksake-app/
-├── backend/          # API REST + cron + email (Fly.io)
-├── frontend/         # PWA React (Vercel)
-├── init_schema.sql   # Esquema + semillas
-├── enable_rls.sql    # Reaplicar RLS (opcional)
-└── .env.example      # Plantilla de entorno
+TrekSafe/
+├── backend/            # Entradas api/worker independientes; main mantiene compatibilidad
+│   ├── src/            # Presentación, aplicación, dominio e infraestructura
+│   ├── migrations/     # SQL incremental y registro por entorno
+│   ├── Dockerfile
+│   └── fly.toml        # Configuración histórica de un grupo app
+├── frontend/           # PWA React / Vite, salida dist
+├── docs/arquitectura/  # Diseño R2, evidencia, decisiones y transición
+├── .github/workflows/  # CI: validaciones; publicación pendiente en #110
+├── init_schema.sql     # Solo base nueva/descartable: borra y recrea tablas
+└── .env.example        # Plantilla sin secretos
 ```
 
 ## Inicio rápido
 
-**Requisitos:** Node.js ≥ 20 · npm ≥ 10 · proyecto [Supabase](https://supabase.com) · (opcional) [Brevo](https://www.brevo.com)
+**Requisitos:** Node.js 22 (alineado con Docker y CI) · npm ≥ 10 · proyecto [Supabase](https://supabase.com) · (opcional en local) [Brevo](https://www.brevo.com)
 
 ```bash
 git clone <url-del-repositorio>
-cd treksake-app
+cd TrekSafe
 npm run install:all
 
 cp .env.example backend/.env
@@ -134,7 +114,7 @@ echo "VITE_API_URL=http://localhost:3000/api" > frontend/.env
 # Completa SUPABASE_*, JWT_SECRET, MEDICAL_ENCRYPTION_KEY y correo en backend/.env
 ```
 
-En el SQL Editor de Supabase ejecuta `init_schema.sql` (incluye semillas de prueba).
+Para una **base nueva y descartable**, revisar `init_schema.sql` y después las [migraciones incrementales y sus dependencias](backend/migrations/README.md). `init_schema.sql` borra y recrea tablas: **no ejecutarlo en DEV compartido ni en un entorno con datos existentes**. No repetir DDL por un asiento ausente; comprobar estructura y registro primero. Mantener `CRON_ENABLED=false` al desarrollar contra DEV compartido salvo la instancia coordinada del motor.
 
 ```bash
 npm run dev:backend    # http://localhost:3000/api/salud
@@ -152,6 +132,7 @@ npm run dev:frontend   # http://localhost:5173
 | `BREVO_API_KEY` o `SMTP_*` | Alertas por correo |
 | `CORS_ORIGIN` | Origen del frontend |
 | `MAIL_DEV_FALLBACK` | `true` en dev · `false` en prod |
+| `CRON_ENABLED` | Fijar `false` en DEV compartido. `api.ts` no inicia cron; `worker.ts` respeta el interruptor |
 | `VITE_API_URL` | URL del API (build-time en Vercel) |
 
 Referencia completa: [`.env.example`](.env.example).
@@ -165,7 +146,11 @@ Referencia completa: [`.env.example`](.env.example).
 | --- | --- |
 | `npm run install:all` | Dependencias backend + frontend |
 | `npm run dev:backend` / `dev:frontend` | Desarrollo |
+| `npm run dev:api --prefix backend` | API independiente con recarga; sin cron ni verificación SMTP |
+| `npm run dev:worker --prefix backend` | Tareas con recarga; comprobar destino y `CRON_ENABLED` antes de habilitarlas |
 | `npm run build:backend` / `build:frontend` | Build producción |
+| `npm run start:api --prefix backend` | Ejecuta `dist/api.js` después del build |
+| `npm run start:worker --prefix backend` | Ejecuta `dist/worker.js` después del build, sin servidor HTTP |
 | `npm test --prefix backend` | Tests |
 | `npm run test:mail --prefix backend` | Verifica correo |
 | `npm run test:rescue-alert --prefix backend` | Simula alerta |
@@ -174,6 +159,8 @@ Referencia completa: [`.env.example`](.env.example).
 
 ## Despliegue
 
+La siguiente tabla recoge **destinos históricos declarados**, no disponibilidad o revisión publicada certificadas:
+
 | Capa | Plataforma | URL |
 | --- | --- | --- |
 | PWA | Vercel | https://treksafe-app.vercel.app |
@@ -181,7 +168,11 @@ Referencia completa: [`.env.example`](.env.example).
 | DB | Supabase | `service_role` |
 | Email | Brevo (desde Fly) | API y/o SMTP |
 
-Orden: API → PWA (`VITE_API_URL`) → `CORS_ORIGIN` en Fly.
+**Secuencia R2 objetivo:** esquema compatible → API/procesador → frontend → comprobaciones y recuperación. Ver [procedimiento y condiciones](docs/arquitectura/transicion-y-validacion.md).
+
+Las entradas independientes están implementadas en #107; la configuración y publicación de dos máquinas se realiza en #110 y su integración con outbox en #109. El costo base de cómputo y sus exclusiones están en [decisiones](docs/arquitectura/decisiones.md); el costo total de las cuentas no está verificado.
+
+**Referencia histórica de una sola API:** los comandos siguientes no despliegan la arquitectura R2 objetivo. `set-fly-secrets.ps1` utiliza una app fija e importa valores del `.env`; revisar destino y configuración por entorno antes de cualquier uso. La guía operativa final pertenece a #110.
 
 ```bash
 cd backend
@@ -198,7 +189,7 @@ fly secrets set CORS_ORIGIN=https://treksafe-app.vercel.app -a treksafe-api
 
 Artefactos: [`backend/fly.toml`](backend/fly.toml) · [`backend/Dockerfile`](backend/Dockerfile) · [`frontend/vercel.json`](frontend/vercel.json).
 
-> Los correos salen desde **Fly**, no desde Vercel. Con API key de Brevo suele bastar; IP de egress fija: `fly ips allocate-egress -a treksafe-api -r iad`.
+> El diseño envía correo desde el procesador de Fly. La API de Brevo o SMTP deben configurarse y probarse con destinatarios controlados. No asignar IP de egreso fija por defecto; evaluarla solo si el proveedor lo requiere. Configurado, encolado, aceptado y recibido son estados distintos.
 
 <details>
 <summary>Base de datos</summary>
@@ -207,7 +198,7 @@ Estados de expedición: `programada` → `en_progreso` → `completada` | `alert
 
 Entidades: `usuarios`, `perfiles_senderista`, `perfiles_rescatista`, `expediciones`, `contactos_emergencia`, `fichas_medicas`, `bitacoras_rescate`, `despachos_correo`, `auditoria_acceso_medico`, …
 
-Las migraciones `sprint*_migration.sql` y `post_mvp_migration.sql` están obsoletas (fusionadas en `init_schema.sql`).
+Las migraciones `sprint*_migration.sql` y `post_mvp_migration.sql` están obsoletas. Release 2 agrega SQL en `backend/migrations/`; el esquema inicial no incluye por sí solo todas esas ampliaciones. Orden y aplicaciones reales: [README de migraciones](backend/migrations/README.md) y [registro por entorno](backend/migrations/REGISTRO_APLICACION.md). Los asientos conciliados de TECH-56 ya figuran en `develop`; no implican DDL aplicado de nuevo.
 
 </details>
 
@@ -221,7 +212,7 @@ Prefijo `/api` · `Authorization: Bearer <JWT>` · JSON `camelCase`
 | Auth | `POST /auth/registrar-senderista` · `registrar-rescatista` · `iniciar-sesion` |
 | Usuario | `/usuario/ficha-medica` · `/contactos` · `/privacidad/revocar` |
 | Expediciones | `POST /` · `GET /` · `GET /activa` · `GET /historial` · `GET /:id` · `PUT /:id` · `POST /:id/cancelar` · `POST /:id/ampliar-retorno` · `POST /:id/confirmar-retorno` |
-| Rescate | `/expediciones` · `/historial` · `/alertas` · confirmar · bitácora |
+| Rescate | `/expediciones` · `/historial` · `/alertas` · confirmar · bitácora · `POST /alertas/:id/coordinacion` (HU-39) · `GET /rescatistas` · `POST /alertas/:id/coordinacion/relevos` · `POST …/relevos/:relevoId/aceptar` · `…/rechazar` · `…/cancelar` (HU-40) |
 
 ## Seguridad
 
