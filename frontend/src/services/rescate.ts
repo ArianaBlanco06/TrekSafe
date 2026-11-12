@@ -1,6 +1,7 @@
 import { api } from './clienteApi';
 
 export type NivelRiesgoRescate = 'verde' | 'amarillo' | 'rojo';
+export type CriterioPrioridadRescate = 'tiempo_excedido' | 'tamano_grupo';
 
 /**
  * Responsable vigente de una alerta (HU-39). Lo ven todos los rescatistas autorizados y
@@ -17,6 +18,7 @@ export type Coordinacion = {
 
 export type ExpedicionRescate = {
   expedicionId: string;
+  numeroParticipantes: number;
   estado: 'en_progreso' | 'alerta';
   nivelRiesgo: NivelRiesgoRescate;
   nombreCompletoSenderista: string;
@@ -53,9 +55,15 @@ export type AlertaRescate = {
   coordinacion: Coordinacion | null;
 };
 
-export function obtenerExpedicionesRescate(zona?: string) {
-  const params = zona?.trim() ? `?zona=${encodeURIComponent(zona.trim())}` : '';
-  return api.get<{ expediciones: ExpedicionRescate[] }>(`/rescate/expediciones${params}`, true);
+export function obtenerExpedicionesRescate(zona?: string, criterio?: CriterioPrioridadRescate) {
+  const params = new URLSearchParams();
+  if (zona?.trim()) params.set('zona', zona.trim());
+  if (criterio) params.set('criterio', criterio);
+  const consulta = params.toString();
+  return api.get<{ expediciones: ExpedicionRescate[] }>(
+    `/rescate/expediciones${consulta ? `?${consulta}` : ''}`,
+    true,
+  );
 }
 
 export function obtenerAlertasRescate() {
