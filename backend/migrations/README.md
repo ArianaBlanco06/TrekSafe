@@ -49,6 +49,7 @@ Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos
 | `022_dep108_crear_expedicion_atomica.sql` | Creación compuesta por RPC y unicidad de expedición bloqueante por senderista; aborta ante duplicados existentes | `000`, `002`, `014` |
 | `023_dep108_avisos_transaccionales.sql` | Trigger que guarda el aviso in-app en la transacción de edición/cancelación/ampliación | `000`, `012`, `013` |
 | `024_dep108_vencimientos_outbox.sql` | RPC nueva de vencimientos con estado y pendientes atómicos; no sustituye el cron legado | `000`, `015`, `022` |
+| `025_hu42_cerrar_incidente.sql` | Tabla `informes_cierre_incidente` (un informe por incidente, solo anexado, hora del servidor), `UPDATE (estado, cerrado_en, version)` sobre `incidentes` para `service_role` (solo aditivo, sin `REVOKE`), RPC `treksafe_cerrar_incidente`, `treksafe_marcar_incidente_localizado` y `treksafe_leer_ultimo_cierre_incidente`. No modifica `expediciones`. Aplicar una sola vez, **después de `021` si existe** | `017`, `019` |
 
 `015` es el esquema canónico de HU-45 preparado en DEP-04 (#108). El PR #90 contiene una propuesta llamada `012_hu45_outbox.sql`: **no aplicarla encima de esta tabla ni repetir su registro**. #109 debe conservar la identidad lógica obligatoria y adaptar el encolado/procesador al contrato canónico. Para nuevas migraciones, comprobar el siguiente número libre al momento del merge.
 
@@ -89,6 +90,26 @@ node backend/scripts/test-hu41-postgres.mjs --pg-bin "C:\Program Files\PostgreSQ
 ```
 
 El script aplica `init_schema.sql` y las migraciones hasta la `018`, después la `019`, y ejecuta `tests/hu41_bitacora_incidente.test.sql` (16 casos), seis pruebas de concurrencia con sesiones reales y la suite TypeScript `hu41Postgres.integration.test.ts`. `REGISTRO_APLICACION.md` lo actualiza quien aplique la migración en cada entorno.
+
+## HU-42: cierre del incidente con informe
+
+`025` no es re-ejecutable (`CREATE TABLE` y `CREATE FUNCTION` fallan si ya existen; además aborta si `025` ya figura en `treksafe_migraciones`) y requiere `017` (`incidentes`) y `019` (bitácora y su función interna). Solo `service_role` ejecuta las funciones. Es solo aditiva y **no modifica `expediciones`**: cerrar el incidente es un cierre operativo y la expedición sigue en `alerta` hasta que el senderista confirme su retorno (HU-10).
+
+**Orden con la `021` (HU-40):** la `021` hace `REVOKE UPDATE` de tabla sobre `incidentes`, y en PostgreSQL eso también retira los privilegios de columna. Aplicar la `021` **antes** que la `025`. Si se aplicó después, recuperar con:
+
+```sql
+GRANT UPDATE (estado, cerrado_en, version) ON public.incidentes TO service_role;
+```
+
+Comprobación de solo lectura: `SELECT has_column_privilege('service_role','public.incidentes','estado','UPDATE'), has_column_privilege('service_role','public.incidentes','cerrado_en','UPDATE');`. Tras aplicarla, recargar el esquema de PostgREST para exponer las tres RPC nuevas.
+
+Suite contra una base local desechable (no toca Supabase ni DEV):
+
+```bash
+node backend/scripts/test-hu42-postgres.mjs --pg-bin "C:\Program Files\PostgreSQL\17\bin"
+```
+
+El script aplica `init_schema.sql`, las migraciones hasta la `019` (más `015`, `022`, `023` y `024`), después la `025`, y ejecuta `tests/hu42_cerrar_incidente.test.sql`, la suite SQL de HU-41 como regresión, las pruebas de concurrencia con sesiones reales y la suite TypeScript `hu42Postgres.integration.test.ts`. `REGISTRO_APLICACION.md` lo actualiza quien aplique la migración en cada entorno.
 
 ## HU-29: plantillas personales de ruta
 
