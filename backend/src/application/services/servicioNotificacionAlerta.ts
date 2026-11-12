@@ -1,7 +1,7 @@
-import { buildCorreoAlertaContacto } from '../../infrastructure/email/templates/contactAlertEmail.js';
-import { RepositorioAlerta } from '../../infrastructure/repositories/RepositorioAlerta.js';
-import { RepositorioDespachoCorreo } from '../../infrastructure/repositories/RepositorioDespachoCorreo.js';
-import { RepositorioOutboxSupabase } from '../../infrastructure/repositories/RepositorioOutboxSupabase.js';
+import { buildCorreoAlertaContacto } from '../mensajes/contactAlertEmail.js';
+import type { ICorreo } from '../ports/correo.js';
+import type { IRepositorioAlerta } from '../ports/RepositorioAlerta.js';
+import type { IRepositorioDespachoCorreo } from '../ports/RepositorioDespachoCorreo.js';
 import type { IRepositorioOutbox } from '../../domain/repositories/IRepositorioOutbox.js';
 
 export type ResultadoAlertaContacto = {
@@ -14,9 +14,10 @@ export type ResultadoAlertaContacto = {
 
 export class ServicioNotificacionAlerta {
   constructor(
-    private readonly repoAlerta = new RepositorioAlerta(),
-    private readonly repoDespacho = new RepositorioDespachoCorreo(),
-    private readonly repoOutbox: IRepositorioOutbox = new RepositorioOutboxSupabase(),
+    private readonly repoAlerta: IRepositorioAlerta,
+    private readonly correo: ICorreo,
+    private readonly repoDespacho: IRepositorioDespachoCorreo,
+    private readonly repoOutbox?: IRepositorioOutbox,
   ) {}
 
   async notificarContactosEmergencia(expedicionId: string): Promise<ResultadoAlertaContacto> {
@@ -31,7 +32,8 @@ export class ServicioNotificacionAlerta {
     }
 
     const correosVistos = new Set<string>();
-    let encolados = 0;
+    let enviados = 0;
+    let registrados = 0;
     let fallidos = 0;
     let omitidos = 0;
 
@@ -53,31 +55,45 @@ export class ServicioNotificacionAlerta {
         fechaLimite: contexto.fechaLimite,
       });
 
-      try {
-        await this.repoOutbox.guardar({
-          tipoEvento: 'ALERTA_CONTACTO',
-          destinatario: contacto.correoElectronico,
-          asunto: subject,
-          cuerpo: text,
-          cuerpoHtml: html,
-          metadata: {
-            expedicionId,
-            tipoDespacho: 'alerta_contacto',
-            nombreContacto: contacto.nombreCompleto,
-          },
-        });
-        encolados++;
-      } catch (err) {
-        fallidos++;
-        console.error(`[Alerta] fallo al encolar en outbox para ${contacto.correoElectronico}:`, err);
+      if (this.repoOutbox) {
+        try {
+          await this.repoOutbox.guardar({
+            claveEvento: `ALERTA_CONTACTO:${expedicionId}`,
+            canal: 'correo',
+            tipoEvento: 'ALERTA_CONTACTO',
+            destinatario: contacto.correoElectronico,
+            asunto: subject,
+            cuerpo: text,
+            cuerpoHtml: html,
+            metadata: { expedicionId, tipoDespacho: 'alerta_contacto' },
+          });
+          registrados++;
+          await this.repoDespacho.registrarEnvio(expedicionId, 'alerta_contacto', contacto.correoElectronico);
+        } catch (err) {
+          fallidos++;
+          console.error(`[Alerta] fallo al encolar outbox para ${contacto.correoElectronico}:`, err);
+        }
+      } else {
+        try {
+          const resultado = await this.correo.enviar({ to: contacto.correoElectronico, subject, html, text });
+          if (resultado === 'enviado') {
+            enviados++;
+            await this.repoDespacho.registrarEnvio(expedicionId, 'alerta_contacto', contacto.correoElectronico);
+          } else {
+            registrados++;
+          }
+        } catch (err) {
+          fallidos++;
+          console.error(`[Alerta] fallo envío a ${contacto.correoElectronico}:`, err);
+        }
       }
     }
 
+    const modo = this.correo?.getModoTransporte ? this.correo.getModoTransporte() : 'outbox';
     console.log(
-      `[Alerta] expedición ${expedicionId}: contactos encolados=${encolados} fallidos=${fallidos} omitidos=${omitidos}`,
+      `[Alerta] expedición ${expedicionId}: contactos enviados=${enviados} registrados=${registrados} fallidos=${fallidos} omitidos=${omitidos} modo=${modo}`,
     );
 
-    // enviados=encolados para compatibilidad con las métricas del cron
-    return { expedicionId, enviados: encolados, registrados: encolados, fallidos, omitidos };
+    return { expedicionId, enviados, registrados, fallidos, omitidos };
   }
 }

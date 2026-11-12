@@ -18,12 +18,24 @@ async function parsearError(res: Response): Promise<CuerpoErrorApi> {
   }
 }
 
+const CAMPOS_ESTANDAR_ERROR = new Set(['error', 'mensaje', 'codigo', 'detalles']);
+
+/** Campos del cuerpo del error que no son los estándar; `undefined` si no hay ninguno. */
+function extrasDelCuerpo(cuerpo: CuerpoErrorApi): Record<string, unknown> | undefined {
+  const extras = Object.fromEntries(
+    Object.entries(cuerpo as Record<string, unknown>).filter(([clave]) => !CAMPOS_ESTANDAR_ERROR.has(clave)),
+  );
+  return Object.keys(extras).length > 0 ? extras : undefined;
+}
+
 export class ErrorClienteApi extends Error {
   constructor(
     message: string,
     public status: number,
     public codigo?: string,
     public detalles?: CuerpoErrorApi['detalles'],
+    /** Resto de campos del cuerpo del error (por ejemplo, datos del conflicto). Sin validar. */
+    public extras?: Record<string, unknown>,
   ) {
     super(message);
     this.name = 'ErrorClienteApi';
@@ -76,6 +88,7 @@ export async function peticionApi<T>(
       res.status,
       err.codigo,
       err.detalles,
+      extrasDelCuerpo(err),
     );
   }
 

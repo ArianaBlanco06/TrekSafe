@@ -12,12 +12,15 @@ class MockRepositorioOutbox implements IRepositorioOutbox {
   async guardar(mensaje: NuevoMensajeOutbox): Promise<MensajeOutbox> {
     const item: MensajeOutbox = {
       id: `outbox-${this.items.length + 1}`,
+      claveEvento: mensaje.claveEvento,
+      canal: mensaje.canal ?? 'correo',
+      destinatarioNormalizado: mensaje.destinatario.toLowerCase().trim(),
       tipoEvento: mensaje.tipoEvento,
       destinatario: mensaje.destinatario,
       asunto: mensaje.asunto,
       cuerpo: mensaje.cuerpo,
       cuerpoHtml: mensaje.cuerpoHtml,
-      metadata: mensaje.metadata,
+      metadata: mensaje.metadata ?? {},
       estado: 'pendiente',
       intentos: 0,
       maxIntentos: mensaje.maxIntentos ?? 3,

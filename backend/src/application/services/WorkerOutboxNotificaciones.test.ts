@@ -22,14 +22,19 @@ class RepositorioOutboxMemoria implements IRepositorioOutbox {
   public items: MensajeOutbox[] = [];
 
   async guardar(mensaje: NuevoMensajeOutbox): Promise<MensajeOutbox> {
+    const claveEvento = mensaje.claveEvento ?? `evt-${this.items.length + 1}`;
+    const canal = mensaje.canal ?? 'correo';
     const item: MensajeOutbox = {
       id: `outbox-${this.items.length + 1}`,
+      claveEvento,
+      canal,
       tipoEvento: mensaje.tipoEvento,
       destinatario: mensaje.destinatario,
+      destinatarioNormalizado: mensaje.destinatario.trim().toLowerCase(),
       asunto: mensaje.asunto,
       cuerpo: mensaje.cuerpo,
       cuerpoHtml: mensaje.cuerpoHtml,
-      metadata: mensaje.metadata,
+      metadata: mensaje.metadata ?? {},
       estado: 'pendiente',
       intentos: 0,
       maxIntentos: mensaje.maxIntentos ?? 3,
@@ -160,6 +165,7 @@ describe('HU-45: Reintentar avisos fallidos sin perder su seguimiento (DoD y Cri
     it('persiste el aviso en outbox y espera incrementalmente ante rechazo confirmado', async () => {
       // 1. Guardar mensaje en outbox
       await repo.guardar({
+        claveEvento: 'ALERTA_CONTACTO:exp-1',
         tipoEvento: 'ALERTA_CONTACTO',
         destinatario: 'contacto@ejemplo.com',
         asunto: 'Alerta de retorno',
@@ -202,6 +208,7 @@ describe('HU-45: Reintentar avisos fallidos sin perder su seguimiento (DoD y Cri
   describe('CA-02 — Hasta 3 intentos totales ante rechazo confirmado, quedando marcado como fallido', () => {
     it('realiza hasta 3 intentos totales con espera creciente y marca fallido definitivo sin repetir', async () => {
       await repo.guardar({
+        claveEvento: 'ALERTA_RESCATE:exp-2',
         tipoEvento: 'ALERTA_RESCATE',
         destinatario: 'rescate@treksafe.pe',
         asunto: 'Incidente de rescate',
@@ -240,6 +247,7 @@ describe('HU-45: Reintentar avisos fallidos sin perder su seguimiento (DoD y Cri
   describe('CA-03 — Timeout o respuesta ambigua queda clasificado como incierto', () => {
     it('marca estado incierto ante timeout ambiguo y no cuenta como entregado', async () => {
       await repo.guardar({
+        claveEvento: 'ALERTA_CONTACTO:exp-3',
         tipoEvento: 'ALERTA_CONTACTO',
         destinatario: 'familia@treksafe.pe',
         asunto: 'Aviso urgente',
@@ -261,6 +269,7 @@ describe('HU-45: Reintentar avisos fallidos sin perder su seguimiento (DoD y Cri
   describe('Concurrencia y Lease distribuido', () => {
     it('dos workers concurrentes con lease en base de datos no reclaman el mismo registro', async () => {
       await repo.guardar({
+        claveEvento: 'AVISO:senderista-1',
         tipoEvento: 'AVISO_SENDERISTA',
         destinatario: 'senderista@treksafe.pe',
         asunto: 'Recordatorio',

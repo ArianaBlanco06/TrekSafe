@@ -51,8 +51,23 @@ export default defineConfig({
         clientsClaim: true,
         runtimeCaching: [
           {
+            // HU-34: los avances y sus notas nunca se almacenan como respuestas offline.
+            urlPattern: ({ url }) => /^\/api\/expediciones\/[^/]+\/avances(?:\/|$)/.test(url.pathname),
+            handler: 'NetworkOnly',
+          },
+          {
+            // HU-33: recorrido y preparación son privados, sin fallback API.
+            urlPattern: ({ url }) => /^\/api\/expediciones\/[^/]+\/recorrido\/?$/.test(url.pathname),
+            handler: 'NetworkOnly',
+          },
+          {
             // El editor necesita una version vigente y aislada de la cache API.
             urlPattern: ({ url }) => /\/expediciones\/[^/]+\/puntos\/?$/.test(url.pathname),
+            handler: 'NetworkOnly',
+          },
+          {
+            // HU-37: la bandeja de avisos es privada; nunca se guarda en caché.
+            urlPattern: ({ url }) => /^\/api\/avisos(?:\/|$)/.test(url.pathname),
             handler: 'NetworkOnly',
           },
           {

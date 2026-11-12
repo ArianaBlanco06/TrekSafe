@@ -1,8 +1,7 @@
 import type { IRepositorioOutbox } from '../../domain/repositories/IRepositorioOutbox.js';
-import { RepositorioOutboxSupabase } from '../../infrastructure/repositories/RepositorioOutboxSupabase.js';
-import { RepositorioAlerta } from '../../infrastructure/repositories/RepositorioAlerta.js';
-import { RepositorioDespachoCorreo } from '../../infrastructure/repositories/RepositorioDespachoCorreo.js';
-import { buildCorreoRetornoSeguro } from '../../infrastructure/email/templates/retornoSeguroEmail.js';
+import type { IRepositorioAlerta } from '../ports/RepositorioAlerta.js';
+import type { IRepositorioDespachoCorreo } from '../ports/RepositorioDespachoCorreo.js';
+import { buildCorreoRetornoSeguro } from '../mensajes/retornoSeguroEmail.js';
 
 export type ResultadoNotificacionRetorno = {
   expedicionId: string;
@@ -13,9 +12,9 @@ export type ResultadoNotificacionRetorno = {
 
 export class ServicioNotificacionRetornoSeguro {
   constructor(
-    private readonly repoOutbox: IRepositorioOutbox = new RepositorioOutboxSupabase(),
-    private readonly repoAlerta = new RepositorioAlerta(),
-    private readonly repoDespacho = new RepositorioDespachoCorreo(),
+    private readonly repoOutbox: IRepositorioOutbox,
+    private readonly repoAlerta: IRepositorioAlerta,
+    private readonly repoDespacho?: IRepositorioDespachoCorreo,
   ) {}
 
   /**
@@ -62,14 +61,16 @@ export class ServicioNotificacionRetornoSeguro {
       correosVistos.add(email);
 
       // Deduplicación lógica: Comprobar si ya fue despachado o registrado para este evento
-      const yaDespachado = await this.repoDespacho.yaFueEnviado(
-        expedicionId,
-        'alerta_contacto',
-        email,
-      );
-      if (yaDespachado) {
-        omitidos++;
-        continue;
+      if (this.repoDespacho) {
+        const yaDespachado = await this.repoDespacho.yaFueEnviado(
+          expedicionId,
+          'alerta_contacto',
+          email,
+        );
+        if (yaDespachado) {
+          omitidos++;
+          continue;
+        }
       }
 
       // Generar plantilla sin datos médicos
@@ -86,6 +87,8 @@ export class ServicioNotificacionRetornoSeguro {
 
       // Crear entrada outbox garantizando trazabilidad y reintentos futuros
       const guardado = await this.repoOutbox.guardar({
+        claveEvento: `RETORNO_SEGURO:${expedicionId}`,
+        canal: 'correo',
         tipoEvento: 'RETORNO_SEGURO_CONTACTO',
         destinatario: email,
         asunto: subject,

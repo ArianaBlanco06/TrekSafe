@@ -50,7 +50,11 @@ class ExpedicionDAOEnMemoria implements IExpedicionDAO {
   /** Simula un cambio concurrente (p. ej. el cron) justo antes de que la RPC bloquee la fila. */
   antesDeCancelar?: () => void;
 
-  constructor(public plan: PlanExpedicion) {}
+  /** `relojBd` hace de now() de la base, que es el que usa la RPC. */
+  constructor(
+    public plan: PlanExpedicion,
+    private readonly relojBd: IReloj = new RelojFijo(AHORA),
+  ) {}
 
   async obtenerPlan(expedicionId: string, senderistaId: string): Promise<PlanExpedicion | null> {
     if (this.plan.id !== expedicionId || this.plan.senderistaId !== senderistaId) return null;
@@ -88,6 +92,10 @@ class ExpedicionDAOEnMemoria implements IExpedicionDAO {
       return { id: this.plan.id, version: this.plan.version, estado: 'cancelada' };
     }
     if (this.plan.estado !== 'programada') throw new ErrorCancelacionPlan('PLAN_NO_CANCELABLE');
+    // HU-27 CA-01 (migración 018): la salida debe ser futura según el reloj de la base.
+    if (new Date(this.plan.horaInicio).getTime() <= this.relojBd.ahora().getTime()) {
+      throw new ErrorCancelacionPlan('PLAN_NO_CANCELABLE');
+    }
 
     this.plan = { ...this.plan, estado: 'cancelada', version: this.plan.version + 1 };
     this.eventos.push({
@@ -161,7 +169,7 @@ describe('CancelarPlan', () => {
   let ejecutor: CancelarPlan;
 
   function preparar(plan: PlanExpedicion = planInicial(), instante = AHORA): void {
-    dao = new ExpedicionDAOEnMemoria(plan);
+    dao = new ExpedicionDAOEnMemoria(plan, new RelojFijo(instante));
     ejecutor = new CancelarPlan(dao, new RelojFijo(instante));
   }
 
@@ -213,8 +221,59 @@ describe('CancelarPlan', () => {
       }
     });
 
-    it('cancela un plan programado cuya hora de salida ya pasó sin que el cron lo promoviera', async () => {
+    it('acepta un motivo de exactamente 200 caracteres', async () => {
+      await ejecutor.ejecutar(comando({ operacionId: OPERACION, motivo: 'a'.repeat(200) }));
+
+      assert.equal(dao.eventos[0]?.motivo?.length, 200);
+    });
+  });
+
+  // HU-27 CA-01: "solo el propietario cancela un plan programado y futuro".
+  describe('CA-01: solo se cancela un plan programado y con salida futura', () => {
+    it('rechaza cancelar un plan programado cuya hora de salida ya pasó, sin escribir nada', async () => {
       preparar(planInicial({ horaInicio: '2030-01-15T11:00:00.000Z' }));
+
+      const { estado, cuerpo } = await rechazo(() => comando());
+
+      assert.equal(estado, 409);
+      assert.equal(cuerpo.codigo, 'PLAN_NO_CANCELABLE');
+      assert.match(String(cuerpo.mensaje), /programadas con hora de salida futura/);
+      assert.equal(dao.llamadasCancelar, 0, 'se rechaza antes de llegar a la persistencia');
+      assert.equal(dao.plan.estado, 'programada');
+      assert.equal(dao.plan.version, 1);
+      assert.equal(dao.eventos.length, 0);
+    });
+
+    it('rechaza cancelar cuando la salida es exactamente ahora (no es futura)', async () => {
+      preparar(planInicial({ horaInicio: AHORA }));
+
+      const { estado, cuerpo } = await rechazo(() => comando());
+
+      assert.equal(estado, 409);
+      assert.equal(cuerpo.codigo, 'PLAN_NO_CANCELABLE');
+      assert.equal(dao.plan.estado, 'programada');
+      assert.equal(dao.eventos.length, 0);
+    });
+
+    it('responde 409 si la base considera que la salida ya pasó aunque el reloj local diga lo contrario', async () => {
+      // Reloj local 12:00:00 (salida 12:00:00.500, futura); reloj de la base 12:00:01 (ya pasó).
+      dao = new ExpedicionDAOEnMemoria(
+        planInicial({ horaInicio: '2030-01-15T12:00:00.500Z' }),
+        new RelojFijo('2030-01-15T12:00:01.000Z'),
+      );
+      ejecutor = new CancelarPlan(dao, new RelojFijo(AHORA));
+
+      const { estado, cuerpo } = await rechazo(() => comando());
+
+      assert.equal(estado, 409);
+      assert.equal(cuerpo.codigo, 'PLAN_NO_CANCELABLE');
+      assert.equal(dao.llamadasCancelar, 1, 'la persistencia hizo la comprobación definitiva');
+      assert.equal(dao.plan.estado, 'programada');
+      assert.equal(dao.eventos.length, 0);
+    });
+
+    it('acepta cancelar cuando la salida es 1 ms posterior a ahora', async () => {
+      preparar(planInicial({ horaInicio: '2030-01-15T12:00:00.001Z' }));
 
       const resultado = await ejecutor.ejecutar(comando());
 
@@ -222,10 +281,23 @@ describe('CancelarPlan', () => {
       assert.equal(dao.eventos.length, 1);
     });
 
-    it('acepta un motivo de exactamente 200 caracteres', async () => {
-      await ejecutor.ejecutar(comando({ operacionId: OPERACION, motivo: 'a'.repeat(200) }));
+    it('repetir una cancelación ya hecha devuelve lo mismo aunque la salida ya haya pasado', async () => {
+      preparar(planInicial({ estado: 'cancelada', version: 2, horaInicio: '2030-01-15T11:00:00.000Z' }));
 
-      assert.equal(dao.eventos[0]?.motivo?.length, 200);
+      const resultado = await ejecutor.ejecutar(comando());
+
+      assert.deepEqual(resultado, { id: EXPEDICION, version: 2, estado: 'cancelada' });
+      assert.equal(dao.llamadasCancelar, 0);
+      assert.equal(dao.eventos.length, 0);
+    });
+
+    it('el estado se evalúa antes que la salida: un plan en curso con salida pasada responde PLAN_NO_CANCELABLE', async () => {
+      preparar(planInicial({ estado: 'en_progreso', horaInicio: '2030-01-15T11:00:00.000Z' }));
+
+      const { estado, cuerpo } = await rechazo(() => comando());
+
+      assert.equal(estado, 409);
+      assert.equal(cuerpo.codigo, 'PLAN_NO_CANCELABLE');
     });
   });
 

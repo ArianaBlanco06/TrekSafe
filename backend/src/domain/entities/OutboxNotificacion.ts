@@ -9,8 +9,11 @@ export type ResultadoEnvioTransporte = {
 
 export type MensajeOutbox = {
   id: string;
+  claveEvento: string;
+  canal: string;
   tipoEvento: string;
   destinatario: string;
+  destinatarioNormalizado?: string;
   asunto: string;
   cuerpo: string;
   cuerpoHtml?: string;
@@ -29,6 +32,8 @@ export type MensajeOutbox = {
 };
 
 export type NuevoMensajeOutbox = {
+  claveEvento: string;
+  canal?: string;
   tipoEvento: string;
   destinatario: string;
   asunto: string;

@@ -159,9 +159,15 @@ export function PaginaListaExpediciones() {
             return (
               <div key={exp.id}>
                 {estaActiva ? <Link to="/senderista/expedicion/activa" className="block">{tarjeta}</Link> : tarjeta}
+                <Link to={`/senderista/expedicion/${encodeURIComponent(exp.id)}/recorrido`}
+                  aria-label={`Ver recorrido de la expedición a ${exp.lugarFin}`}
+                  className="inline-flex items-center min-h-12 text-sm font-semibold text-primary mr-4">Ver recorrido</Link>
                 <Link to={`/senderista/expedicion/${encodeURIComponent(exp.id)}/equipo`}
                   aria-label={`Revisar equipo de la expedición a ${exp.lugarFin}`}
                   className="inline-flex items-center min-h-12 text-sm font-semibold text-primary">Revisar equipo</Link>
+                <Link to={`/senderista/expedicion/${encodeURIComponent(exp.id)}/cambios`}
+                  aria-label={`Ver cambios del plan de la expedición a ${exp.lugarFin}`}
+                  className="inline-flex items-center min-h-12 ml-4 text-sm font-semibold text-primary">Ver cambios</Link>
               </div>
             );
           })}
