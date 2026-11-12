@@ -94,6 +94,15 @@ describe('BitacoraIncidente (HU-41)', () => {
     assert.equal(arbol.root.findByType('ol').props['aria-label'], 'Entradas de la bitácora');
   });
 
+  it('alCargar (HU-42) recibe los datos de cada lectura correcta', async () => {
+    const recibidos: DatosBitacora[] = [];
+    const { arbol } = await montar({ alCargar: (d) => void recibidos.push(d) });
+    assert.equal(recibidos.length, 1);
+    assert.equal(recibidos[0]?.estado, 'abierto');
+    assert.equal(recibidos[0]?.esResponsable, true);
+    assert.ok(arbol);
+  });
+
   it('la lista vacía muestra "Aún no hay entradas."', async () => {
     const { arbol } = await montar({ datos: [bitacora({ entradas: [] })] });
     assert.match(textoDe(arbol), /Aún no hay entradas\./);

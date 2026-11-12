@@ -26,6 +26,8 @@ export type BitacoraIncidenteProps = {
   incidenteId: string;
   /** Tras NO_ES_RESPONSABLE (relevo) o cierre: la página vuelve a leer la coordinación. */
   alCambiarResponsable?: () => void;
+  /** HU-42: se llama con los datos tras cada lectura correcta (la página los usa para el cierre). */
+  alCargar?: (bitacora: DatosBitacora) => void;
   /** Solo para pruebas. */
   cargar?: (incidenteId: string) => Promise<{ bitacora: DatosBitacora }>;
   /** Solo para pruebas. */
@@ -44,6 +46,7 @@ export type BitacoraIncidenteProps = {
 export function BitacoraIncidente({
   incidenteId,
   alCambiarResponsable,
+  alCargar,
   cargar = obtenerBitacoraIncidente,
   agregar = agregarEntradaBitacora,
   generarId = generarUuid,
@@ -62,6 +65,9 @@ export function BitacoraIncidente({
   const gestor = useRef<GestorOperacion | null>(null);
   gestor.current ??= crearGestorOperacion(generarId);
   const lectura = useRef(0);
+  // Referencia: un `alCargar` nuevo en cada render no debe disparar otra lectura.
+  const alCargarRef = useRef(alCargar);
+  alCargarRef.current = alCargar;
 
   const recargar = useCallback(async () => {
     const numero = (lectura.current += 1);
@@ -69,6 +75,7 @@ export function BitacoraIncidente({
       const { bitacora: datos } = await cargar(incidenteId);
       if (numero !== lectura.current) return; // llegó una lectura más nueva
       setBitacora(datos);
+      alCargarRef.current?.(datos);
       setErrorCarga('');
     } catch (error) {
       if (numero !== lectura.current) return;
