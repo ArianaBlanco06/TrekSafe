@@ -82,6 +82,10 @@ export class BitacoraIncidenteDAOMemoria implements IBitacoraIncidenteDAO {
     operacionId: string,
   ): EntradaBitacora {
     this.exigirIncidente(incidenteId);
+    // Como treksafe_entrada_bitacora_repetida (019): un UUID ya usado (HU-42 lo reutiliza como comando).
+    if (this.entradas.some((f) => f.operacionId === operacionId) || this.operacionesDeOtroTipo.has(operacionId)) {
+      throw new ErrorBitacoraIncidente('OPERACION_YA_REGISTRADA');
+    }
     if (tipo === 'cierre' && this.entradas.some((f) => f.entrada.incidenteId === incidenteId && f.entrada.tipo === 'cierre')) {
       throw new ErrorBitacoraIncidente('OPERACION_YA_REGISTRADA');
     }
