@@ -5,6 +5,8 @@ export type DestinatarioRescatista = {
 };
 export type ExpedicionAlertaLeida = {
   id: string;
+  /** Senderista y acompañantes. Las lecturas anteriores pueden omitir el conteo. */
+  numeroParticipantes?: number;
   lugarInicio: string;
   lugarFin: string;
   horaInicio: string;

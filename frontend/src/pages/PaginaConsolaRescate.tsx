@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -7,15 +7,28 @@ import {
   Phone,
   Search,
   User,
+  Users,
 } from 'lucide-react';
 import {
-  obtenerExpedicionesRescate,
+  type CriterioPrioridadRescate,
   type ExpedicionRescate,
   type NivelRiesgoRescate,
 } from '@/services/rescate';
 import { BloqueCoordinacion } from '@/components/rescate/BloqueCoordinacion';
 import type { PuntoMapaExpedicionRescate } from '@/components/maps/RescueExpeditionsMap';
 import { RescueExpeditionsMapLazy } from '@/components/maps/RescueExpeditionsMapLazy';
+import { useConsolaRescate } from '@/hooks/useConsolaRescate';
+
+const OPCIONES_PRIORIDAD: Record<CriterioPrioridadRescate, { etiqueta: string; descripcion: string }> = {
+  tiempo_excedido: {
+    etiqueta: 'Tiempo excedido',
+    descripcion: 'Primero la fecha límite más antigua de cada grupo operativo.',
+  },
+  tamano_grupo: {
+    etiqueta: 'Participantes declarados',
+    descripcion: 'Primero los grupos con más participantes, incluyendo al senderista.',
+  },
+};
 
 const RIESGO_META: Record<
   NivelRiesgoRescate,
@@ -91,26 +104,11 @@ function convertirAPuntosMapas(expediciones: ExpedicionRescate[]): PuntoMapaExpe
 }
 
 export function PaginaConsolaRescate() {
-  const [expediciones, setExpediciones] = useState<ExpedicionRescate[]>([]);
   const [zonaInput, setZonaInput] = useState('');
-  const [zonaAplicada, setZonaAplicada] = useState('');
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState('');
-
-  const cargarExpediciones = useCallback(() => {
-    setError('');
-    obtenerExpedicionesRescate(zonaAplicada || undefined)
-      .then((r) => setExpediciones(r.expediciones))
-      .catch((e) => setError(e instanceof Error ? e.message : 'Error al cargar expediciones'))
-      .finally(() => setCargando(false));
-  }, [zonaAplicada]);
-
-  useEffect(() => {
-    setCargando(true);
-    cargarExpediciones();
-    const poll = setInterval(cargarExpediciones, 30_000);
-    return () => clearInterval(poll);
-  }, [cargarExpediciones]);
+  const [zonaSolicitada, setZonaSolicitada] = useState('');
+  const [criterio, setCriterio] = useState<CriterioPrioridadRescate>('tiempo_excedido');
+  const { expediciones, criterioAplicado, zonaAplicada, cargando, error, cargarExpediciones } =
+    useConsolaRescate(zonaSolicitada, criterio);
 
   const conteos = useMemo(
     () => ({
@@ -125,12 +123,12 @@ export function PaginaConsolaRescate() {
 
   const handleBuscar = (e: React.FormEvent) => {
     e.preventDefault();
-    setZonaAplicada(zonaInput.trim());
+    setZonaSolicitada(zonaInput.trim());
   };
 
   const handleLimpiarZona = () => {
     setZonaInput('');
-    setZonaAplicada('');
+    setZonaSolicitada('');
   };
 
   return (
@@ -159,6 +157,28 @@ export function PaginaConsolaRescate() {
         </button>
       </form>
 
+      <div className="mb-5">
+        <label htmlFor="criterio-prioridad" className="block text-sm font-semibold mb-2">
+          Ordenar por
+        </label>
+        <select
+          id="criterio-prioridad"
+          value={criterio}
+          onChange={(evento) => setCriterio(evento.target.value as CriterioPrioridadRescate)}
+          aria-describedby="descripcion-prioridad"
+          className="input-field w-full"
+        >
+          {Object.entries(OPCIONES_PRIORIDAD).map(([valor, opcion]) => (
+            <option key={valor} value={valor}>{opcion.etiqueta}</option>
+          ))}
+        </select>
+        <p id="descripcion-prioridad" className="text-xs text-muted-foreground mt-2" aria-live="polite">
+          Orden activo por {OPCIONES_PRIORIDAD[criterioAplicado].etiqueta.toLowerCase()}.{' '}
+          {OPCIONES_PRIORIDAD[criterioAplicado].descripcion}{' '}
+          Los empates se resuelven por fecha límite e identificador.
+        </p>
+      </div>
+
       {zonaAplicada && (
         <div className="flex items-center justify-between mb-4 text-xs">
           <span className="text-muted-foreground">
@@ -185,7 +205,7 @@ export function PaginaConsolaRescate() {
         ))}
       </div>
 
-      {!cargando && puntosMapas.length > 0 && (
+      {puntosMapas.length > 0 && (
         <div className="mb-6">
           <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1">
             <MapPin size={14} /> Mapa de expediciones activas
@@ -197,13 +217,17 @@ export function PaginaConsolaRescate() {
       {error && (
         <div className="error-banner mb-4">
           {error}{' '}
-          <button type="button" onClick={cargarExpediciones} className="underline font-semibold ml-1">
+          <button type="button" onClick={cargarExpediciones} disabled={cargando} className="underline font-semibold ml-1">
             Reintentar
           </button>
         </div>
       )}
 
-      {cargando ? (
+      {cargando && expediciones.length > 0 && (
+        <p role="status" className="text-sm text-muted-foreground mb-3">Actualizando expediciones…</p>
+      )}
+
+      {cargando && expediciones.length === 0 ? (
         <p className="text-sm text-muted-foreground">Cargando expediciones…</p>
       ) : expediciones.length === 0 ? (
         <div className="bg-muted rounded-2xl p-5 text-sm text-muted-foreground">
@@ -257,6 +281,10 @@ function TarjetaExpedicion({
         </p>
         <p className="flex items-center gap-2">
           <Phone size={14} /> {expedicion.telefonoSenderista}
+        </p>
+        <p className="flex items-center gap-2">
+          <Users size={14} aria-hidden="true" />
+          {expedicion.numeroParticipantes} {expedicion.numeroParticipantes === 1 ? 'participante declarado' : 'participantes declarados'}
         </p>
         <p className="flex items-center gap-2 font-medium text-foreground">
           <Clock size={14} /> {formatearEstadoTiempo(expedicion)}
