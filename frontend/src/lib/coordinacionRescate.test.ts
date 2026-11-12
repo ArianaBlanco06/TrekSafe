@@ -10,6 +10,22 @@ import {
   puedeAsumir,
   textoCoordinacion,
 } from './coordinacionRescate';
+import {
+  AVISO_RELEVO_CANCELADO,
+  AVISO_RELEVO_RECHAZADO,
+  TEXTO_CONFIRMAR_CANCELACION,
+  TEXTO_CONFIRMAR_RECHAZO,
+  intentarAceptarRelevo,
+  intentarCancelarRelevo,
+  intentarProponerRelevo,
+  intentarRechazarRelevo,
+  puedeAceptarRelevo,
+  puedeCancelarRelevo,
+  puedeProponerRelevo,
+  puedeRechazarRelevo,
+  textoRelevoPendiente,
+  validarMotivoRelevo,
+} from './coordinacionRescate';
 import type { Coordinacion } from '../services/rescate';
 import { ErrorClienteApi } from '../services/clienteApi';
 
@@ -191,5 +207,235 @@ describe('intentarAsumir: política del operacionId', () => {
     assert.deepEqual(r, { tipo: 'error', mensaje: 'Alerta no encontrada' });
     await intentarAsumir('exp-1', gestor, asumir);
     assert.deepEqual(usados, ['op-1', 'op-2']);
+  });
+});
+
+const pendiente = (extra: Partial<NonNullable<Coordinacion['relevoPendiente']>> = {}) => ({
+  relevoId: 'rel-1',
+  destinatarioId: 'dest-1',
+  nombreDestinatario: 'Luis Relevo',
+  solicitadoEn: '2030-01-15T14:00:00.000Z',
+  esParaMi: false,
+  ...extra,
+});
+const DATOS = { destinatarioId: 'dest-1', motivo: '  Cambio de turno  ', versionIncidente: 3 };
+
+describe('relevo (HU-40): reglas de visibilidad', () => {
+  it('solo el responsable sin relevo pendiente puede proponer', () => {
+    assert.equal(puedeProponerRelevo(coordinacion({ esMia: true })), true);
+    assert.equal(puedeProponerRelevo(coordinacion({ esMia: true, relevoPendiente: pendiente() })), false);
+    assert.equal(puedeProponerRelevo(coordinacion({ esMia: false })), false);
+    assert.equal(puedeProponerRelevo(null), false);
+    assert.equal(puedeProponerRelevo(undefined), false);
+  });
+
+  it('solo el destinatario del relevo pendiente puede aceptar', () => {
+    assert.equal(puedeAceptarRelevo(coordinacion({ relevoPendiente: pendiente({ esParaMi: true }) })), true);
+    assert.equal(puedeAceptarRelevo(coordinacion({ relevoPendiente: pendiente() })), false);
+    assert.equal(puedeAceptarRelevo(coordinacion()), false);
+    assert.equal(puedeAceptarRelevo(null), false);
+  });
+
+  it('solo el destinatario del relevo pendiente puede rechazar', () => {
+    assert.equal(puedeRechazarRelevo(coordinacion({ relevoPendiente: pendiente({ esParaMi: true }) })), true);
+    assert.equal(puedeRechazarRelevo(coordinacion({ relevoPendiente: pendiente() })), false);
+    assert.equal(puedeRechazarRelevo(coordinacion({ esMia: true, relevoPendiente: pendiente() })), false);
+    assert.equal(puedeRechazarRelevo(coordinacion()), false);
+    assert.equal(puedeRechazarRelevo(null), false);
+    assert.equal(puedeRechazarRelevo(undefined), false);
+  });
+
+  it('solo quien propuso (el responsable con un relevo pendiente) puede cancelar', () => {
+    assert.equal(puedeCancelarRelevo(coordinacion({ esMia: true, relevoPendiente: pendiente() })), true);
+    assert.equal(puedeCancelarRelevo(coordinacion({ esMia: true })), false, 'sin relevo pendiente no hay qué cancelar');
+    assert.equal(puedeCancelarRelevo(coordinacion({ relevoPendiente: pendiente() })), false);
+    assert.equal(puedeCancelarRelevo(coordinacion({ relevoPendiente: pendiente({ esParaMi: true }) })), false);
+    assert.equal(puedeCancelarRelevo(null), false);
+    assert.equal(puedeCancelarRelevo(undefined), false);
+  });
+
+  it('con el relevo resuelto (sin relevoPendiente) no se ofrece aceptar, rechazar ni cancelar y el responsable puede proponer otro', () => {
+    const libre = coordinacion({ esMia: true });
+    assert.equal(puedeAceptarRelevo(libre), false);
+    assert.equal(puedeRechazarRelevo(libre), false);
+    assert.equal(puedeCancelarRelevo(libre), false);
+    assert.equal(puedeProponerRelevo(libre), true);
+  });
+
+  it('el motivo es obligatorio y admite hasta 280 caracteres tras recortar', () => {
+    assert.match(validarMotivoRelevo('   ') ?? '', /motivo/i);
+    assert.equal(validarMotivoRelevo('Cambio de turno'), null);
+    assert.equal(validarMotivoRelevo('a'.repeat(280)), null);
+    assert.match(validarMotivoRelevo('a'.repeat(281)) ?? '', /280/);
+  });
+});
+
+describe('relevo (HU-40): textos', () => {
+  it('sin relevo pendiente no hay texto', () => {
+    assert.equal(textoRelevoPendiente(coordinacion()), null);
+  });
+
+  it('el responsable ve a quién propuso, desde qué hora, y que sigue coordinando', () => {
+    const texto = textoRelevoPendiente(coordinacion({ esMia: true, relevoPendiente: pendiente() }), 'UTC');
+    assert.equal(texto, 'Relevo pendiente a Luis Relevo desde 14:00. Sigues coordinando tú');
+  });
+
+  it('el destinatario ve quién le propone el relevo y el motivo', () => {
+    const texto = textoRelevoPendiente(
+      coordinacion({ relevoPendiente: pendiente({ esParaMi: true, motivo: 'Cambio de turno' }) }),
+    );
+    assert.equal(texto, 'Ana Rescate te propone relevarlo: Cambio de turno');
+  });
+
+  it('otro rescatista ve solo a quién se propone, sin motivo', () => {
+    const texto = textoRelevoPendiente(coordinacion({ relevoPendiente: pendiente({ motivo: 'secreto' }) }), 'UTC');
+    assert.equal(texto, 'Relevo pendiente a Luis Relevo desde 14:00');
+    assert.doesNotMatch(texto ?? '', /secreto|Sigues/);
+  });
+});
+
+describe('relevo (HU-40): intentos y operacionId', () => {
+  it('proponer envía el motivo recortado y la versión, y descarta el operacionId al terminar', async () => {
+    const gestor = crearGestorOperacion((() => { let n = 0; return () => `op-${++n}`; })());
+    const llamadas: unknown[][] = [];
+    const resultado = await intentarProponerRelevo('exp-1', DATOS, gestor, async (...args) => {
+      llamadas.push(args);
+      return { coordinacion: coordinacion({ esMia: true, relevoPendiente: pendiente() }) };
+    });
+    assert.equal(resultado.tipo, 'ok');
+    assert.deepEqual(llamadas, [['exp-1', { destinatarioId: 'dest-1', motivo: 'Cambio de turno', versionIncidente: 3 }, 'op-1']]);
+    assert.equal(gestor.obtener(), 'op-2'); // el anterior se descartó
+  });
+
+  it('un error de red o un 5xx conservan el operacionId para el reintento', async () => {
+    const gestor = crearGestorOperacion((() => { let n = 0; return () => `op-${++n}`; })());
+    for (const status of [0, 503]) {
+      const r = await intentarProponerRelevo('exp-1', DATOS, gestor, async () => {
+        throw new ErrorClienteApi('sin red', status);
+      });
+      assert.equal(r.tipo, 'error');
+      assert.equal(gestor.obtener(), 'op-1');
+    }
+  });
+
+  it('VERSION_DESACTUALIZADA, RELEVO_PENDIENTE y NO_ES_RESPONSABLE piden releer y descartan el operacionId', async () => {
+    for (const codigo of ['VERSION_DESACTUALIZADA', 'RELEVO_PENDIENTE', 'NO_ES_RESPONSABLE']) {
+      const gestor = crearGestorOperacion((() => { let n = 0; return () => `op-${++n}`; })());
+      const r = await intentarProponerRelevo('exp-1', DATOS, gestor, async () => {
+        throw new ErrorClienteApi(`mensaje ${codigo}`, 409, codigo);
+      });
+      assert.deepEqual(r, { tipo: 'releer', mensaje: `mensaje ${codigo}` });
+      assert.equal(gestor.obtener(), 'op-2');
+    }
+  });
+
+  it('un 400 de validación es un error común, sin releer', async () => {
+    const r = await intentarProponerRelevo('exp-1', DATOS, crearGestorOperacion(() => 'op'), async () => {
+      throw new ErrorClienteApi('El motivo es obligatorio', 400);
+    });
+    assert.deepEqual(r, { tipo: 'error', mensaje: 'El motivo es obligatorio' });
+  });
+
+  it('aceptar envía el relevo y la operación, sin versión', async () => {
+    const llamadas: unknown[][] = [];
+    const r = await intentarAceptarRelevo('exp-1', 'rel-1', crearGestorOperacion(() => 'op-9'), async (...args) => {
+      llamadas.push(args);
+      return { coordinacion: coordinacion({ esMia: true }) };
+    });
+    assert.equal(r.tipo, 'ok');
+    assert.deepEqual(llamadas, [['exp-1', 'rel-1', 'op-9']]);
+  });
+
+  it('aceptar con el relevo ya resuelto o el caso cerrado pide releer', async () => {
+    for (const codigo of ['RELEVO_YA_RESUELTO', 'INCIDENTE_CERRADO', 'NO_ES_DESTINATARIO']) {
+      const r = await intentarAceptarRelevo('exp-1', 'rel-1', crearGestorOperacion(() => 'op'), async () => {
+        throw new ErrorClienteApi('x', 409, codigo);
+      });
+      assert.equal(r.tipo, 'releer');
+    }
+  });
+});
+
+describe('relevo (HU-40): rechazar y cancelar', () => {
+  const generador = () => crearGestorOperacion((() => { let n = 0; return () => `op-${++n}`; })());
+
+  for (const [nombre, intentar, aviso] of [
+    ['rechazar', intentarRechazarRelevo, AVISO_RELEVO_RECHAZADO],
+    ['cancelar', intentarCancelarRelevo, AVISO_RELEVO_CANCELADO],
+  ] as const) {
+    it(`${nombre} envía el relevo y la operación, sin motivo ni versión, y descarta el operacionId`, async () => {
+      const gestor = generador();
+      const llamadas: unknown[][] = [];
+      const r = await intentar('exp-1', 'rel-1', gestor, async (...args) => {
+        llamadas.push(args);
+        return { coordinacion: coordinacion({ esMia: true }) };
+      });
+      assert.equal(r.tipo, 'ok');
+      assert.deepEqual(llamadas, [['exp-1', 'rel-1', 'op-1']]);
+      assert.equal(gestor.obtener(), 'op-2');
+      assert.ok(aviso.length > 0);
+    });
+
+    it(`${nombre}: un error de red o un 5xx conservan el operacionId para el reintento`, async () => {
+      const gestor = generador();
+      for (const status of [0, 503]) {
+        const r = await intentar('exp-1', 'rel-1', gestor, async () => {
+          throw new ErrorClienteApi('sin red', status);
+        });
+        assert.equal(r.tipo, 'error');
+        assert.equal(gestor.obtener(), 'op-1');
+      }
+    });
+
+    it(`${nombre}: relevo ya resuelto, caso cerrado o actor incorrecto piden releer y descartan el operacionId`, async () => {
+      for (const codigo of ['RELEVO_YA_RESUELTO', 'INCIDENTE_CERRADO', 'NO_ES_DESTINATARIO', 'NO_ES_PROPONENTE', 'RELEVO_NO_ENCONTRADO']) {
+        const gestor = generador();
+        const r = await intentar('exp-1', 'rel-1', gestor, async () => {
+          throw new ErrorClienteApi(`mensaje ${codigo}`, codigo === 'RELEVO_NO_ENCONTRADO' ? 404 : codigo.startsWith('NO_ES') ? 403 : 409, codigo);
+        });
+        assert.equal(r.tipo, 'releer', codigo);
+        assert.equal(gestor.obtener(), 'op-2', codigo);
+      }
+    });
+
+    it(`${nombre}: RELEVO_YA_RESUELTO dice cómo quedó el relevo según el servidor`, async () => {
+      for (const [estado, texto] of [
+        ['aceptado', 'El relevo ya fue aceptado.'],
+        ['rechazado', 'El relevo ya fue rechazado.'],
+        ['cancelado', 'El relevo ya fue cancelado.'],
+      ] as const) {
+        const r = await intentar('exp-1', 'rel-1', generador(), async () => {
+          throw new ErrorClienteApi('El relevo ya fue resuelto', 409, 'RELEVO_YA_RESUELTO', undefined, { estadoRelevo: estado });
+        });
+        assert.deepEqual(r, { tipo: 'releer', mensaje: texto });
+      }
+      // Sin el dato, o con uno desconocido, se usa el mensaje del servidor.
+      for (const extras of [undefined, { estadoRelevo: 'invalidado' }, { estadoRelevo: 7 }]) {
+        const r = await intentar('exp-1', 'rel-1', generador(), async () => {
+          throw new ErrorClienteApi('El relevo ya fue resuelto', 409, 'RELEVO_YA_RESUELTO', undefined, extras);
+        });
+        assert.deepEqual(r, { tipo: 'releer', mensaje: 'El relevo ya fue resuelto' });
+      }
+    });
+
+    it(`${nombre}: un 400 o un código desconocido es un error común, sin releer`, async () => {
+      const r = await intentar('exp-1', 'rel-1', generador(), async () => {
+        throw new ErrorClienteApi('Datos de entrada inválidos', 400, 'DATOS_INVALIDOS');
+      });
+      assert.deepEqual(r, { tipo: 'error', mensaje: 'Datos de entrada inválidos' });
+    });
+  }
+
+  it('aceptar también dice cómo quedó un relevo que otro rechazó o canceló', async () => {
+    const r = await intentarAceptarRelevo('exp-1', 'rel-1', generador(), async () => {
+      throw new ErrorClienteApi('El relevo ya fue resuelto', 409, 'RELEVO_YA_RESUELTO', undefined, { estadoRelevo: 'cancelado' });
+    });
+    assert.deepEqual(r, { tipo: 'releer', mensaje: 'El relevo ya fue cancelado.' });
+  });
+
+  it('los textos de confirmación y de resultado no piden motivo ni mencionan datos médicos', () => {
+    for (const texto of [TEXTO_CONFIRMAR_RECHAZO, TEXTO_CONFIRMAR_CANCELACION, AVISO_RELEVO_RECHAZADO, AVISO_RELEVO_CANCELADO]) {
+      assert.doesNotMatch(texto, /motivo|sangre|alergi|medicament|ficha|salud/i);
+    }
   });
 });

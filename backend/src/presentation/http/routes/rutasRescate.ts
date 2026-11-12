@@ -7,6 +7,8 @@ import {
 import { crearControladorRescate } from '../controllers/controladorRescate.js';
 import { crearControladorBitacoraIncidente } from '../controllers/controladorBitacoraIncidente.js';
 import { crearControladorCoordinacion } from '../controllers/controladorCoordinacion.js';
+import { crearControladorRelevo } from '../controllers/controladorRelevo.js';
+import { crearControladorRescatistas } from '../controllers/controladorRescatistas.js';
 import {
   crearModuloRescate,
   type ModuloRescate,
@@ -29,6 +31,14 @@ export function crearRutasRescate(
   } = crearControladorRescate(modulo.servicio);
   const router = Router();
   const coordinacion = crearControladorCoordinacion(modulo.asignarResponsable);
+  // HU-40: relevo de la coordinación y catálogo de rescatistas validados.
+  const relevo = crearControladorRelevo(
+    modulo.proponerRelevo,
+    modulo.aceptarRelevo,
+    modulo.rechazarRelevo,
+    modulo.cancelarRelevo,
+  );
+  const rescatistas = crearControladorRescatistas(modulo.rescatistas);
   const bitacora = crearControladorBitacoraIncidente({
     consultar: modulo.consultarBitacoraIncidente,
     agregar: modulo.agregarEntradaBitacora,
@@ -52,6 +62,13 @@ export function crearRutasRescate(
     '/alertas/:expedicionId/coordinacion',
     asyncHandler(coordinacion.asumir),
   );
+  // HU-40: relevo de la coordinación (proponer, aceptar, rechazar y cancelar).
+  // HU-40: rescatistas validados para elegir destinatario (solo id y nombre).
+  router.get('/rescatistas', asyncHandler(rescatistas.listar));
+  router.post('/alertas/:expedicionId/coordinacion/relevos', asyncHandler(relevo.proponer));
+  router.post('/alertas/:expedicionId/coordinacion/relevos/:relevoId/aceptar', asyncHandler(relevo.aceptar));
+  router.post('/alertas/:expedicionId/coordinacion/relevos/:relevoId/rechazar', asyncHandler(relevo.rechazar));
+  router.post('/alertas/:expedicionId/coordinacion/relevos/:relevoId/cancelar', asyncHandler(relevo.cancelar));
   // HU-41: bitácora cronológica compartida; la bitácora personal anterior se conserva.
   router.get(
     '/incidentes/:incidenteId/bitacora',
