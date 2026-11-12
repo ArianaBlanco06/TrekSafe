@@ -388,7 +388,7 @@ async function principal() {
   for (const archivo of [...MIGRACIONES_PREVIAS, MIGRACION_HU42]) {
     await q(await readFile(path.join(migraciones, archivo), 'utf8'));
   }
-  console.log(`init_schema.sql y ${MIGRACIONES_PREVIAS.length} migraciones previas aplicados (013 a 019, 022 a 024 incluidas), más la 025.\n`);
+  console.log(`init_schema.sql y ${MIGRACIONES_PREVIAS.length} migraciones previas aplicados (000 a 019 y 022 a 024, con la 015), más la 025.\n`);
 
   // --- Suites SQL de una sola sesión --------------------------------------
   await ejecutarSuiteSql('HU-42', 'tests/hu42_cerrar_incidente.test.sql', CASOS_SQL_HU42, 'hu42_sql');

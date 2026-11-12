@@ -315,6 +315,93 @@ Cambios sin confirmar en `feature/HU-29-plantillas-cuenta` (7 archivos modificad
 
 ---
 
+### 2026-11-11T09:30:00-05:00 — HU-42 — Hallazgos del código real y diseño
+
+**Fase:** Análisis / Diseño
+
+**Objetivo:**
+Planificar la HU-42 (cerrar un incidente con informe) sobre el código real de `develop` (8468edf), con HU-39 y HU-41 ya integradas.
+
+**Estado anterior:**
+Rama `feat/hu-42-cerrar-incidente` creada desde `origin/develop`, árbol limpio. La matriz marcaba HU-42 como "Planificado (bloqueado por HU-39/41)".
+
+**Análisis técnico resumido:**
+- El número 021 está tomado por `origin/feat/hu-40-transferir-coordinacion` y el 020 por `origin/feat/hu-49-sincronizacion-offline`; 022 a 024 son de DEP-04. La HU-42 usa **025**.
+- Nada en el sistema llevaba un incidente a `localizado`, estado que el CA-1 exige. Se añade una RPC mínima `treksafe_marcar_incidente_localizado`.
+- Tras el cierre la expedición sigue en `alerta` (CA-3) y `leerCoordinaciones` filtra los incidentes cerrados, así que el detalle de la alerta necesita su propia lectura del último cierre.
+- La 021 (HU-40) hace `REVOKE UPDATE` de tabla sobre `incidentes`, lo que retira también los privilegios de columna: la 025 debe ser solo aditiva y aplicarse después de la 021.
+- Contrato de HU-41 para HU-42: `FOR UPDATE` desde el principio y función interna `treksafe_anexar_entrada_bitacora_interna(..., 'cierre', ...)`.
+
+**Decisión adoptada:** Decisiones provisionales D1 a D7 (catálogo de resultados sin estado de salud, cierre solo desde `localizado`, nota fija al localizar, códigos HTTP como HU-41, sin aviso al senderista, alerta visible tras el cierre, resumen de 1 a 2000 caracteres), todas pendientes de confirmar con Marko (D1 también con Jhon).
+
+**Pruebas:** No aplica (análisis).
+
+**Riesgos o bloqueos:** Orden 021 → 025 con Favio y Ariana; conflictos de merge en `servicios.ts` y `rutasRescate.ts` con HU-40.
+
+**Estado:** Planificado
+
+**Siguiente acción:** Implementar migración, backend y frontend.
+
+---
+
+### 2026-11-11T13:00:00-05:00 — HU-42 — Migración 025, backend y frontend
+
+**Fase:** Implementación
+
+**Objetivo:**
+Implementar el cierre del incidente con informe según el plan, por capas y con commits separados.
+
+**Estado anterior:**
+Solo análisis y decisiones D1 a D7.
+
+**Análisis técnico resumido:**
+- `025_hu42_cerrar_incidente.sql`: tabla `informes_cierre_incidente` (uno por incidente, solo anexada, hora del servidor), `GRANT UPDATE (estado, cerrado_en, version)` aditivo y tres RPC. No modifica `expediciones`.
+- Backend: comandos `ComandoCerrarIncidente` y `ComandoMarcarIncidenteLocalizado`, casos de uso `CerrarIncidente`, `MarcarIncidenteLocalizado` y `ConsultarCierreIncidente`, interfaces segregadas, `CierreIncidenteDAOSupabase` y `CierreIncidenteDAOMemoria`, controlador y tres rutas. Los casos de uso no importan Supabase ni Express.
+- Frontend: `CierreIncidente` (confirmación en dos pasos, reintento con el mismo `comandoId`), `InformeCierreIncidente` y cambios mínimos en `BitacoraIncidente` (prop `alCargar`) y `PaginaDetalleAlertaRescate`.
+- Hallazgo al probar: una FK del informe hacia las entradas de la bitácora impedía el `TRUNCATE` de la bitácora antes de su trigger y rompía la regresión SQL de HU-41; se eliminó la FK (la RPC fija `entrada_bitacora_id`).
+
+**Decisión adoptada:** Se acepta la desviación sin FK hacia la bitácora (ADR-10). Se documentan las demás desviaciones en `docs/hu-42/diseno.md`.
+
+**Pruebas:** Ver la entrada de verificación.
+
+**Riesgos o bloqueos:** DAO Supabase sin probar contra DEV (PostgREST); `test-dep108-postgres.mjs` no ejecutable aquí (falta el binario de PostgREST).
+
+**Estado:** Implementado; verificado localmente
+
+**Siguiente acción:** Documentar evidencias y preparar la PR propuesta.
+
+---
+
+### 2026-11-11T17:30:00-05:00 — HU-42 — Verificación local
+
+**Fase:** Pruebas / Integración
+
+**Objetivo:**
+Ejecutar todas las suites con PostgreSQL local desechable y registrar los resultados reales.
+
+**Estado anterior:**
+Commits de migración, backend y frontend en la rama local, sin push ni PR.
+
+**Análisis técnico resumido:**
+- `test-hu42-postgres.mjs`: 13 casos SQL de HU-42, 16 de regresión de HU-41, 9 de concurrencia con sesiones reales (incluidas 10 rondas de cierres simultáneos y 20 rondas de nota contra cierre sin `40P01`) y 20 pruebas TypeScript sobre Postgres real: 39 de 39 casos.
+- `test:pwa:privacidad` falla 6 pruebas en la ruta del proyecto (contiene `á`), exactamente las mismas que en `develop` limpio; en una ruta sin tilde pasan 22 de 22 con y sin estos cambios. No es una regresión.
+
+**Decisión adoptada:** Se registran los resultados tal cual (ver `docs/hu-42/evidencias/resultado-suites.md` y `resultado-postgres.md`).
+
+**Pruebas (resultados reales):**
+- `npm run typecheck --prefix backend` → OK; `npm test --prefix backend` → 705 aprobadas, 0 fallos; `npm run build --prefix backend` → OK.
+- `npm run typecheck`, `typecheck:tests`, `typecheck:ui --prefix frontend` → OK; `npm run test:equipo --prefix frontend` → 174 aprobadas, 0 fallos, 2 omitidas anteriores; `npm run build --prefix frontend` → OK; `npm run test:ui --prefix frontend` → 13/13.
+- `node backend/scripts/test-hu42-postgres.mjs --pg-bin "C:\Program Files\PostgreSQL\17\bin"` → 39/39; `test-hu41-postgres.mjs` → 23/23.
+- `test-dep108-postgres.mjs` → no ejecutado (requiere `--postgrest`).
+
+**Riesgos o bloqueos:** Prueba manual en DEV pendiente hasta que Ariana aplique la 025 (después de la 021).
+
+**Estado:** Verificado localmente
+
+**Siguiente acción:** PR a `develop` cuando el usuario lo decida; avisos a Ariana (025), Favio (orden 021 → 025), Jhon (D1, HU-47) y Marko (D1 a D7).
+
+---
+
 ## Matriz de criterios de aceptación
 
 | HU | Criterio | Estado | Evidencia |
@@ -325,12 +412,12 @@ Cambios sin confirmar en `feature/HU-29-plantillas-cuenta` (7 archivos modificad
 | HU-36 | C1. Solo el propietario consulta los cambios de su plan | Planificado (bloqueado por HU-26/27/35) | — |
 | HU-36 | C2. Edición, cancelación y ampliación con fecha, autor, antes/después | Planificado (bloqueado) | — |
 | HU-36 | C3. Evento atómico con la operación, orden estable, sin contraseñas ni datos médicos | Planificado (bloqueado) | — |
-| HU-41 | C1. Responsable vigente agrega entradas a incidente abierto | Planificado (bloqueado por HU-39) | — |
-| HU-41 | C2. Entradas sin sobrescritura con autor y hora del servidor | Planificado (bloqueado) | — |
-| HU-41 | C3. Rescatistas autorizados leen en orden estable; corrección = nueva entrada | Planificado (bloqueado) | — |
-| HU-42 | C1. Solo el responsable cierra incidente localizado y abierto con resultado y resumen | Planificado (bloqueado por HU-39/41) | — |
-| HU-42 | C2. Cierre de todo el incidente conservando bitácora | Planificado (bloqueado) | — |
-| HU-42 | C3. Cierre operativo ≠ retorno confirmado; no confirma retorno | Planificado (bloqueado) | — |
+| HU-41 | C1. Responsable vigente agrega entradas a incidente abierto | Verificado localmente | `docs/hu-41/evidencias/` (SQL 16/16, concurrencia, contrato del DAO); DEV pendiente |
+| HU-41 | C2. Entradas sin sobrescritura con autor y hora del servidor | Verificado localmente | `docs/hu-41/evidencias/` (triggers de solo anexado, hora del servidor); DEV pendiente |
+| HU-41 | C3. Rescatistas autorizados leen en orden estable; corrección = nueva entrada | Verificado localmente | `docs/hu-41/evidencias/` (orden `(registrada_en, secuencia)`, corrección); DEV pendiente |
+| HU-42 | C1. Solo el responsable cierra incidente localizado y abierto con resultado y resumen | Verificado localmente | SQL 3 a 6 y 12 de `hu42_cerrar_incidente.test.sql`; contrato del DAO; `rutasCierreIncidente.test.ts`; concurrencia (a); DAO Supabase sin probar contra DEV |
+| HU-42 | C2. Cierre de todo el incidente conservando bitácora | Verificado localmente | SQL 7 a 9 y 11; contrato (bitácora conservada, un solo informe); concurrencia (b), (b2), (c), (d1) a (d3), (e); regresión SQL de HU-41 16/16 |
+| HU-42 | C3. Cierre operativo ≠ retorno confirmado; no confirma retorno | Verificado localmente | SQL 10 (la fila de `expediciones` queda idéntica con `alerta` y `completada`); `cierreIncidente.dto.test.ts`; `InformeCierreIncidente.test.tsx` |
 | HU-50 | C1. Autoriza antes de descifrar (consentimiento, incidente abierto, responsable) | Planificado (bloqueado por HU-39/40) | — |
 | HU-50 | C2. Relevo aceptado transfiere acceso; otros reciben rechazo sin ficha | Planificado (bloqueado) | — |
 | HU-50 | C3. Auditoría de permitidos/denegados; correos sin datos médicos | Planificado (bloqueado) | — |
@@ -346,6 +433,10 @@ Cambios sin confirmar en `feature/HU-29-plantillas-cuenta` (7 archivos modificad
 | ADR-06 | Cómo probar la lógica pura del frontend sin runner ni dependencias nuevas | Instalar vitest / probar solo con build / ejecutar con `tsx` del backend | Lógica en `plantillasCuentaLogica.ts` (sin alias `@/`), prueba `*.test.ts` junto a ella, ejecutada con `npm run test:frontend-logica --prefix backend`; `frontend/tsconfig.json` excluye `src/**/*.test.ts` | Sin dependencias nuevas; la prueba no corre en `npm test` del backend ni en el build del frontend |
 | ADR-07 | Tipo compartido entre presentación y composición | Importar el tipo desde el controlador / desde infraestructura / tipo en `application` | `ModuloPlantillas` en `application/modulos/` | Presentación no importa infraestructura y la composición no importa presentación |
 | ADR-05 | Registro de migraciones | Herramienta externa / SQL numerado + tabla de registro | `backend/migrations/NNN_huXX_descripcion.sql` + tabla `treksafe_migraciones` + `REGISTRO_APLICACION.md` | Sin dependencias nuevas; orden explícito revisable por Sebastián |
+| ADR-08 | Aplicar la 025 respecto a la 021 (HU-40), cuyo `REVOKE UPDATE` de tabla sobre `incidentes` retira los privilegios de columna | Repetir un `REVOKE` y reconceder / solo aditiva con orden documentado | 025 solo aditiva (`GRANT UPDATE (estado, cerrado_en, version)`, ningún `REVOKE` sobre `incidentes`); aplicar la 021 antes; línea de recuperación en la cabecera y en el README de migraciones | Una prueba SQL (caso 12) simula la 021. Si el orden se invierte hay que repetir el `GRANT` |
+| ADR-09 | Idempotencia del cierre y unicidad entre tipos de operación | Tabla de operaciones aparte / `comando_id` = `operacion_id` de la entrada de cierre | `comando_id` único en el informe y reutilizado como `operacion_id` de la entrada `cierre`; sin `CREATE OR REPLACE` de funciones de HU-41 | Un comando ya usado en una nota, en "localizado" o en un incidente da `OPERACION_YA_REGISTRADA` sin tocar HU-41 |
+| ADR-10 | Vínculo del informe con la entrada de cierre de la bitácora | FK compuesta hacia `entradas_bitacora_incidente` / columna sin FK fijada por la RPC | Columna `entrada_bitacora_id` sin FK | Una FK entrante impide el `TRUNCATE` de la bitácora antes de su trigger (la regresión SQL de HU-41 lo detectó); la coherencia la garantiza la RPC y la comprueban las pruebas |
+| ADR-11 | Transición `abierto → localizado`, que nadie implementaba | Dejar el CA-1 inalcanzable / RPC mínima dentro de HU-42 | RPC `treksafe_marcar_incidente_localizado` (solo el responsable, idempotente, con nota fija en la bitácora) | Pendiente de confirmar con Marko (D2); HU-40 debe confirmar que `localizado` sube `version` |
 
 ## Inventario de migraciones
 
@@ -353,6 +444,7 @@ Cambios sin confirmar en `feature/HU-29-plantillas-cuenta` (7 archivos modificad
 |---------|-------------|---------|-------|---------|-------------|
 | `000_registro_migraciones.sql` | `init_schema.sql` | 000 | 2026-10-26 | Solo clúster PostgreSQL 17 local desechable (aplicada y probada); NO aplicada en DEV | Escrita; verificada localmente; pendiente DEV |
 | `001_hu29_plantillas_ruta.sql` (+ `.down.sql`) | 000 | 001 | 2026-10-26 | Solo clúster PostgreSQL 17 local desechable (aplicada y probada, incluida reversión); NO aplicada en DEV | Escrita; verificada localmente; pendiente DEV |
+| `025_hu42_cerrar_incidente.sql` | 017, 019 (aplicar después de la 021 si existe) | 025 | 2026-11-11 | Solo clúster PostgreSQL 17 local desechable (aplicada y probada); NO aplicada en DEV | Escrita; verificada localmente; pendiente DEV (Ariana debe reservar el número y aplicarla una sola vez) |
 
 ## Resultados de pruebas
 
@@ -366,6 +458,12 @@ Cambios sin confirmar en `feature/HU-29-plantillas-cuenta` (7 archivos modificad
 | 2026-10-26 | `TREKSAFE_PG_TEST_URL=postgres://postgres@127.0.0.1:55432/treksafe_desechable npm run test:migraciones --prefix backend` | 12/12 aprobadas, 0 omitidas, 0 fallos |
 | 2026-10-26 | `npm run test:frontend-logica --prefix backend` | 9/9 aprobadas |
 | 2026-10-26 | `npm run build:backend` / `npm run build:frontend` | OK / OK |
+| 2026-11-11 | `npm run typecheck --prefix backend` / `npm test --prefix backend` / `npm run build --prefix backend` (HU-42) | OK / 705 aprobadas, 0 fallos / OK |
+| 2026-11-11 | `npm run typecheck`, `typecheck:tests`, `typecheck:ui`, `test:equipo`, `build`, `test:ui` con `--prefix frontend` (HU-42) | OK, OK, OK, 174 aprobadas con 2 omitidas anteriores, OK, 13/13 |
+| 2026-11-11 | `node backend/scripts/test-hu42-postgres.mjs --pg-bin "C:\Program Files\PostgreSQL\17\bin"` | 39/39 (13 SQL HU-42, 16 SQL HU-41, 9 de concurrencia, suite TypeScript con 20 pruebas) |
+| 2026-11-11 | `node backend/scripts/test-hu41-postgres.mjs --pg-bin "C:\Program Files\PostgreSQL\17\bin"` (regresión) | 23/23 |
+| 2026-11-11 | `npm run test:pwa:privacidad --prefix frontend` | 6 fallos idénticos a los de `develop` limpio con la ruta del proyecto (tilde); 22/22 en una ruta sin tilde, con y sin HU-42 |
+| 2026-11-11 | `node backend/scripts/test-dep108-postgres.mjs` | No ejecutado: exige `--postgrest <postgrest.exe>` y no hay binario en esta máquina |
 
 ## Trabajo pendiente y coordinación
 
@@ -375,6 +473,7 @@ Cambios sin confirmar en `feature/HU-29-plantillas-cuenta` (7 archivos modificad
 - **Fernando:** integrar `CRON_ENABLED`; coordinar plantilla de correo de rescate sin datos médicos (HU-50).
 - **Ariana:** publicar `develop`.
 - **Marko:** aplicar migraciones en DEV en ventana coordinada; aceptación funcional.
+- **HU-42 pendiente para Done:** aplicar la 025 en DEV una sola vez y después de la 021 (Ariana), recargar PostgREST y ejecutar `docs/hu-42/evidencias/prueba-manual.md`; confirmar D1 a D7 con Marko (D1 también con Jhon); orden 021 → 025 y conflictos de merge en `servicios.ts`/`rutasRescate.ts` con Favio; incorporar la 025 a `test-dep108-postgres.mjs` (Marko, script ajeno).
 
 ## Estado final
 
