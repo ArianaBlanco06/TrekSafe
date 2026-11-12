@@ -1,31 +1,30 @@
 import { Router } from 'express';
-import { AmpliarRetorno } from '../../../application/use-cases/AmpliarRetorno.js';
-import { CancelarPlan } from '../../../application/use-cases/CancelarPlan.js';
-import { EditarPlan } from '../../../application/use-cases/EditarPlan.js';
-import { ObtenerPlan } from '../../../application/use-cases/ObtenerPlan.js';
-import { getSupabaseAdmin } from '../../../infrastructure/database/supabase.js';
-import { ExpedicionDAOSupabase } from '../../../infrastructure/repositories/ExpedicionDAOSupabase.js';
-import { RelojSistema } from '../../../infrastructure/services/RelojSistema.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
-import { middlewareAutenticacion, requerirRol } from '../middleware/middlewareAutenticacion.js';
 import {
-  obtenerExpedicionActiva,
-  obtenerHistorialExpediciones,
-  listarExpediciones,
-  confirmarRetorno,
-  crearExpedicion,
-} from '../controllers/controladorExpedicion.js';
+  middlewareAutenticacion,
+  requerirRol,
+} from '../middleware/middlewareAutenticacion.js';
+import { crearControladorExpedicion } from '../controllers/controladorExpedicion.js';
+import { crearModuloExpediciones } from '../../../infrastructure/composicion/servicios.js';
 import { crearControladorPlanExpedicion } from '../controllers/controladorPlanExpedicion.js';
 
-export function crearRutasExpedicion(): Router {
+export function crearRutasExpedicion(
+  modulo = crearModuloExpediciones(),
+): Router {
+  const {
+    obtenerExpedicionActiva,
+    obtenerHistorialExpediciones,
+    listarExpediciones,
+    confirmarRetorno,
+    crearExpedicion,
+  } = crearControladorExpedicion(modulo.servicio);
   const router = Router();
-  const dao = new ExpedicionDAOSupabase(getSupabaseAdmin());
-  const reloj = new RelojSistema();
   const planes = crearControladorPlanExpedicion(
-    new ObtenerPlan(dao),
-    new EditarPlan(dao, reloj),
-    new CancelarPlan(dao, reloj),
-    new AmpliarRetorno(dao, reloj),
+    modulo.obtener,
+    modulo.editar,
+    modulo.cancelar,
+    modulo.ampliar,
+    modulo.avisador,
   );
 
   router.use(middlewareAutenticacion, requerirRol('senderista'));

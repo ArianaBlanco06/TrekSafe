@@ -1,6 +1,5 @@
 import type { IRepositorioOutbox } from '../../domain/repositories/IRepositorioOutbox.js';
-import { RepositorioOutboxSupabase } from '../../infrastructure/repositories/RepositorioOutboxSupabase.js';
-import { RepositorioRescate } from '../../infrastructure/repositories/RepositorioRescate.js';
+import type { IRepositorioRescate } from '../ports/RepositorioRescate.js';
 import { ErrorAplicacion } from '../../shared/errors/ErrorAplicacion.js';
 
 export type ItemDespachoIncidenteDTO = {
@@ -48,8 +47,8 @@ export class FachadaEntregaAvisosIncidente {
   private readonly clavesIdempotenciaProcesadas = new Set<string>();
 
   constructor(
-    private readonly repoOutbox: IRepositorioOutbox = new RepositorioOutboxSupabase(),
-    private readonly repoRescate: RepositorioRescate = new RepositorioRescate(),
+    private readonly repoOutbox: IRepositorioOutbox,
+    private readonly repoRescate: IRepositorioRescate,
   ) {}
 
   /**

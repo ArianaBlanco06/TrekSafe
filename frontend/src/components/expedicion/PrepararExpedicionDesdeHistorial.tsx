@@ -4,15 +4,21 @@ import { ChevronLeft, RefreshCw } from 'lucide-react';
 import { useEstadoEnLinea } from '@/hooks/useEstadoEnLinea';
 import { getSessionScope } from '@/lib/sesion';
 import { obtenerBorradorDesdeHistorial, type BorradorDesdeHistorial } from '@/services/expedicion';
+import { puntosRutaApi, type PuntoRuta } from '@/services/puntosRuta';
 
 type Props = {
   origenId: string;
   children: (borrador: BorradorDesdeHistorial) => ReactNode;
   obtener?: typeof obtenerBorradorDesdeHistorial;
+  consultarPuntos?: (id: string) => Promise<{ puntos: PuntoRuta[] }>;
 };
 
+const consultarPuntosPorDefecto = (id: string) => puntosRutaApi.consultar(id);
+
 /** Carga un origen autorizado antes de montar el formulario de creación. */
-export function PrepararExpedicionDesdeHistorial({ origenId, children, obtener = obtenerBorradorDesdeHistorial }: Props) {
+export function PrepararExpedicionDesdeHistorial({
+  origenId, children, obtener = obtenerBorradorDesdeHistorial, consultarPuntos = consultarPuntosPorDefecto,
+}: Props) {
   const enLinea = useEstadoEnLinea();
   const [scope] = useState(getSessionScope);
   const [borrador, setBorrador] = useState<BorradorDesdeHistorial | null>(null);
@@ -26,8 +32,11 @@ export function PrepararExpedicionDesdeHistorial({ origenId, children, obtener =
     setError('');
     setBorrador(null);
     obtener(origenId)
-      .then((respuesta) => {
-        if (activo && scope === getSessionScope()) setBorrador(respuesta.borrador);
+      .then(async (respuesta) => {
+        if (!activo || scope !== getSessionScope()) return;
+        // Un fallo de consulta no significa que el origen carezca de puntos.
+        const { puntos } = await consultarPuntos(origenId);
+        if (activo && scope === getSessionScope()) setBorrador({ ...respuesta.borrador, puntos });
       })
       .catch((causa: unknown) => {
         if (activo && scope === getSessionScope()) {
@@ -37,7 +46,7 @@ export function PrepararExpedicionDesdeHistorial({ origenId, children, obtener =
       .finally(() => { if (activo && scope === getSessionScope()) setCargando(false); });
     return () => { activo = false; };
     // Reconectar no vuelve a montar un formulario que ya contiene cambios.
-  }, [origenId, obtener, intento, scope]);
+  }, [origenId, obtener, consultarPuntos, intento, scope]);
 
   if (borrador) return children(borrador);
 

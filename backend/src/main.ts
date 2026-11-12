@@ -1,43 +1,96 @@
-import { createApp } from './presentation/http/app.js';
-import { loadEnv } from './infrastructure/config/env.js';
+import { iniciarApi } from './api.js';
+import { iniciarWorker } from './worker.js';
+import { inicializarEntorno, loadEnv } from './infrastructure/config/env.js';
 import { verificarConexionBaseDatos } from './infrastructure/database/supabase.js';
-import { ServicioCorreo } from './infrastructure/email/ServicioCorreo.js';
+import { closePool } from './infrastructure/database/pool.js';
+import { createApp } from './presentation/http/app.js';
+import { verificarCorreoConfigurado } from './infrastructure/composicion/arranque.js';
 import { iniciarCronFechaLimiteExpedicion } from './infrastructure/jobs/cronFechaLimiteExpedicion.js';
-import { iniciarWorkerOutbox } from './infrastructure/jobs/workerOutboxJob.js';
+import {
+  esEntradaPrincipal,
+  registrarSenales,
+} from './infrastructure/ejecucion/cicloVida.js';
 
-async function bootstrap() {
-  loadEnv();
-  const { port, nodeEnv, mailDevFallback, cronEnabled } = loadEnv();
+export type DependenciasCompatibilidad = {
+  verificarBase(): Promise<void>;
+  verificarCorreo(): Promise<void>;
+  iniciarWorker(): Promise<{ detener(): Promise<void> }>;
+  iniciarApi(): Promise<{ detener(): Promise<void> }>;
+  cerrarRecursos(): Promise<void>;
+};
 
-  try {
-    await verificarConexionBaseDatos();
-    console.log('[TrekSafe API] Conexión a base de datos Supabase OK');
-  } catch (err) {
-    console.error('[TrekSafe API] Fallo en conexión a base de datos:', err);
-    process.exit(1);
-  }
-
-  try {
-    await new ServicioCorreo().verificarConexion();
-  } catch (err) {
-    if (nodeEnv === 'production' && !mailDevFallback) {
-      console.error('[TrekSafe API] Configuración de correo fallida:', err);
-      process.exit(1);
-    }
-    console.warn('[TrekSafe API] Advertencia de verificación de correo (desarrollo continúa):', err);
-  }
-
-  if (cronEnabled) {
-    iniciarCronFechaLimiteExpedicion();
-    iniciarWorkerOutbox();
-  } else {
-    console.log('[Cron] desactivado (CRON_ENABLED=false)');
-  }
-
-  const app = createApp();
-  app.listen(port, '0.0.0.0', () => {
-    console.log(`[TrekSafe API] escuchando en http://0.0.0.0:${port}`);
-  });
+function crearDependenciasCompatibilidad(): DependenciasCompatibilidad {
+  inicializarEntorno();
+  const env = loadEnv();
+  return {
+    verificarBase: verificarConexionBaseDatos,
+    verificarCorreo: verificarCorreoConfigurado,
+    iniciarWorker: () =>
+      iniciarWorker({
+        habilitado: env.cronEnabled,
+        verificarBase: async () => {},
+        verificarCorreo: async () => {},
+        iniciarTareas: () => iniciarCronFechaLimiteExpedicion(env),
+        cerrarRecursos: async () => {},
+      }),
+    iniciarApi: () =>
+      iniciarApi({
+        port: env.port,
+        verificarBase: async () => {},
+        crearAplicacion: createApp,
+        cerrarRecursos: async () => {},
+      }),
+    cerrarRecursos: closePool,
+  };
 }
 
-bootstrap();
+/** Entrada histórica: conserva API y cron juntos hasta el cambio de despliegue de #110. */
+export async function iniciarCompatibilidad(
+  dependencias: DependenciasCompatibilidad = crearDependenciasCompatibilidad(),
+) {
+  let worker:
+    | Awaited<ReturnType<DependenciasCompatibilidad['iniciarWorker']>>
+    | undefined;
+  try {
+    await dependencias.verificarBase();
+    await dependencias.verificarCorreo();
+    worker = await dependencias.iniciarWorker();
+    const api = await dependencias.iniciarApi();
+    let cierre: Promise<void> | undefined;
+    const tareas = worker;
+    return {
+      detener: () =>
+        (cierre ??= (async () => {
+          try {
+            const resultados = await Promise.allSettled([
+              tareas.detener(),
+              api.detener(),
+            ]);
+            const fallo = resultados.find(
+              (resultado): resultado is PromiseRejectedResult =>
+                resultado.status === 'rejected',
+            );
+            if (fallo) throw fallo.reason;
+          } finally {
+            await dependencias.cerrarRecursos();
+          }
+        })()),
+    };
+  } catch (error) {
+    try {
+      await worker?.detener();
+    } finally {
+      await dependencias.cerrarRecursos();
+    }
+    throw error;
+  }
+}
+
+if (esEntradaPrincipal(import.meta.url)) {
+  iniciarCompatibilidad()
+    .then(({ detener }) => registrarSenales(detener))
+    .catch((error) => {
+      console.error('[TrekSafe] Fallo de arranque:', error);
+      process.exitCode = 1;
+    });
+}

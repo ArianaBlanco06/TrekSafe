@@ -9,12 +9,15 @@ export class RepositorioOutboxSupabase implements IRepositorioOutbox {
   private mapearFila(f: any): MensajeOutbox {
     return {
       id: f.id,
+      claveEvento: f.clave_evento,
+      canal: f.canal,
       tipoEvento: f.tipo_evento,
       destinatario: f.destinatario,
+      destinatarioNormalizado: f.destinatario_normalizado,
       asunto: f.asunto,
       cuerpo: f.cuerpo,
       cuerpoHtml: f.cuerpo_html,
-      metadata: f.metadata,
+      metadata: f.metadata ?? {},
       estado: f.estado,
       intentos: f.intentos,
       maxIntentos: f.max_intentos,
@@ -30,9 +33,12 @@ export class RepositorioOutboxSupabase implements IRepositorioOutbox {
   }
 
   async guardar(mensaje: NuevoMensajeOutbox): Promise<MensajeOutbox> {
+    const canal = mensaje.canal ?? 'correo';
     const { data, error } = await this.supabase
       .from('outbox_notificaciones')
       .insert({
+        clave_evento: mensaje.claveEvento,
+        canal,
         tipo_evento: mensaje.tipoEvento,
         destinatario: mensaje.destinatario,
         asunto: mensaje.asunto,
@@ -48,6 +54,19 @@ export class RepositorioOutboxSupabase implements IRepositorioOutbox {
       .single();
 
     if (error) {
+      if (error.code === '23505') {
+        // Idempotencia: el evento y destinatario ya existen en el canal
+        const normalizado = mensaje.destinatario.trim().toLowerCase();
+        const { data: existente } = await this.supabase
+          .from('outbox_notificaciones')
+          .select('*')
+          .eq('clave_evento', mensaje.claveEvento)
+          .eq('destinatario_normalizado', normalizado)
+          .eq('canal', canal)
+          .maybeSingle();
+
+        if (existente) return this.mapearFila(existente);
+      }
       throw new ErrorAplicacion(500, `Error al guardar en outbox: ${error.message}`);
     }
 

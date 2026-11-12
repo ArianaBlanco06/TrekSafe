@@ -135,7 +135,9 @@ test('medicina, contactos, expediciones y rescate nunca tienen fallback de cache
   await expect(page.getByPlaceholder('Ej: Penicilina')).toHaveValue('alergia-privada-a');
   await page.goto('/senderista/perfil/contactos');
   await expect(page.getByText('Contacto privado A', { exact: true })).toBeVisible();
-  const urls = ['/api/usuario/ficha-medica', '/api/usuario/contactos', '/api/expediciones', '/api/rescate/alertas', '/externo/perfil'];
+  const urls = ['/api/usuario/ficha-medica', '/api/usuario/contactos', '/api/expediciones',
+    // HU-36: el historial de cambios del plan contiene datos personales.
+    '/api/expediciones/dddddddd-dddd-4ddd-8ddd-dddddddddddd/cambios', '/api/rescate/alertas', '/externo/perfil'];
   for (const url of urls) {
     expect(await page.evaluate(async endpoint => (await fetch(endpoint, {
       cache: 'no-store', headers: { Authorization: 'Bearer fixture-a' },

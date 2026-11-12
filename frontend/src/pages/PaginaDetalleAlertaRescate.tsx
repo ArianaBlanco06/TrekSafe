@@ -13,6 +13,8 @@ import {
   Users,
 } from 'lucide-react';
 import { ExpeditionRouteMapLazy } from '@/components/maps/ExpeditionRouteMapLazy';
+import { BitacoraIncidente } from '@/components/rescate/BitacoraIncidente';
+import { BloqueCoordinacion } from '@/components/rescate/BloqueCoordinacion';
 import { parseDecimalCoordinates } from '@/lib/coordinates';
 import { buildExternalMapUrl } from '@/lib/mapLinks';
 import {
@@ -208,6 +210,24 @@ export function PaginaDetalleAlertaRescate() {
       </div>
 
       {error && <div className="error-banner mb-4">{error}</div>}
+
+      {/* HU-39: coordinación de la alerta, aparte de "Confirmar recepción" (HU-14). */}
+      <BloqueCoordinacion
+        expedicionId={detalle.expedicionId}
+        estado="alerta"
+        coordinacion={detalle.coordinacion}
+        alActualizar={cargarDetalle}
+      />
+
+      {/* HU-41: bitácora compartida del incidente (distinta de la bitácora personal de HU-14). */}
+      {detalle.coordinacion && (
+        <BitacoraIncidente
+          key={detalle.coordinacion.incidenteId}
+          incidenteId={detalle.coordinacion.incidenteId}
+          alCambiarResponsable={cargarDetalle}
+        />
+      )}
+
       {mensajeGuardado && (
         <div className="mb-4 p-3 rounded-xl bg-primary/10 text-primary text-sm font-medium">
           {mensajeGuardado}

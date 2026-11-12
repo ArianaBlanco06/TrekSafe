@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { FachadaEntregaAvisosIncidente } from './FachadaEntregaAvisosIncidente.js';
 import type { IRepositorioOutbox } from '../../domain/repositories/IRepositorioOutbox.js';
 import type { MensajeOutbox, NuevoMensajeOutbox } from '../../domain/entities/OutboxNotificacion.js';
-import type { RepositorioRescate } from '../../infrastructure/repositories/RepositorioRescate.js';
+import type { IRepositorioRescate } from '../ports/RepositorioRescate.js';
 
 class MockRepositorioOutbox implements IRepositorioOutbox {
   public items: MensajeOutbox[] = [];
@@ -11,6 +11,9 @@ class MockRepositorioOutbox implements IRepositorioOutbox {
   async guardar(mensaje: NuevoMensajeOutbox): Promise<MensajeOutbox> {
     const item: MensajeOutbox = {
       id: `outbox-${this.items.length + 1}`,
+      claveEvento: mensaje.claveEvento ?? `evt-${this.items.length + 1}`,
+      canal: mensaje.canal ?? 'correo',
+      destinatarioNormalizado: mensaje.destinatario.toLowerCase().trim(),
       tipoEvento: mensaje.tipoEvento,
       destinatario: mensaje.destinatario,
       asunto: mensaje.asunto,
@@ -83,7 +86,7 @@ describe('HU-46: Revisar la entrega de avisos de un incidente (DoD y Criterios)'
     repoRescate = new MockRepositorioRescate();
     fachada = new FachadaEntregaAvisosIncidente(
       repoOutbox,
-      repoRescate as unknown as RepositorioRescate,
+      repoRescate as unknown as IRepositorioRescate,
     );
   });
 
@@ -92,6 +95,8 @@ describe('HU-46: Revisar la entrega de avisos de un incidente (DoD y Criterios)'
       // 1. Mensaje Enviado
       repoOutbox.items.push({
         id: 'msg-1',
+        claveEvento: 'ALERTA_CONTACTO:exp-1',
+        canal: 'correo',
         tipoEvento: 'ALERTA_CONTACTO',
         destinatario: 'contacto@ejemplo.com',
         asunto: 'Alerta retorno',
@@ -114,6 +119,8 @@ describe('HU-46: Revisar la entrega de avisos de un incidente (DoD y Criterios)'
       // 2. Mensaje Fallido
       repoOutbox.items.push({
         id: 'msg-2',
+        claveEvento: 'ALERTA_RESCATE:exp-1',
+        canal: 'correo',
         tipoEvento: 'ALERTA_RESCATE',
         destinatario: 'rescate@treksafe.pe',
         asunto: 'Alerta rescate',
@@ -136,6 +143,8 @@ describe('HU-46: Revisar la entrega de avisos de un incidente (DoD y Criterios)'
       // 3. Mensaje Incierto
       repoOutbox.items.push({
         id: 'msg-3',
+        claveEvento: 'ALERTA_CONTACTO:exp-1:otro',
+        canal: 'correo',
         tipoEvento: 'ALERTA_CONTACTO',
         destinatario: 'otro@ejemplo.com',
         asunto: 'Alerta retorno',
@@ -174,6 +183,8 @@ describe('HU-46: Revisar la entrega de avisos de un incidente (DoD y Criterios)'
     it('permite reintentar un aviso fallido y previene reenvíos con la misma clave de idempotencia', async () => {
       repoOutbox.items.push({
         id: 'msg-fallido',
+        claveEvento: 'ALERTA_CONTACTO:exp-fallido',
+        canal: 'correo',
         tipoEvento: 'ALERTA_CONTACTO',
         destinatario: 'contacto@ejemplo.com',
         asunto: 'Alerta',
@@ -217,6 +228,8 @@ describe('HU-46: Revisar la entrega de avisos de un incidente (DoD y Criterios)'
     it('bloquea terminantemente el reintento de avisos que ya fueron enviados exitosamente', async () => {
       repoOutbox.items.push({
         id: 'msg-ya-enviado',
+        claveEvento: 'ALERTA_CONTACTO:exp-ya-enviado',
+        canal: 'correo',
         tipoEvento: 'ALERTA_CONTACTO',
         destinatario: 'contacto@ejemplo.com',
         asunto: 'Alerta',
@@ -252,6 +265,8 @@ describe('HU-46: Revisar la entrega de avisos de un incidente (DoD y Criterios)'
     it('bloquea el reintento manual directo de avisos en estado incierto hasta su revisión', async () => {
       repoOutbox.items.push({
         id: 'msg-incierto',
+        claveEvento: 'ALERTA_RESCATE:exp-incierto',
+        canal: 'correo',
         tipoEvento: 'ALERTA_RESCATE',
         destinatario: 'rescate@treksafe.pe',
         asunto: 'Alerta',
