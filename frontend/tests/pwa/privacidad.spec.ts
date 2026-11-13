@@ -155,7 +155,7 @@ test('medicina, contactos, expediciones y rescate nunca tienen fallback de cache
   }
 });
 
-test('shell, plantillas y borradores propios funcionan offline y se sincronizan en la misma sesion', async ({ page, context, request }) => {
+test('shell, plantillas y borradores propios funcionan offline y se sincronizan tras revisión explícita', async ({ page, context, request }) => {
   await login(page);
   await guardarOffline(page);
   expect((await inventario(page)).some(entry => entry.url.endsWith('/expedition-drafts') && entry.body.includes('Destino privado A'))).toBe(true);
@@ -167,7 +167,13 @@ test('shell, plantillas y borradores propios funcionan offline y se sincronizan 
   await page.getByRole('button', { name: 'Destino privado A', exact: true }).click();
   await expect(page.getByLabel('Ubicación inicial', { exact: true })).toHaveValue('Inicio privado A');
   await context.setOffline(false);
-  await expect(page.getByText('Borradores offline sincronizados con el servidor.')).toBeVisible();
+  await page.getByRole('link', { name: 'Revisar cola de borradores' }).click();
+  await page.getByRole('button', { name: 'Revisar borrador', exact: true }).click();
+  await expect(page.getByRole('checkbox', { name: /Contacto privado A/ })).toBeChecked();
+  await page.getByLabel('He revisado los contactos de alerta para esta nueva expedición.').check();
+  await page.getByLabel('He revisado las fechas de salida y retorno para este borrador.').check();
+  await page.getByRole('button', { name: 'Confirmar y sincronizar borrador' }).click();
+  await expect(page.getByText('Borrador sincronizado. Puedes abrir su expedición.')).toBeVisible();
   const created = await (await request.get('/__tests__/creadas')).json();
   expect(created.some((entry: { account: string; lugarFin: string }) => entry.account === 'a' && entry.lugarFin === 'Destino privado A')).toBe(true);
 });

@@ -33,6 +33,8 @@ import { PropiedadExpedicionSupabase } from '../../infrastructure/repositories/P
 import { crearRutasHistorialCambios } from '../../presentation/http/routes/rutasHistorialCambios.js';
 import { crearRutasAvisos } from '../../presentation/http/routes/rutasAvisos.js';
 
+import { crearRutasBorradores } from '../../presentation/http/routes/rutasBorradores.js';
+import { CreadorPlanSupabase } from '../repositories/CreadorPlanSupabase.js';
 import type { Router } from 'express';
 import type { DependenciasHttp } from '../../presentation/http/app.js';
 
@@ -89,6 +91,7 @@ export function ensamblarHttp(): DependenciasHttp {
     '/expediciones',
     crearRutasHistorialCambios(consultarHistorialCambios),
   );
+  registrar('/expediciones', crearRutasBorradores(new CreadorPlanSupabase(getSupabaseAdmin())));
   registrar('/expediciones', crearRutasExpedicion());
   registrar('/plantillas', crearRutasPlantillas(ensamblarModuloPlantillas()));
   registrar('/rescate', crearRutasRescate());

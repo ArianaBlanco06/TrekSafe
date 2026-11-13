@@ -38,6 +38,9 @@ jobs:
       - name: Compilar backend
         run: npm run build --prefix backend
 
+      - name: Probar idempotencia HU-49 en PostgreSQL desechable
+        run: node backend/scripts/test-hu49-postgres.mjs --pg-bin "$(pg_config --bindir)"
+
   frontend:
     name: Frontend - validaciones
     runs-on: ubuntu-latest
@@ -117,7 +120,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo install -d /usr/share/postgresql-common/pgdg
-          curl --fail --location --retry 3 https://www.postgresql.org/media/keys/ACCC4CF8.asc -o "$RUNNER_TEMP/pgdg.asc"
+          curl --fail --location --connect-timeout 15 --max-time 60 --retry 3 --retry-all-errors --retry-delay 2 https://www.postgresql.org/media/keys/ACCC4CF8.asc -o "$RUNNER_TEMP/pgdg.asc"
           gpg --show-keys --with-colons "$RUNNER_TEMP/pgdg.asc" | grep -F 'B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8'
           sudo install -m 644 "$RUNNER_TEMP/pgdg.asc" /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
           echo 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main' | sudo tee /etc/apt/sources.list.d/treksafe-pgdg.list
@@ -130,7 +133,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/postgrest"
-          curl --fail --location --retry 3 https://github.com/PostgREST/postgrest/releases/download/v16.5/postgrest-v16.5-linux-static-x86-64.tar.xz -o "$RUNNER_TEMP/postgrest.tar.xz"
+          curl --fail --location --connect-timeout 15 --max-time 60 --retry 3 --retry-all-errors --retry-delay 2 https://github.com/PostgREST/postgrest/releases/download/v16.5/postgrest-v16.5-linux-static-x86-64.tar.xz -o "$RUNNER_TEMP/postgrest.tar.xz"
           echo "5099e7ada38f9f6846cd87c14c5f158b7c165f1e9959665ad412e61f4dceba95  $RUNNER_TEMP/postgrest.tar.xz" | sha256sum --check
           tar -xJf "$RUNNER_TEMP/postgrest.tar.xz" -C "$RUNNER_TEMP/postgrest"
           "$RUNNER_TEMP/postgrest/postgrest" --version
