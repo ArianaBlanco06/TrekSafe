@@ -2,7 +2,7 @@
 
 Base `develop` 6ad98a9. Se conserva la autoría de Fernando; correcciones realizadas por Codex por delegación de Marko. La outbox canónica es 015, ya aplicada en DEV; no existe otra migración 012 de HU-45 que deba aplicarse.
 
-026 agrega un historial de intentos sin cuerpo/destinatario, presupuesto automático y autorización de un intento manual. Las tres RPC usan SECURITY INVOKER y solo service_role puede ejecutarlas. Un token UUID nuevo identifica cada reserva. El inicio se confirma en SQL antes de llamar al transporte; solo el titular puede finalizar. Si vence una reserva tras iniciar un transporte, queda incierta y no se reenvía automáticamente. Un fallo al registrar el resultado después de aceptar el correo conserva ese inicio duradero.
+026 agrega un historial de intentos sin cuerpo/destinatario, presupuesto automático y autorización de un intento manual. Las cuatro RPC usan SECURITY INVOKER y solo service_role puede ejecutarlas. La selección de pendientes y las reservas utilizan el reloj de PostgreSQL, evitando diferencias de precisión/hora con Node. Un token UUID nuevo identifica cada reserva. El inicio se confirma en SQL antes de llamar al transporte; solo el titular puede finalizar. Si vence una reserva tras iniciar un transporte, queda incierta y no se reenvía automáticamente. Un fallo al registrar el resultado después de aceptar el correo conserva ese inicio duradero.
 
 Los tres intentos automáticos esperan 1 y 5 minutos. dev-log se guarda con su modo y se cuenta como simulación, no como envío real. El scheduler evita ciclos solapados y espera el ciclo en curso al cerrar. Su construcción está en composición; no se activa al importar ni se incorpora automáticamente al arranque pendiente de #109.
 
