@@ -1,0 +1,53 @@
+{
+  "fecha": "2026-11-13",
+  "base_develop": "6ad98a90be11c8151b9d086172bba49d60d10ef0",
+  "fuente_codigo": "903274c0036b4455f579ed88938842a623ac1d7a",
+  "responsable_aplicacion_dev": "Ariana",
+  "migraciones": [
+    {
+      "version": "020",
+      "archivo": "backend/migrations/020_hu49_creacion_plan_idempotente.sql",
+      "pr": 115,
+      "prerrequisitos": "002, 014, 022",
+      "sha256": "b23bb87b7f373b952d7af5bc4753f6a74163a58749676545130be2815ce9c597",
+      "fuente": "903274c0036b4455f579ed88938842a623ac1d7a",
+      "estado_dev": "Pendiente; verificar objetos y asiento antes de aplicar"
+    },
+    {
+      "version": "025",
+      "archivo": "backend/migrations/025_hu42_cerrar_incidente.sql",
+      "pr": 126,
+      "prerrequisitos": "017, 019, 021",
+      "sha256": "38ecbead5abf46efb551733c792ff753be174d22660b5a135a74559048ad41ac",
+      "fuente": "903274c0036b4455f579ed88938842a623ac1d7a",
+      "estado_dev": "Pendiente; verificar objetos y asiento antes de aplicar"
+    },
+    {
+      "version": "026",
+      "archivo": "backend/migrations/026_hu45_intentos_reservas.sql",
+      "pr": 90,
+      "prerrequisitos": "015",
+      "sha256": "54ba54bc0464cd4b89b69bd921a9d6596d5d68942aa92441490054620642e84d",
+      "fuente": "903274c0036b4455f579ed88938842a623ac1d7a",
+      "estado_dev": "Pendiente; verificar objetos y asiento antes de aplicar"
+    },
+    {
+      "version": "027",
+      "archivo": "backend/migrations/027_hu44_retorno_atomico.sql",
+      "pr": 93,
+      "prerrequisitos": "015, 017, 026",
+      "sha256": "537e98f54019c07c9602205adcfe0b1e8dfaa851c784873dad6596efe15e5e7b",
+      "fuente": "903274c0036b4455f579ed88938842a623ac1d7a",
+      "estado_dev": "Pendiente; verificar objetos y asiento antes de aplicar"
+    },
+    {
+      "version": "028",
+      "archivo": "backend/migrations/028_hu46_reintento_persistido.sql",
+      "pr": 94,
+      "prerrequisitos": "017, 026",
+      "sha256": "582e6b233f95f4f8c362dad94b1d08114f15a224e1d0f932c259da2cb2f0ba2a",
+      "fuente": "903274c0036b4455f579ed88938842a623ac1d7a",
+      "estado_dev": "Pendiente; verificar objetos y asiento antes de aplicar"
+    }
+  ]
+}
