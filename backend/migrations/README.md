@@ -52,6 +52,7 @@ Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos
 | `023_dep108_avisos_transaccionales.sql` | Trigger que guarda el aviso in-app en la transacción de edición/cancelación/ampliación | `000`, `012`, `013` |
 | `024_dep108_vencimientos_outbox.sql` | RPC nueva de vencimientos con estado y pendientes atómicos; no sustituye el cron legado | `000`, `015`, `022` |
 | `025_hu42_cerrar_incidente.sql` | Tabla `informes_cierre_incidente` (un informe por incidente, solo anexado, hora del servidor), `UPDATE (estado, cerrado_en, version)` sobre `incidentes` para `service_role` (solo aditivo, sin `REVOKE`), RPC `treksafe_cerrar_incidente`, `treksafe_marcar_incidente_localizado` y `treksafe_leer_ultimo_cierre_incidente`. No modifica `expediciones`. Aplicar una sola vez, **después de `021` si existe** | `017`, `019` |
+| `029_hu50_ficha_medica_responsable.sql` | Tabla `accesos_ficha_medica` (auditoría de accesos permitidos y denegados a la ficha médica, solo anexado, hora del servidor, sin datos de salud), `UPDATE (version)` sobre `incidentes` para `service_role` (aditivo, para el bloqueo `FOR SHARE`), RPC `treksafe_contexto_ficha_medica`, `treksafe_leer_ficha_cifrada_responsable` y `treksafe_registrar_acceso_ficha_medica`, y la RPC ARCO `treksafe_anonimizar_notas_avance` (`SECURITY DEFINER`). Aplicar una sola vez, **después de `021` y `025`** | `016`, `017` |
 
 `015` es el esquema canónico de HU-45 preparado en DEP-04 (#108). El PR #90 contiene una propuesta llamada `012_hu45_outbox.sql`: **no aplicarla encima de esta tabla ni repetir su registro**. #109 debe conservar la identidad lógica obligatoria y adaptar el encolado/procesador al contrato canónico. Para nuevas migraciones, comprobar el siguiente número libre al momento del merge: hoy la `020` está en la rama de HU-49 (`020_hu49_creacion_plan_idempotente.sql`) y la `021` es de HU-40; el siguiente libre en las ramas remotas conocidas es la `025`.
 
@@ -112,6 +113,24 @@ node backend/scripts/test-hu42-postgres.mjs --pg-bin "C:\Program Files\PostgreSQ
 ```
 
 El script aplica `init_schema.sql`, las migraciones hasta la `019` (más `015`, `022`, `023` y `024`), después la `025`, y ejecuta `tests/hu42_cerrar_incidente.test.sql`, la suite SQL de HU-41 como regresión, las pruebas de concurrencia con sesiones reales y la suite TypeScript `hu42Postgres.integration.test.ts`. `REGISTRO_APLICACION.md` lo actualiza quien aplique la migración en cada entorno.
+
+## HU-50: ficha médica solo para el responsable vigente
+
+`029` no es re-ejecutable (`CREATE TABLE` y `CREATE FUNCTION` fallan si ya existen; además aborta si `029` ya figura en `treksafe_migraciones`) y requiere el esquema base (`fichas_medicas`), `016` (`avances_expedicion`) y `017` (`incidentes`). Aplicarla **una sola vez, después de la `021` y la `025`**. Solo `service_role` ejecuta las funciones.
+
+- **GRANT aditivo:** `GRANT UPDATE (version) ON public.incidentes TO service_role` (sin `REVOKE`). `SELECT ... FOR SHARE` sobre `incidentes` exige UPDATE sobre alguna columna (aviso de la `019`). Si la `021` se aplicara después, su `REVOKE UPDATE` de tabla retiraría este privilegio y la `021` ya vuelve a conceder `version`.
+- **La RPC ARCO es `SECURITY DEFINER`** (`treksafe_anonimizar_notas_avance`) porque `service_role` no tiene ningún privilegio sobre `avances_expedicion` (la `016` solo expone RPC definidoras). Usa `search_path = pg_catalog, pg_temp` y nombres calificados, como las RPC de la `016`; tiene `EXECUTE` solo `service_role`. Las otras tres RPC son `SECURITY INVOKER` con `search_path` vacío.
+- **Tras aplicarla, recargar el esquema de PostgREST** para exponer las 4 RPC nuevas.
+- **Comprobación de solo lectura** (debe dar `false`; la auditoría es solo anexada): `SELECT has_table_privilege('service_role','public.accesos_ficha_medica','UPDATE');`
+- La tabla legada `auditoria_acceso_medico` se conserva, ya no se escribe y queda marcada con un `COMMENT`.
+
+Suite contra una base local desechable (no toca Supabase ni DEV):
+
+```bash
+node backend/scripts/test-hu50-postgres.mjs --pg-bin "C:\Program Files\PostgreSQL\17\bin"
+```
+
+El script aplica `init_schema.sql`, las migraciones hasta la `019` (más `015`, `021`, `022`, `023` y `024`), después la `025` y la `029`, y ejecuta `tests/hu50_ficha_medica_responsable.test.sql`, las suites SQL de HU-42 y HU-41 como regresión, pruebas de concurrencia con sesiones reales y la suite TypeScript `hu50Postgres.integration.test.ts`. `REGISTRO_APLICACION.md` lo actualiza quien aplique la migración en cada entorno.
 
 ## HU-29: plantillas personales de ruta
 
