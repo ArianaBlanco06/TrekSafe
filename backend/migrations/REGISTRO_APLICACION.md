@@ -25,6 +25,7 @@ Solo se anotan aplicaciones reales sobre un entorno (DEV, producción u otro). L
 | `018_hu27_cancelar_salida_futura.sql` | 018 | 2026-11-10 20:43 UTC | DEV | 9b43f46 | Marko | OK |
 | `017_hu39_asumir_coordinacion.sql` | 017 | 2026-11-10 22:51 UTC | DEV | 257b2e2 | Ariana | OK |
 | `015_hu45_outbox.sql` | 015 | 2026-11-11 12:57:25 UTC | DEV | a988637 | Marko (PO), mediante Codex/Supabase | OK: esquema y RLS; procesador no activado |
+| `021_hu40_transferir_coordinacion.sql` | 021 | 2026-11-12 01:56 UTC | DEV | 80f38b4 | Ariana | OK |
 | `022_dep108_crear_expedicion_atomica.sql` | 022 | 2026-11-11 12:57:41 UTC | DEV | a988637 | Marko (PO), mediante Codex/Supabase | OK: creación por RPC y unicidad de bloqueantes |
 | `023_dep108_avisos_transaccionales.sql` | 023 | 2026-11-11 12:57:45 UTC | DEV | a988637 | Marko (PO), mediante Codex/Supabase | OK: evento y aviso transaccionales |
 | `024_dep108_vencimientos_outbox.sql` | 024 | 2026-11-11 12:57:50 UTC | DEV | a988637 | Marko (PO), mediante Codex/Supabase | OK: productor SQL futuro; cron legado sin cambios |

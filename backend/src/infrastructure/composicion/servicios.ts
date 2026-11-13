@@ -15,6 +15,10 @@ import { EditarPlan } from '../../application/use-cases/EditarPlan.js';
 import { CancelarPlan } from '../../application/use-cases/CancelarPlan.js';
 import { AmpliarRetorno } from '../../application/use-cases/AmpliarRetorno.js';
 import { AsignarResponsable } from '../../application/use-cases/AsignarResponsable.js';
+import { ProponerRelevo } from '../../application/use-cases/ProponerRelevo.js';
+import { AceptarRelevo } from '../../application/use-cases/AceptarRelevo.js';
+import { RechazarRelevo } from '../../application/use-cases/RechazarRelevo.js';
+import { CancelarRelevo } from '../../application/use-cases/CancelarRelevo.js';
 import { AgregarEntradaBitacora } from '../../application/use-cases/AgregarEntradaBitacora.js';
 import { ConsultarBitacoraIncidente } from '../../application/use-cases/ConsultarBitacoraIncidente.js';
 import { CerrarIncidente } from '../../application/use-cases/CerrarIncidente.js';
@@ -32,6 +36,8 @@ import { ExpedicionDAOSupabase } from '../repositories/ExpedicionDAOSupabase.js'
 import { IncidenteDAOSupabase } from '../repositories/IncidenteDAOSupabase.js';
 import { BitacoraIncidenteDAOSupabase } from '../repositories/BitacoraIncidenteDAOSupabase.js';
 import { CierreIncidenteDAOSupabase } from '../repositories/CierreIncidenteDAOSupabase.js';
+import { RescatistasDAOSupabase } from '../repositories/RescatistasDAOSupabase.js';
+import type { IRescatistasDAO } from '../../domain/repositories/IRescatistasDAO.js';
 import { ServicioCorreo } from '../email/ServicioCorreo.js';
 import { RelojSistema } from '../services/RelojSistema.js';
 import {
@@ -84,6 +90,13 @@ export function crearModuloExpediciones() {
 export type ModuloRescate = {
   servicio: ServicioRescate;
   asignarResponsable: AsignarResponsable;
+  /** Relevo de la coordinación (HU-40): proponer, aceptar, rechazar y cancelar. */
+  proponerRelevo: ProponerRelevo;
+  aceptarRelevo: AceptarRelevo;
+  rechazarRelevo: RechazarRelevo;
+  cancelarRelevo: CancelarRelevo;
+  /** Catálogo de rescatistas validados para elegir destinatario (HU-40). */
+  rescatistas: IRescatistasDAO;
   consultarBitacoraIncidente: ConsultarBitacoraIncidente;
   agregarEntradaBitacora: AgregarEntradaBitacora;
   // HU-42: cierre del incidente con informe.
@@ -118,6 +131,17 @@ export function crearModuloRescate(
     asignarResponsable:
       dependencias.asignarResponsable ??
       new AsignarResponsable(obtenerIncidentes()),
+    proponerRelevo:
+      dependencias.proponerRelevo ?? new ProponerRelevo(obtenerIncidentes()),
+    aceptarRelevo:
+      dependencias.aceptarRelevo ?? new AceptarRelevo(obtenerIncidentes()),
+    rechazarRelevo:
+      dependencias.rechazarRelevo ?? new RechazarRelevo(obtenerIncidentes()),
+    cancelarRelevo:
+      dependencias.cancelarRelevo ?? new CancelarRelevo(obtenerIncidentes()),
+    rescatistas:
+      dependencias.rescatistas ??
+      new RescatistasDAOSupabase(getSupabaseAdmin()),
     consultarBitacoraIncidente:
       dependencias.consultarBitacoraIncidente ??
       new ConsultarBitacoraIncidente(obtenerBitacora()),

@@ -70,8 +70,12 @@ describe('BloqueCoordinacion (HU-39)', () => {
 
   it('esMia muestra "Tú coordinas esta alerta" sin comparar nombres', async () => {
     const { arbol } = await montar({ coordinacion: coordinacion({ esMia: true }) });
-    assert.equal(textoDe(arbol), 'Tú coordinas esta alerta');
-    assert.equal(arbol.root.findAllByType('button').length, 0);
+    assert.match(textoDe(arbol), /^Tú coordinas esta alerta/);
+    // HU-40: el responsable ve "Transferir coordinación", pero nunca "Asumir coordinación".
+    assert.deepEqual(
+      arbol.root.findAllByType('button').map((b) => b.children.join('')),
+      ['Transferir coordinación'],
+    );
   });
 
   it('el mismo nombre con esMia=false no se muestra como propio', async () => {

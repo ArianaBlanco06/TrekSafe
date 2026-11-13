@@ -22,6 +22,8 @@ URLs históricas: [PWA](https://treksafe-app.vercel.app) · [API /salud](https:/
 
 > **Continuidad ISW2 — HU-32:** gestión de puntos intermedios implementada y validada localmente. [Dossier, demostración y evidencia](docs/hu-32/README.md). Su migración `010_hu32_puntos_ruta.sql` está aplicada y registrada en Supabase DEV.
 
+> **Continuidad ISW2 — HU-40:** transferir la coordinación de una alerta: proponer, aceptar, rechazar y cancelar el relevo entre rescatistas validados, con historial de quién resolvió y cuándo. [Diseño y estado](docs/hu-40/diseno.md) · [prueba manual](docs/hu-40/evidencias/prueba-manual.md). Su migración `021_hu40_transferir_coordinacion.sql` (antes `019`, que ocupó HU-41; corregida en sitio para ampliar el relevo) no está aplicada en ningún entorno compartido y queda pendiente de que Ariana confirme que no está en Supabase DEV. La prueba manual de la API contra Supabase real (proyecto personal) se ejecutó con la versión corregida y dio todo PASS; queda pendiente la del navegador. El relevo pendiente de un caso cerrado queda inerte (sin trigger; el riesgo de reabrir casos está en el diseño). Sin notificación adicional al destinatario.
+
 ## Contenido
 
 - [Características](#características)
@@ -210,7 +212,7 @@ Prefijo `/api` · `Authorization: Bearer <JWT>` · JSON `camelCase`
 | Auth | `POST /auth/registrar-senderista` · `registrar-rescatista` · `iniciar-sesion` |
 | Usuario | `/usuario/ficha-medica` · `/contactos` · `/privacidad/revocar` |
 | Expediciones | `POST /` · `GET /` · `GET /activa` · `GET /historial` · `GET /:id` · `PUT /:id` · `POST /:id/cancelar` · `POST /:id/ampliar-retorno` · `POST /:id/confirmar-retorno` |
-| Rescate | `/expediciones` · `/historial` · `/alertas` · confirmar · bitácora |
+| Rescate | `/expediciones` · `/historial` · `/alertas` · confirmar · bitácora · `POST /alertas/:id/coordinacion` (HU-39) · `GET /rescatistas` · `POST /alertas/:id/coordinacion/relevos` · `POST …/relevos/:relevoId/aceptar` · `…/rechazar` · `…/cancelar` (HU-40) |
 
 ## Seguridad
 

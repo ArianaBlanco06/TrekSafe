@@ -2,9 +2,10 @@ import type { Request, Response } from 'express';
 import {
   confirmarAlertaSchema,
   consultaListarExpedicionesSchema,
+  consultaListarAlertasSchema,
   actualizarBitacoraRescateSchema,
 } from '../../../application/dto/rescate.dto.js';
-import { ServicioRescate } from '../../../application/services/servicioRescate.js';
+import type { ServicioRescate } from '../../../application/services/servicioRescate.js';
 import type { SolicitudAutenticada } from '../middleware/middlewareAutenticacion.js';
 
 export function crearControladorRescate(servicioRescate: ServicioRescate) {
@@ -37,8 +38,10 @@ export function crearControladorRescate(servicioRescate: ServicioRescate) {
   }
 
   async function listarAlertas(req: Request, res: Response): Promise<void> {
+    const consulta = consultaListarAlertasSchema.parse(req.query);
     const alertas = await servicioRescate.listarAlertas(
       solicitudAuth(req).user.id,
+      consulta,
     );
     res.status(200).json({ alertas });
   }
