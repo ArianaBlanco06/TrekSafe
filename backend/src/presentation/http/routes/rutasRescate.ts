@@ -10,6 +10,7 @@ import { crearControladorCoordinacion } from '../controllers/controladorCoordina
 import { crearControladorCierreIncidente } from '../controllers/controladorCierreIncidente.js';
 import { crearControladorRelevo } from '../controllers/controladorRelevo.js';
 import { crearControladorRescatistas } from '../controllers/controladorRescatistas.js';
+import { crearControladorEntregaIncidente } from '../controllers/controladorEntregaIncidente.js';
 import {
   crearModuloRescate,
   type ModuloRescate,
@@ -49,6 +50,7 @@ export function crearRutasRescate(
     marcarLocalizado: modulo.marcarIncidenteLocalizado,
     consultar: modulo.consultarCierreIncidente,
   });
+  const entrega = crearControladorEntregaIncidente(modulo.entregaAvisos);
 
   router.use(middlewareAutenticacion, requerirRol('rescatista'));
   router.get('/expediciones', asyncHandler(listarExpediciones));
@@ -63,6 +65,10 @@ export function crearRutasRescate(
     '/alertas/:expedicionId/confirmar',
     asyncHandler(confirmarAlerta),
   );
+  // HU-46: Revisar la entrega de avisos de un incidente y reintento manual
+  router.get('/alertas/:id/despachos', asyncHandler(entrega.listarDespachosIncidente));
+  router.post('/alertas/:id/despachos/:mensajeId/reintentar', asyncHandler(entrega.reintentarDespachoIncidente));
+
   // HU-39: coordinación (incidente), separada de la recepción histórica de HU-14.
   router.post(
     '/alertas/:expedicionId/coordinacion',

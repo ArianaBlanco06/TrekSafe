@@ -10,6 +10,7 @@ import {
   ServicioBandejaAvisos,
 } from '../../application/services/servicioBandejaAvisos.js';
 import { AvisadorCambiosPlan } from '../../application/services/AvisadorCambiosPlan.js';
+import { FachadaEntregaAvisosIncidente } from '../../application/services/FachadaEntregaAvisosIncidente.js';
 import { ObtenerPlan } from '../../application/use-cases/ObtenerPlan.js';
 import { EditarPlan } from '../../application/use-cases/EditarPlan.js';
 import { CancelarPlan } from '../../application/use-cases/CancelarPlan.js';
@@ -32,6 +33,7 @@ import { RepositorioAlerta } from '../repositories/RepositorioAlerta.js';
 import { RepositorioAuditoriaAccesoMedico } from '../repositories/RepositorioAuditoriaAccesoMedico.js';
 import { RepositorioDespachoCorreo } from '../repositories/RepositorioDespachoCorreo.js';
 import { RepositorioAvisosSupabase } from '../repositories/RepositorioAvisosSupabase.js';
+import { RepositorioOutboxSupabase } from '../repositories/RepositorioOutboxSupabase.js';
 import { ExpedicionDAOSupabase } from '../repositories/ExpedicionDAOSupabase.js';
 import { IncidenteDAOSupabase } from '../repositories/IncidenteDAOSupabase.js';
 import { BitacoraIncidenteDAOSupabase } from '../repositories/BitacoraIncidenteDAOSupabase.js';
@@ -103,6 +105,7 @@ export type ModuloRescate = {
   cerrarIncidente: CerrarIncidente;
   marcarIncidenteLocalizado: MarcarIncidenteLocalizado;
   consultarCierreIncidente: ConsultarCierreIncidente;
+  entregaAvisos: FachadaEntregaAvisosIncidente;
 };
 
 export function crearModuloRescate(
@@ -157,6 +160,12 @@ export function crearModuloRescate(
     consultarCierreIncidente:
       dependencias.consultarCierreIncidente ??
       new ConsultarCierreIncidente(obtenerCierre()),
+    entregaAvisos:
+      dependencias.entregaAvisos ??
+      new FachadaEntregaAvisosIncidente(
+        new RepositorioOutboxSupabase(),
+        new RepositorioOutboxSupabase(),
+      ),
   };
 }
 export function crearDependenciasCron() {
