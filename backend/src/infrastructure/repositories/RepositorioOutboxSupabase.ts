@@ -3,7 +3,8 @@ import type { IRepositorioOutbox } from '../../domain/repositories/IRepositorioO
 import type { MensajeOutbox, NuevoMensajeOutbox } from '../../domain/entities/OutboxNotificacion.js';
 import { ErrorAplicacion } from '../../shared/errors/ErrorAplicacion.js';
 
-export class RepositorioOutboxSupabase implements IRepositorioOutbox {
+import type { IConsultaDespachos,IColaDespachos,ResultadoReintentoManualDTO } from '../../application/ports/despachos.js';
+export class RepositorioOutboxSupabase implements IRepositorioOutbox,IConsultaDespachos,IColaDespachos {
   constructor(private readonly supabase = getSupabaseAdmin()) {}
 
   private mapearFila(f: any): MensajeOutbox {
@@ -94,5 +95,25 @@ export class RepositorioOutboxSupabase implements IRepositorioOutbox {
     if(error) throw new ErrorAplicacion(503,'No se pudo confirmar el resultado del intento');
     if(!['enviado','reintentado','fallido','incierto','reserva_perdida'].includes(data)) throw new ErrorAplicacion(503,'Resultado de intento inválido');
     return data as import('../../domain/repositories/IRepositorioOutbox.js').FinIntento;
+  }
+  private errorDespacho(error:{message:string;code?:string}):never {
+    const codigo=error.message;
+    if(['NO_ES_RESPONSABLE','PROHIBIDO','DESPACHO_AJENO'].includes(codigo)) throw new ErrorAplicacion(403,'No tienes acceso a los despachos de este incidente',codigo);
+    if(codigo==='NO_ENCONTRADO') throw new ErrorAplicacion(404,'Despacho no encontrado',codigo);
+    if(['CLAVE_REUTILIZADA','DESPACHO_NO_FALLIDO'].includes(codigo)) throw new ErrorAplicacion(409,'Solicitud en conflicto',codigo);
+    if(['CLAVE_INVALIDA','AVISO_YA_ENVIADO','ESTADO_INCIERTO_REQUIERE_REVISION'].includes(codigo)||error.code==='22P02') throw new ErrorAplicacion(400,'Solicitud de reintento no permitida',codigo);
+    throw new ErrorAplicacion(503,'No se pudieron consultar o actualizar los despachos');
+  }
+  async listarAutorizados(actor:string,expedicion:string):Promise<MensajeOutbox[]> {
+    const {data,error}=await this.supabase.rpc('treksafe_despachos_autorizados',{p_actor:actor,p_expedicion:expedicion});
+    if(error) this.errorDespacho(error);
+    if(!Array.isArray(data)) throw new ErrorAplicacion(503,'Respuesta de despachos inválida');
+    return data.map(f=>this.mapearFila(f));
+  }
+  async reintentarAutorizado(actor:string,expedicion:string,mensaje:string,clave:string):Promise<ResultadoReintentoManualDTO> {
+    const {data,error}=await this.supabase.rpc('treksafe_reintentar_despacho',{p_actor:actor,p_expedicion:expedicion,p_mensaje:mensaje,p_clave:clave});
+    if(error) this.errorDespacho(error);
+    if(!data||typeof data!=='object'||data.id!==mensaje||data.nuevoEstado!=='pendiente') throw new ErrorAplicacion(503,'Respuesta de reintento inválida');
+    return data as ResultadoReintentoManualDTO;
   }
 }

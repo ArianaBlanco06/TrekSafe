@@ -40,7 +40,7 @@ const baseMigrations = [
     '010_hu32_puntos_ruta', '011_hu29_endurecer_permisos', '012_hu36_eventos_plan_solo_anexado', '013_hu37_avisos', '014_hu38_minutos_recordatorio',
     '016_hu34_avances_expedicion', '017_hu39_asumir_coordinacion', '018_hu27_cancelar_salida_futura', '019_hu41_bitacora_incidente', '021_hu40_transferir_coordinacion'
 ];
-const newMigrations = ['015_hu45_outbox', '022_dep108_crear_expedicion_atomica', '023_dep108_avisos_transaccionales', '024_dep108_vencimientos_outbox', '020_hu49_creacion_plan_idempotente', '025_hu42_cerrar_incidente', '026_hu45_intentos_reservas', '027_hu44_retorno_atomico'];
+const newMigrations = ['015_hu45_outbox', '022_dep108_crear_expedicion_atomica', '023_dep108_avisos_transaccionales', '024_dep108_vencimientos_outbox', '020_hu49_creacion_plan_idempotente', '025_hu42_cerrar_incidente', '026_hu45_intentos_reservas', '027_hu44_retorno_atomico', '028_hu46_reintento_persistido'];
 const apply = async (client, names) => { for (const name of names)
     await client.query(await readFile(path.join(root, 'backend/migrations', `${name}.sql`), 'utf8')); };
 const roles = `CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN; CREATE ROLE service_role NOLOGIN BYPASSRLS;
@@ -282,6 +282,10 @@ try {
     });
     await test('HU-44 retorno, evento y avisos atómicos; destinatarios y deduplicación',async()=>{
       const c=await client('hu44'); try { await c.query(await readFile(path.join(root,'backend/migrations/tests/hu44_retorno.test.sql'),'utf8')); }
+      finally { await c.query('ROLLBACK');await c.end(); }
+    });
+    await test('HU-46 SQL real: responsable, pertenencia, idempotencia y un intento manual',async()=>{
+      const c=await client('hu46'); try { await c.query(await readFile(path.join(root,'backend/migrations/tests/hu46_reintentos.test.sql'),'utf8')); }
       finally { await c.query('ROLLBACK');await c.end(); }
     });
     const key = randomBytes(40).toString('hex');

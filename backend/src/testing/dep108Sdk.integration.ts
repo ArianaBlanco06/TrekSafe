@@ -73,6 +73,26 @@ try {
     assert.equal(envios,antes);
     assert.equal((await db.query('SELECT estado FROM public.outbox_notificaciones WHERE id=$1',[mail2.id])).rows[0].estado,'incierto');
     console.log('OK SDK: worker real sobre PostgREST, exclusión, simulación y reinicio tras aceptación con SQL caído');
+    const responsable=(await db.query('SELECT usuario_id FROM public.perfiles_rescatista ORDER BY usuario_id LIMIT 1')).rows[0].usuario_id as string;
+    await db.query("UPDATE public.expediciones SET estado='alerta' WHERE id=$1",[created.id]);
+    await db.query('SELECT public.treksafe_asumir_coordinacion($1,$2,$3)',[created.id,responsable,randomUUID()]);
+    const manual=await salida.guardar({claveEvento:`manual:${randomUUID()}`,tipoEvento:'prueba',destinatario:'ficticio@example.invalid',asunto:'Prueba',cuerpo:'Prueba',metadata:{expedicionId:created.id}});
+    await db.query("UPDATE public.outbox_notificaciones SET estado='fallido',intentos=3,intentos_automaticos=3 WHERE id=$1",[manual.id]);
+    const clave=randomUUID();
+    const [primera,segunda]=await Promise.all([
+      salida.reintentarAutorizado(responsable,created.id,manual.id,clave),
+      new RepositorioOutboxSupabase(sdk).reintentarAutorizado(responsable,created.id,manual.id,clave),
+    ]);
+    assert.deepEqual(primera,segunda);
+    assert.equal((await db.query('SELECT count(*)::int n FROM public.solicitudes_reintento_outbox WHERE mensaje_id=$1',[manual.id])).rows[0].n,1);
+    await assert.rejects(()=>salida.listarAutorizados(other,created.id),(e:unknown)=>e instanceof Error&&e.message.includes('No tienes acceso'));
+    const total=envios;await worker.procesarLote('manual');assert.equal(envios,total+1);
+    const reiniciado=new RepositorioOutboxSupabase(sdk);
+    assert.deepEqual(await reiniciado.reintentarAutorizado(responsable,created.id,manual.id,clave),primera);
+    await worker.procesarLote('repetido');assert.equal(envios,total+1);
+    const listado=await reiniciado.listarAutorizados(responsable,created.id);
+    assert.ok(listado.some(m=>m.id===manual.id&&m.intentos===4&&m.estado==='enviado'));
+    console.log('OK SDK: reintento concurrente, autorización, un intento adicional e idempotencia tras reinicio');
     const planRetorno=await repo.crearExpedicion(other,{...input,idsContactos:[foreignContact]});
     await db.query("UPDATE public.expediciones SET estado='en_progreso' WHERE id=$1",[planRetorno.id]);
     const retorno=await repo.completarConfirmacionRetorno(planRetorno.id,other);
