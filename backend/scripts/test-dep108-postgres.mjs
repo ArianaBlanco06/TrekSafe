@@ -40,7 +40,7 @@ const baseMigrations = [
     '010_hu32_puntos_ruta', '011_hu29_endurecer_permisos', '012_hu36_eventos_plan_solo_anexado', '013_hu37_avisos', '014_hu38_minutos_recordatorio',
     '016_hu34_avances_expedicion', '017_hu39_asumir_coordinacion', '018_hu27_cancelar_salida_futura', '019_hu41_bitacora_incidente', '021_hu40_transferir_coordinacion'
 ];
-const newMigrations = ['015_hu45_outbox', '022_dep108_crear_expedicion_atomica', '023_dep108_avisos_transaccionales', '024_dep108_vencimientos_outbox', '020_hu49_creacion_plan_idempotente', '025_hu42_cerrar_incidente'];
+const newMigrations = ['015_hu45_outbox', '022_dep108_crear_expedicion_atomica', '023_dep108_avisos_transaccionales', '024_dep108_vencimientos_outbox', '020_hu49_creacion_plan_idempotente', '025_hu42_cerrar_incidente', '026_hu45_intentos_reservas'];
 const apply = async (client, names) => { for (const name of names)
     await client.query(await readFile(path.join(root, 'backend/migrations', `${name}.sql`), 'utf8')); };
 const roles = `CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN; CREATE ROLE service_role NOLOGIN BYPASSRLS;
@@ -276,6 +276,10 @@ try {
             await c.query('ROLLBACK');
             await c.end();
         } });
+    await test('HU-45 SQL real: reservas, inicio, resultado, recuperación y permisos',async()=>{
+      const c=await client('hu45'); try { await c.query(await readFile(path.join(root,'backend/migrations/tests/hu45_reservas.test.sql'),'utf8')); }
+      finally { await c.query('ROLLBACK');await c.end(); }
+    });
     const key = randomBytes(40).toString('hex');
     const conf = path.join(workspace, 'postgrest.conf');
     await writeFile(conf, `db-uri = "postgresql://postgres@127.0.0.1:${port}/${database}"\ndb-schemas = "public"\ndb-anon-role = "anon"\nserver-host = "127.0.0.1"\nserver-port = ${restPort}\n`);
