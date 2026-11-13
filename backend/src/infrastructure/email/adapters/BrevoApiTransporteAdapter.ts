@@ -30,27 +30,10 @@ export class BrevoApiTransporteAdapter implements ITransporteCorreo {
         estado: 'enviado',
         modo: 'brevo-api',
       };
-    } catch (err: any) {
-      const errorMsg = err?.message || String(err);
-      
-      if (
-        errorMsg.toLowerCase().includes('timeout') ||
-        errorMsg.toLowerCase().includes('etimedout') ||
-        errorMsg.toLowerCase().includes('econnreset') ||
-        errorMsg.toLowerCase().includes('socket')
-      ) {
-        return {
-          estado: 'incierto',
-          modo: 'brevo-api',
-          error: `Timeout o respuesta ambigua del proveedor: ${errorMsg}`,
-        };
-      }
-
-      return {
-        estado: 'fallido',
-        modo: 'brevo-api',
-        error: errorMsg,
-      };
+    } catch (err: unknown) {
+      const codigo=typeof err==='object'&&err!==null&&'codigo' in err?String(err.codigo):'';
+      const rechazo=/^4[0-9]{2}$/.test(codigo)||codigo==='BREVO_IP_BLOQUEADO';
+      return {estado:rechazo?'fallido':'incierto',modo:'brevo-api',error:rechazo?'RECHAZO_CONFIRMADO':'RESULTADO_INCIERTO'};
     }
   }
 }

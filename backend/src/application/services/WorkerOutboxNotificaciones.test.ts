@@ -73,6 +73,21 @@ class RepositorioOutboxMemoria implements IRepositorioOutbox {
     return true;
   }
 
+  async iniciarIntento(id:string,token:string):Promise<MensajeOutbox|null> {
+    const item=this.items.find(i=>i.id===id&&i.bloqueadoPor===token);
+    if(!item) return null;
+    item.intentos++;
+    return structuredClone(item);
+  }
+  async finalizarIntento(id:string,token:string,estado:'enviado'|'fallido'|'incierto',modo:string,ahora:Date):Promise<import('../../domain/repositories/IRepositorioOutbox.js').FinIntento> {
+    const item=this.items.find(i=>i.id===id&&i.bloqueadoPor===token);
+    if(!item) return 'reserva_perdida';
+    if(estado==='enviado') { await this.marcarEnviado(id,modo,ahora); return 'enviado'; }
+    if(estado==='incierto') { await this.marcarIncierto(id,item.intentos,'RESULTADO_INCIERTO'); return 'incierto'; }
+    if(item.intentos>=item.maxIntentos) { await this.marcarFallido(id,item.intentos,'RECHAZO_CONFIRMADO'); return 'fallido'; }
+    await this.marcarReintento(id,new Date(ahora.getTime()+(item.intentos===1?60000:300000)),item.intentos,'RECHAZO_CONFIRMADO');
+    return 'reintentado';
+  }
   async marcarEnviado(id: string, modoEnvio: string, fechaEnvio: Date): Promise<void> {
     const item = this.items.find((i) => i.id === id);
     if (item) {
@@ -256,7 +271,7 @@ describe('HU-45: Reintentar avisos fallidos sin perder su seguimiento (DoD y Cri
       // Al agotar el 3er intento debe quedar como 'fallido' definitivo
       assert.equal(repo.items[0].intentos, 3);
       assert.equal(repo.items[0].estado, 'fallido');
-      assert.equal(repo.items[0].ultimoError, 'Rechazo 3');
+      assert.equal(repo.items[0].ultimoError, 'RECHAZO_CONFIRMADO');
     });
   });
 
@@ -277,7 +292,7 @@ describe('HU-45: Reintentar avisos fallidos sin perder su seguimiento (DoD y Cri
       const res = await worker.procesarLote('worker-1');
       assert.equal(res.inciertos, 1);
       assert.equal(repo.items[0].estado, 'incierto');
-      assert.ok(repo.items[0].ultimoError?.includes('Timeout de socket'));
+      assert.equal(repo.items[0].ultimoError,'RESULTADO_INCIERTO');
       assert.equal(repo.items[0].enviadoEn, null);
     });
   });
@@ -305,4 +320,13 @@ describe('HU-45: Reintentar avisos fallidos sin perder su seguimiento (DoD y Cri
       assert.equal(pendientesWorker2.length, 0);
     });
   });
+});
+
+// Una simulación procesa el pendiente pero no acredita aceptación de un proveedor real.
+it('dev-log se contabiliza como registrado y nunca como envío real',async()=>{
+  const repo=new RepositorioOutboxMemoria();
+  await repo.guardar({claveEvento:'simulado',tipoEvento:'prueba',destinatario:'ficticio@example.invalid',asunto:'Prueba',cuerpo:'Prueba'});
+  const transporte:ITransporteCorreo={obtenerModo:()=> 'dev-log',enviar:async()=>({estado:'enviado',modo:'dev-log'})};
+  const resultado=await new WorkerOutboxNotificaciones(repo,transporte).procesarLote('a');
+  assert.equal(resultado.exitosos,0); assert.equal(resultado.registrados,1);
 });

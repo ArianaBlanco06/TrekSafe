@@ -51,6 +51,28 @@ try {
     await assert.rejects(() => unavailable.crearExpedicion(actor, input), /migración de creación transaccional/);
     const badResponse = { rpc: async () => ({ data: {}, error: null }) };
     await assert.rejects(() => new RepositorioExpedicion(badResponse as never).crearExpedicion(actor, input), /Respuesta inválida/);
+    const {RepositorioOutboxSupabase}=await import('../infrastructure/repositories/RepositorioOutboxSupabase.js');
+    const {WorkerOutboxNotificaciones}=await import('../application/services/WorkerOutboxNotificaciones.js');
+    const salida=new RepositorioOutboxSupabase(sdk);
+    const mail=await salida.guardar({claveEvento:`sdk:${randomUUID()}`,tipoEvento:'prueba',destinatario:'ficticio@example.invalid',asunto:'Prueba',cuerpo:'Prueba'});
+    let envios=0;
+    const transporte={obtenerModo:()=> 'dev-log' as const,enviar:async()=>{envios++;return {estado:'enviado' as const,modo:'dev-log' as const};}};
+    const worker=new WorkerOutboxNotificaciones(salida,transporte);
+    const resultados=await Promise.all([worker.procesarLote('a'),worker.procesarLote('b')]);
+    assert.equal(envios,1); assert.equal(resultados.reduce((n,r)=>n+r.exitosos,0),0);
+    assert.equal(resultados.reduce((n,r)=>n+r.registrados,0),1);
+    assert.equal((await db.query('SELECT resultado FROM public.intentos_outbox WHERE notificacion_id=$1',[mail.id])).rows[0].resultado,'simulado');
+    // Prueba de error después de aceptación: inicio persiste aunque la confirmación SQL falle.
+    const mail2=await salida.guardar({claveEvento:`sdk:${randomUUID()}`,tipoEvento:'prueba',destinatario:'ficticio@example.invalid',asunto:'Prueba',cuerpo:'Prueba'});
+    const finalizar=salida.finalizarIntento.bind(salida);
+    salida.finalizarIntento=async()=>{throw new Error('FALLO_SQL_CONTROLADO');};
+    await assert.rejects(()=>worker.procesarLote('c'),/FALLO_SQL_CONTROLADO/);
+    salida.finalizarIntento=finalizar;
+    await db.query("UPDATE public.outbox_notificaciones SET bloqueado_hasta=clock_timestamp()-interval '1 second' WHERE id=$1",[mail2.id]);
+    const antes=envios; await new WorkerOutboxNotificaciones(salida,transporte).procesarLote('reiniciado');
+    assert.equal(envios,antes);
+    assert.equal((await db.query('SELECT estado FROM public.outbox_notificaciones WHERE id=$1',[mail2.id])).rows[0].estado,'incierto');
+    console.log('OK SDK: worker real sobre PostgREST, exclusión, simulación y reinicio tras aceptación con SQL caído');
     console.log('OK SDK: creación real, colecciones, error de propiedad, RPC ausente sin fallback y respuesta inválida');
 }
 finally {

@@ -4,7 +4,7 @@ import type { MensajeOutbox, NuevoMensajeOutbox } from '../../domain/entities/Ou
 import { ErrorAplicacion } from '../../shared/errors/ErrorAplicacion.js';
 
 export class RepositorioOutboxSupabase implements IRepositorioOutbox {
-  private readonly supabase = getSupabaseAdmin();
+  constructor(private readonly supabase = getSupabaseAdmin()) {}
 
   private mapearFila(f: any): MensajeOutbox {
     return {
@@ -45,7 +45,7 @@ export class RepositorioOutboxSupabase implements IRepositorioOutbox {
         cuerpo: mensaje.cuerpo,
         cuerpo_html: mensaje.cuerpoHtml,
         metadata: mensaje.metadata ?? {},
-        max_intentos: mensaje.maxIntentos ?? 3,
+        max_intentos: Math.min(mensaje.maxIntentos ?? 3,3),
         estado: 'pendiente',
         intentos: 0,
         proximo_intento_en: new Date().toISOString(),
@@ -91,117 +91,21 @@ export class RepositorioOutboxSupabase implements IRepositorioOutbox {
     return (data || []).map((d: any) => this.mapearFila(d));
   }
 
-  async adquirirLease(id: string, workerId: string, duracionMs: number, ahora: Date): Promise<boolean> {
-    const ahoraIso = ahora.toISOString();
-    const hastaIso = new Date(ahora.getTime() + duracionMs).toISOString();
-
-    const { data, error } = await this.supabase
-      .from('outbox_notificaciones')
-      .update({
-        bloqueado_hasta: hastaIso,
-        bloqueado_por: workerId,
-        actualizado_en: ahoraIso,
-      })
-      .eq('id', id)
-      .eq('estado', 'pendiente')
-      .or(`bloqueado_hasta.is.null,bloqueado_hasta.lt.${ahoraIso}`)
-      .select('id');
-
-    if (error) {
-      return false;
-    }
-
-    return Array.isArray(data) && data.length > 0;
+  async adquirirLease(id:string,token:string,duracionMs:number,_ahora:Date):Promise<boolean> {
+    const {data,error}=await this.supabase.rpc('treksafe_reservar_outbox',{p_id:id,p_reserva:token,p_duracion_ms:duracionMs});
+    if(error) throw new ErrorAplicacion(503,'No se pudo reservar el aviso');
+    return data===true;
   }
-
-  async marcarEnviado(id: string, modoEnvio: string, fechaEnvio: Date): Promise<void> {
-    const { error } = await this.supabase
-      .from('outbox_notificaciones')
-      .update({
-        estado: 'enviado',
-        modo_envio: modoEnvio,
-        enviado_en: fechaEnvio.toISOString(),
-        bloqueado_hasta: null,
-        bloqueado_por: null,
-        actualizado_en: fechaEnvio.toISOString(),
-      })
-      .eq('id', id);
-
-    if (error) {
-      throw new ErrorAplicacion(500, `Error al marcar outbox como enviado: ${error.message}`);
-    }
+  async iniciarIntento(id:string,token:string):Promise<MensajeOutbox|null> {
+    const {data,error}=await this.supabase.rpc('treksafe_iniciar_intento_outbox',{p_id:id,p_reserva:token});
+    if(error) throw new ErrorAplicacion(503,'No se pudo registrar el inicio del intento');
+    return data?this.mapearFila(data):null;
   }
-
-  async marcarReintento(
-    id: string,
-    proximoIntento: Date,
-    intentosActuales: number,
-    ultimoError: string,
-  ): Promise<void> {
-    const ahora = new Date();
-    const { error } = await this.supabase
-      .from('outbox_notificaciones')
-      .update({
-        intentos: intentosActuales,
-        proximo_intento_en: proximoIntento.toISOString(),
-        ultimo_error: ultimoError,
-        bloqueado_hasta: null,
-        bloqueado_por: null,
-        actualizado_en: ahora.toISOString(),
-      })
-      .eq('id', id);
-
-    if (error) {
-      throw new ErrorAplicacion(500, `Error al registrar reintento en outbox: ${error.message}`);
-    }
-  }
-
-  async marcarFallido(id: string, intentosActuales: number, errorFinal: string): Promise<void> {
-    const ahora = new Date();
-    const { error } = await this.supabase
-      .from('outbox_notificaciones')
-      .update({
-        estado: 'fallido',
-        intentos: intentosActuales,
-        ultimo_error: errorFinal,
-        bloqueado_hasta: null,
-        bloqueado_por: null,
-        actualizado_en: ahora.toISOString(),
-      })
-      .eq('id', id);
-
-    if (error) {
-      throw new ErrorAplicacion(500, `Error al marcar outbox como fallido: ${error.message}`);
-    }
-  }
-
-  async marcarIncierto(id: string, intentosActuales: number, motivoIncierto: string): Promise<void> {
-    const ahora = new Date();
-    const { error } = await this.supabase
-      .from('outbox_notificaciones')
-      .update({
-        estado: 'incierto',
-        intentos: intentosActuales,
-        ultimo_error: motivoIncierto,
-        bloqueado_hasta: null,
-        bloqueado_por: null,
-        actualizado_en: ahora.toISOString(),
-      })
-      .eq('id', id);
-
-    if (error) {
-      throw new ErrorAplicacion(500, `Error al marcar outbox como incierto: ${error.message}`);
-    }
-  }
-
-  async liberarLease(id: string): Promise<void> {
-    await this.supabase
-      .from('outbox_notificaciones')
-      .update({
-        bloqueado_hasta: null,
-        bloqueado_por: null,
-      })
-      .eq('id', id);
+  async finalizarIntento(id:string,token:string,estado:'enviado'|'fallido'|'incierto',modo:string,_ahora:Date) {
+    const {data,error}=await this.supabase.rpc('treksafe_finalizar_intento_outbox',{p_id:id,p_reserva:token,p_estado:estado,p_modo:modo});
+    if(error) throw new ErrorAplicacion(503,'No se pudo confirmar el resultado del intento');
+    if(!['enviado','reintentado','fallido','incierto','reserva_perdida'].includes(data)) throw new ErrorAplicacion(503,'Resultado de intento inválido');
+    return data as import('../../domain/repositories/IRepositorioOutbox.js').FinIntento;
   }
 
   async buscarPorId(id: string): Promise<MensajeOutbox | null> {
