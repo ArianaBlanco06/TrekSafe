@@ -16,7 +16,6 @@ import { cachearContactos, obtenerContactosCacheados } from '@/lib/offlineContac
 import {
   listarBorradoresExpedicion,
   listarPlantillasRuta,
-  eliminarBorradorExpedicion,
   guardarBorradorExpedicion,
   guardarPlantillaRuta,
   type PlantillaRuta,
@@ -25,6 +24,8 @@ import { obtenerContactos, type ContactoEmergencia } from '@/services/usuario';
 import { crearExpedicion, type BorradorDesdeHistorial } from '@/services/expedicion';
 import { puntosRutaApi } from '@/services/puntosRuta';
 import { copiarPuntosParaPlanNuevo } from '@/lib/puntosRuta';
+import type { BorradorExpedicion, DatosBorrador } from '@/application/ports/IColaLocal';
+import { isoADatetimeLocal } from '@/lib/fechaLocal';
 
 export function PaginaCrearExpedicion({ Mapa }: Pick<PropsFormulario, 'Mapa'> = {}) {
   const [parametros] = useSearchParams();
@@ -43,10 +44,12 @@ export function PaginaCrearExpedicion({ Mapa }: Pick<PropsFormulario, 'Mapa'> = 
 
 type PropsFormulario = {
   borrador?: BorradorDesdeHistorial;
+  borradorLocal?: BorradorExpedicion;
+  onGuardarLocal?: (datos: DatosBorrador, enviar: boolean) => Promise<void>;
   Mapa?: ComponentType<CoordinatePickerMapProps>;
 };
 
-export function FormularioCrearExpedicion({ borrador, Mapa = CoordinatePickerMapLazy }: PropsFormulario) {
+export function FormularioCrearExpedicion({ borrador, borradorLocal, onGuardarLocal, Mapa = CoordinatePickerMapLazy }: PropsFormulario) {
   const [scope] = useState(getSessionScope);
   const navigate = useNavigate();
   const enLinea = useEstadoEnLinea();
@@ -55,22 +58,23 @@ export function FormularioCrearExpedicion({ borrador, Mapa = CoordinatePickerMap
   const [contactos, setContactos] = useState<ContactoEmergencia[]>([]);
   const [plantillas, setPlantillas] = useState<PlantillaRuta[]>([]);
   const [borradoresPendientes, setBorradoresPendientes] = useState(0);
-  const [lugarInicio, setLugarInicio] = useState(borrador?.lugarInicio ?? '');
-  const [lugarFin, setLugarFin] = useState(borrador?.lugarFin ?? '');
-  const [coordenadasInicio, setCoordenadasInicio] = useState(borrador?.coordenadasInicio ?? '');
-  const [coordenadasFin, setCoordenadasFin] = useState(borrador?.coordenadasFin ?? '');
+  const [lugarInicio, setLugarInicio] = useState(borradorLocal?.lugarInicio ?? borrador?.lugarInicio ?? '');
+  const [lugarFin, setLugarFin] = useState(borradorLocal?.lugarFin ?? borrador?.lugarFin ?? '');
+  const [coordenadasInicio, setCoordenadasInicio] = useState(borradorLocal?.coordenadasInicio ?? borrador?.coordenadasInicio ?? '');
+  const [coordenadasFin, setCoordenadasFin] = useState(borradorLocal?.coordenadasFin ?? borrador?.coordenadasFin ?? '');
   const [errorCoordInicio, setErrorCoordInicio] = useState('');
   const [errorCoordFin, setErrorCoordFin] = useState('');
-  const [horaInicio, setHoraInicio] = useState('');
-  const [horaRetornoEstimada, setHoraRetornoEstimada] = useState('');
-  const [minutosTolerancia, setMinutosTolerancia] = useState(borrador?.minutosTolerancia ?? 30);
+  const [horaInicio, setHoraInicio] = useState(borradorLocal ? isoADatetimeLocal(borradorLocal.horaInicio) : '');
+  const [horaRetornoEstimada, setHoraRetornoEstimada] = useState(borradorLocal ? isoADatetimeLocal(borradorLocal.horaRetornoEstimada) : '');
+  const [minutosTolerancia, setMinutosTolerancia] = useState(borradorLocal?.minutosTolerancia ?? borrador?.minutosTolerancia ?? 30);
   const [minutosRecordatorio, setMinutosRecordatorio] = useState<15 | 30 | 60>(
-    (borrador?.minutosRecordatorio as 15 | 30 | 60) ?? 30,
+    ((borradorLocal?.minutosRecordatorio ?? borrador?.minutosRecordatorio) as 15 | 30 | 60) ?? 30,
   );
-  const [idsContactosSeleccionados, setIdsContactosSeleccionados] = useState<string[]>(() => [...(borrador?.idsContactos ?? [])]);
+  const [idsContactosSeleccionados, setIdsContactosSeleccionados] = useState<string[]>(() => [...(borradorLocal?.idsContactos ?? borrador?.idsContactos ?? [])]);
   const [nombresAcompanantes, setNombresAcompanantes] = useState<string[]>(() =>
-    borrador?.nombresAcompanantes.length ? [...borrador.nombresAcompanantes] : ['']);
+    (borradorLocal ?? borrador)?.nombresAcompanantes.length ? [...(borradorLocal ?? borrador)!.nombresAcompanantes] : ['']);
   const [contactosRevisados, setContactosRevisados] = useState(false);
+  const [fechasRevisadas, setFechasRevisadas] = useState(false);
   const [cargandoContactos, setCargandoContactos] = useState(true);
   const [errorContactos, setErrorContactos] = useState('');
   const [intentoContactos, setIntentoContactos] = useState(0);
@@ -83,7 +87,8 @@ export function FormularioCrearExpedicion({ borrador, Mapa = CoordinatePickerMap
 
   useEffect(() => {
     if (!enLinea) setCoordsManualesAbiertas(true);
-  }, [enLinea]);
+    if (borradorLocal) { setFechasRevisadas(false); setContactosRevisados(false); }
+  }, [enLinea, borradorLocal]);
 
   useEffect(() => {
     if (errorCoordInicio || errorCoordFin) setCoordsManualesAbiertas(true);
@@ -93,12 +98,13 @@ export function FormularioCrearExpedicion({ borrador, Mapa = CoordinatePickerMap
     let activo = true;
     const vigente = () => activo && scope === getSessionScope();
     void listarPlantillasRuta(scope).then((lista) => { if (vigente()) setPlantillas(lista); });
-    void listarBorradoresExpedicion(scope).then((lista) => { if (vigente()) setBorradoresPendientes(lista.length); });
+    void listarBorradoresExpedicion(scope).then((lista) => { if (vigente()) setBorradoresPendientes(lista.filter(b => b.estado !== 'sincronizado').length); })
+      .catch(() => { if (vigente()) setError('No se pudo consultar la cola de borradores.'); });
 
     function aplicarContactos(lista: ContactoEmergencia[]) {
       if (!vigente()) return;
       setContactos(lista);
-      if (borrador) {
+      if (borrador || (borradorLocal && enLinea)) {
         const disponibles = new Set(lista.map((contacto) => contacto.id));
         setIdsContactosSeleccionados((anteriores) => anteriores.filter((id) => disponibles.has(id)));
         setContactosRevisados(false);
@@ -114,7 +120,7 @@ export function FormularioCrearExpedicion({ borrador, Mapa = CoordinatePickerMap
       } catch {
         const lista = await obtenerContactosCacheados();
         aplicarContactos(lista);
-        if (vigente() && enLinea && lista.length === 0) {
+        if (vigente() && enLinea && (lista.length === 0 || borradorLocal)) {
           setErrorContactos('No pudimos cargar tus contactos. Inténtalo de nuevo.');
         }
       } finally {
@@ -123,44 +129,7 @@ export function FormularioCrearExpedicion({ borrador, Mapa = CoordinatePickerMap
     }
     void cargarContactos();
     return () => { activo = false; };
-  }, [enLinea, scope, borrador, intentoContactos]);
-
-  useEffect(() => {
-    if (!enLinea) return;
-
-    const sincronizarBorradores = async () => {
-      const borradores = await listarBorradoresExpedicion(scope);
-      if (borradores.length === 0) return;
-
-      for (const borrador of borradores) {
-        if (scope !== getSessionScope()) return;
-        try {
-          await crearExpedicion({
-            lugarInicio: borrador.lugarInicio,
-            lugarFin: borrador.lugarFin,
-            coordenadasInicio: borrador.coordenadasInicio || undefined,
-            coordenadasFin: borrador.coordenadasFin || undefined,
-            horaInicio: borrador.horaInicio,
-            horaRetornoEstimada: borrador.horaRetornoEstimada,
-            minutosTolerancia: borrador.minutosTolerancia,
-            idsContactos: borrador.idsContactos,
-            nombresAcompanantes: borrador.nombresAcompanantes,
-          });
-          await eliminarBorradorExpedicion(borrador.id, scope);
-        } catch {
-          break;
-        }
-      }
-
-      const restantes = await listarBorradoresExpedicion(scope);
-      setBorradoresPendientes(restantes.length);
-      if (restantes.length === 0) {
-        setInfo('Borradores offline sincronizados con el servidor.');
-      }
-    };
-
-    void sincronizarBorradores();
-  }, [enLinea, scope]);
+  }, [enLinea, scope, borrador, borradorLocal, intentoContactos]);
 
   const toggleContacto = (id: string) => {
     setContactosRevisados(false);
@@ -242,6 +211,8 @@ export function FormularioCrearExpedicion({ borrador, Mapa = CoordinatePickerMap
     (enLinea || puntosOrigen.length === 0) &&
     (!borrador || (contactosRevisados && !cargandoContactos &&
       idsContactosSeleccionados.every((id) => contactos.some((contacto) => contacto.id === id)))) &&
+    (!borradorLocal || !enLinea || (fechasRevisadas && contactosRevisados && !errorContactos && !cargandoContactos &&
+      idsContactosSeleccionados.every((id) => contactos.some((contacto) => contacto.id === id)))) &&
     !errorCoordInicio &&
     !errorCoordFin;
 
@@ -274,6 +245,10 @@ export function FormularioCrearExpedicion({ borrador, Mapa = CoordinatePickerMap
     operacionEnCurso.current = true;
 
     try {
+      if (borradorLocal && onGuardarLocal) {
+        await onGuardarLocal({ ...payload, coordenadasInicio: coordenadasInicio.trim(), coordenadasFin: coordenadasFin.trim() }, enLinea);
+        return;
+      }
       if (!enLinea) {
         await guardarBorradorExpedicion({
           ...payload,
@@ -292,7 +267,7 @@ export function FormularioCrearExpedicion({ borrador, Mapa = CoordinatePickerMap
         if (scope !== getSessionScope()) return;
         setBorradoresPendientes(restantes.length);
         setPlantillas(rutas);
-        setInfo('Borrador guardado para sincronizar cuando vuelva la conexión. Se eliminará si cierras sesión.');
+        setInfo('Borrador guardado para sincronizar después de revisar fechas y contactos. Se eliminará si cierras sesión.');
         return;
       }
       const { expedicion } = await crearExpedicion(payload);
@@ -338,7 +313,7 @@ export function FormularioCrearExpedicion({ borrador, Mapa = CoordinatePickerMap
         <ChevronLeft size={16} /> {borrador ? 'Historial' : 'Expediciones'}
       </Link>
 
-      <h2 className="text-xl font-bold mb-1">Nueva expedición</h2>
+      <h2 className="text-xl font-bold mb-1">{borradorLocal ? 'Revisar borrador' : 'Nueva expedición'}</h2>
       <p className="text-sm text-muted-foreground mb-4">Registra tu itinerario y contactos de alerta.</p>
 
       {borrador && (
@@ -371,13 +346,14 @@ export function FormularioCrearExpedicion({ borrador, Mapa = CoordinatePickerMap
       {borradoresPendientes > 0 && (
         <div className="mb-4 p-3 rounded-xl bg-primary/10 text-primary text-sm">
           {borradoresPendientes} borrador(es) pendiente(s) de sincronización.
+          <Link to="/senderista/expedicion/borradores" className="block min-h-11 underline font-semibold">Revisar cola de borradores</Link>
         </div>
       )}
 
       {info && <div className="mb-4 p-3 rounded-xl bg-primary/10 text-primary text-sm">{info}</div>}
       {error && <div role="alert" className="error-banner mb-4">{error}</div>}
 
-      {usuario && !borrador && (
+      {usuario && !borrador && !borradorLocal && (
         <SelectorPlantillasCuenta
           usuarioId={usuario.id}
           enLinea={enLinea}
@@ -554,7 +530,7 @@ export function FormularioCrearExpedicion({ borrador, Mapa = CoordinatePickerMap
             type="datetime-local"
             className="input-field"
             value={horaInicio}
-            onChange={(e) => setHoraInicio(e.target.value)}
+              onChange={(e) => { setHoraInicio(e.target.value); setFechasRevisadas(false); }}
             aria-required="true"
           />
         </div>
@@ -565,7 +541,7 @@ export function FormularioCrearExpedicion({ borrador, Mapa = CoordinatePickerMap
             type="datetime-local"
             className="input-field"
             value={horaRetornoEstimada}
-            onChange={(e) => setHoraRetornoEstimada(e.target.value)}
+              onChange={(e) => { setHoraRetornoEstimada(e.target.value); setFechasRevisadas(false); }}
             aria-required="true"
           />
         </div>
@@ -627,7 +603,7 @@ export function FormularioCrearExpedicion({ borrador, Mapa = CoordinatePickerMap
           )}
         </fieldset>
 
-        {borrador && (
+        {(borrador || (borradorLocal && enLinea)) && (
           <label className="flex min-h-12 items-start gap-3 rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">
             <input id="exp-contactos-revisados" type="checkbox" checked={contactosRevisados}
               disabled={cargandoContactos || contactos.length === 0}
@@ -636,6 +612,10 @@ export function FormularioCrearExpedicion({ borrador, Mapa = CoordinatePickerMap
             He revisado los contactos de alerta para esta nueva expedición.
           </label>
         )}
+        {borradorLocal && enLinea && <label className="flex min-h-12 items-center gap-3 text-sm">
+          <input type="checkbox" checked={fechasRevisadas} onChange={e => setFechasRevisadas(e.target.checked)} />
+          He revisado las fechas de salida y retorno para este borrador.
+        </label>}
 
         <div>
           <FieldLabel>Acompañantes de la cordada</FieldLabel>
@@ -683,7 +663,7 @@ export function FormularioCrearExpedicion({ borrador, Mapa = CoordinatePickerMap
         <button type="submit" className="btn-primary" disabled={!puedeEnviar || cargando}>
           {cargando
             ? 'Registrando…'
-            : enLinea
+            : borradorLocal ? (enLinea ? 'Confirmar y sincronizar borrador' : 'Guardar correcciones') : enLinea
               ? 'Registrar expedición'
               : 'Guardar borrador offline'}
         </button>

@@ -23,6 +23,7 @@ import { PaginaPrivacidad } from '@/pages/PaginaPrivacidad';
 import { PaginaRevocacionDatos } from '@/pages/PaginaRevocacionDatos';
 import { PaginaListaExpediciones } from '@/pages/PaginaListaExpediciones';
 import { PaginaCrearExpedicion } from '@/pages/PaginaCrearExpedicion';
+import { PaginaColaBorradores } from '@/pages/PaginaColaBorradores';
 import { PaginaEditarExpedicion } from '@/pages/PaginaEditarExpedicion';
 import { PaginaExpedicionActiva } from '@/pages/PaginaExpedicionActiva';
 import { PaginaRetornoConfirmado } from '@/pages/PaginaRetornoConfirmado';
@@ -80,6 +81,7 @@ export function App() {
               <Route path="expedicion/activa" element={<PaginaExpedicionActiva />} />
               <Route path="expedicion/confirmada" element={<PaginaRetornoConfirmado />} />
               <Route path="expedicion/nueva" element={<PaginaCrearExpedicion />} />
+              <Route path="expedicion/borradores" element={<PaginaColaBorradores />} />
               <Route path="expedicion/:id/puntos" element={<PaginaPuntosRuta />} />
               <Route path="expedicion/:id/recorrido" element={<PaginaRecorrido />} />
               <Route path="expedicion/:id/equipo" element={<PaginaEquipoExpedicion />} />

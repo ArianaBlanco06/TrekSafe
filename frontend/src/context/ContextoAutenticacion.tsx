@@ -27,7 +27,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginSession = useCallback(async (token: string, usuarioSesion: UsuarioSesion) => {
     // Invalidar primero impide aceptar respuestas pendientes de otra cuenta
     // mientras se eliminan sus datos persistidos.
-    const limpieza = limpiarSesion();
+    // Tras cerrar la PWA, una autenticación de la misma cuenta recupera solo su
+    // cola. Logout/401 siguen eliminando todos los datos privados.
+    const limpieza = limpiarSesion(usuarioSesion.id);
     vaciarContactosEnMemoria();
     setUsuario(null);
     try { await limpieza; }

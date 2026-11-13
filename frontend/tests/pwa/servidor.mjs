@@ -26,6 +26,8 @@ const users = {
   b: { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', correoElectronico: 'cuenta-b@example.invalid', rol: 'senderista' },
 };
 const created = [];
+const creacionesOffline = new Map();
+const fallosOffline = { a: {}, b: {} };
 // HU-26 (plan editable con version) y HU-30 (listas de equipo) en memoria, por cuenta.
 const planId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 const contactoId = account => `${account}ccccccc-cccc-4ccc-8ccc-cccccccccccc`;
@@ -75,6 +77,12 @@ const server = createServer(async (req, res) => {
       return res.end(probe);
     }
     if (url.pathname === '/__tests__/creadas') return json(res, 200, created);
+    if (url.pathname === '/__tests__/hu49' && req.method === 'POST') {
+      const datos = await readJson(req);
+      if (!Object.hasOwn(users, datos.cuenta)) return json(res,400,{});
+      fallosOffline[datos.cuenta] = datos;
+      return json(res,200,{});
+    }
     if (url.pathname === '/api/auth/iniciar-sesion') {
       const data = await readJson(req);
       const account = Object.keys(users).find(key => users[key].correoElectronico === data.correoElectronico);
@@ -133,6 +141,29 @@ const server = createServer(async (req, res) => {
         return json(res, 200, { lista: equipos[account][indice] });
       }
       if (url.pathname === '/api/expediciones/activa') return json(res, 200, { expedicion: null });
+      if (url.pathname === '/api/expediciones/borradores/sincronizar' && req.method === 'POST') {
+        const datos = await readJson(req);
+        const clave = `${account}:${datos.borradorId}`;
+        const previa = creacionesOffline.get(clave);
+        if (previa) return JSON.stringify(previa.datos) === JSON.stringify(datos)
+          ? json(res,200,{expedicion:previa.expedicion,repetido:true})
+          : json(res,409,{mensaje:'Identificador reutilizado',codigo:'BORRADOR_REUTILIZADO'});
+        if (fallosOffline[account].contacto) {
+          fallosOffline[account].contacto=false;
+          return json(res,400,{mensaje:'El contacto ya no está disponible. Revisa los contactos.',codigo:'CONTACTOS_INVALIDOS'});
+        }
+        if (Date.parse(datos.horaInicio) <= Date.now()) return json(res,400,{mensaje:'Fecha vencida',codigo:'FECHAS_INVALIDAS'});
+        const expedicion = { ...datos, id:crypto.randomUUID(), estado:'programada',version:1 };
+        creacionesOffline.set(clave,{datos,expedicion});created.push({account,...datos});
+        if (fallosOffline[account].perderRespuesta) {
+          // Enviar cabeceras y parte del cuerpo evita que Chromium repita
+          // silenciosamente un POST cuya conexión se cerró antes de responder.
+          fallosOffline[account].perderRespuesta=false;
+          res.writeHead(201,{'Content-Type':'application/json','Cache-Control':'no-store'});
+          res.flushHeaders();res.write('{"expedicion":');setTimeout(()=>res.destroy(),80);return;
+        }
+        return json(res,201,{expedicion,repetido:false});
+      }
       if (url.pathname === `/api/expediciones/${planId}`) {
         if (req.method === 'PUT') {
           const { versionEsperada, operacionId: _operacionId, ...campos } = await readJson(req);

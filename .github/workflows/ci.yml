@@ -38,6 +38,9 @@ jobs:
       - name: Compilar backend
         run: npm run build --prefix backend
 
+      - name: Probar idempotencia HU-49 en PostgreSQL desechable
+        run: node backend/scripts/test-hu49-postgres.mjs --pg-bin "$(pg_config --bindir)"
+
   frontend:
     name: Frontend - validaciones
     runs-on: ubuntu-latest

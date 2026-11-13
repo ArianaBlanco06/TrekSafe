@@ -58,6 +58,10 @@ export function PaginaListaExpediciones() {
         </Link>
       </div>
 
+      <Link to="/senderista/expedicion/borradores" className="inline-flex min-h-11 items-center text-primary font-semibold mb-4">
+        Borradores offline
+      </Link>
+
       {error && (
         <div className="error-banner mb-4">
           {error}{' '}
