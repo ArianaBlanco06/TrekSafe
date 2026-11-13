@@ -1,5 +1,7 @@
 # HU-40 · Prueba manual contra Supabase real (proyecto personal)
 
+> Nota: esta evidencia describe una ejecución con la 021 sola; con la 025 (HU-42) aplicada, `service_role` sí puede actualizar `estado` y `cerrado_en` (ver V5 y la nota «Cierre desde el SQL Editor»).
+
 **Estado:** la parte de API y de Supabase real se ejecutó **dos veces** contra el proyecto personal. (1) El 2026-11-10/11 contra la **versión anterior** de la migración 021 (proponer y aceptar): esos resultados se conservan como antecedente. (2) El 2026-11-11 (desde las 23:37 UTC) contra la **021 corregida** (proponer, aceptar, rechazar y cancelar): reinicio R1-R6, repetición de los 20 escenarios, RC1-RC23 y V1-V12, todo **PASS**. Queda pendiente la parte del navegador (N1-N13), que no ejecuta quien escribe esto.
 
 **Numeración.** Toda la ejecución de este documento se hizo cuando la migración de HU-40 se llamaba `019_hu40_transferir_coordinacion.sql`. En el merge con `develop` (2026-11-11) HU-41 ya había usado y aplicado la 019 en DEV, y la 020 la usa la rama de HU-49, así que se renombró a **`021_hu40_transferir_coordinacion.sql`** (el contenido de esta ejecución es el mismo salvo el bloque de permisos de `incidentes`, ahora aditivo; ver el diseño). Donde este documento habla de «la 021» se refiere a esa migración; los registros reales del proyecto personal conservan el número de entonces y así se indican (`019`). Resultados de la ejecución con la versión aditiva en PostgreSQL desechable: ver la sección «Evidencia automática previa».
