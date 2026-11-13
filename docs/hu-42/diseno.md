@@ -1,3 +1,5 @@
+> **Decisión PO, 2026-11-13:** D1–D7 confirmadas por Marko en esta conversación. Solo se cierra desde localizado; el cierre es operativo y conserva la independencia del retorno. Aplicación DEV de 025 pendiente de Ariana.
+
 # HU-42: Cerrar un incidente con informe
 
 Como rescatista responsable de un incidente, quiero cerrarlo con un informe (resultado y resumen) para que quede constancia del rescate sin borrar la bitácora y sin dar por confirmado el retorno del senderista.
@@ -24,7 +26,7 @@ Como rescatista responsable de un incidente, quiero cerrarlo con un informe (res
 | Actor | Siempre el del JWT. El cuerpo es `.strict()`: `rescatistaId`, `estadoExpedicion` o `confirmarRetorno` dan 400. |
 | Datos médicos | Ninguno: la tabla no tiene columnas médicas, el catálogo no incluye estado de salud, el resumen es texto libre con aviso fijo en la interfaz. |
 
-## Decisiones provisionales (todas pendientes de confirmar con Marko; D1 también con Jhon)
+## Decisiones confirmadas por el PO (D1–D7; comunicar catálogo a Jhon)
 
 | # | Decisión | Valor provisional | Dónde se cambia |
 |---|---|---|---|

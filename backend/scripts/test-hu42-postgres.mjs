@@ -153,6 +153,7 @@ const MIGRACIONES_PREVIAS = [
   '011_hu29_endurecer_permisos.sql', '012_hu36_eventos_plan_solo_anexado.sql', '013_hu37_avisos.sql',
   '014_hu38_minutos_recordatorio.sql', '015_hu45_outbox.sql', '016_hu34_avances_expedicion.sql',
   '017_hu39_asumir_coordinacion.sql', '018_hu27_cancelar_salida_futura.sql', '019_hu41_bitacora_incidente.sql',
+  '021_hu40_transferir_coordinacion.sql',
   '022_dep108_crear_expedicion_atomica.sql', '023_dep108_avisos_transaccionales.sql',
   '024_dep108_vencimientos_outbox.sql',
 ];
