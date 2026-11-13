@@ -144,7 +144,7 @@ export function crearModuloRescate(
       dependencias.entregaAvisos ??
       new FachadaEntregaAvisosIncidente(
         new RepositorioOutboxSupabase(),
-        new RepositorioRescate(),
+        new RepositorioOutboxSupabase(),
       ),
   };
 }

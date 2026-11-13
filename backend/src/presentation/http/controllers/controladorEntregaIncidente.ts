@@ -1,3 +1,4 @@
+import { ErrorAplicacion } from '../../../shared/errors/ErrorAplicacion.js';
 import type { Request, Response } from 'express';
 import type { FachadaEntregaAvisosIncidente } from '../../../application/services/FachadaEntregaAvisosIncidente.js';
 import type { SolicitudAutenticada } from '../middleware/middlewareAutenticacion.js';
@@ -20,7 +21,8 @@ export function crearControladorEntregaIncidente(fachada: FachadaEntregaAvisosIn
       const usuario = solicitudAuth(req).user;
       const expedicionId = String(req.params.id);
       const mensajeId = String(req.params.mensajeId);
-      const claveIdempotencia = req.headers['x-idempotency-key'] as string | undefined;
+      const claveIdempotencia = req.headers['x-idempotency-key'];
+      if(typeof claveIdempotencia!=='string'||claveIdempotencia.trim().length<1||claveIdempotencia.length>150) throw new ErrorAplicacion(400,'Se requiere X-Idempotency-Key de 1 a 150 caracteres','CLAVE_INVALIDA');
 
       const resultado = await fachada.reintentarDespachoManual(
         usuario.id,
