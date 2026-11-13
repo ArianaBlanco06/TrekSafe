@@ -26,7 +26,7 @@ function clienteConDatos(datos: unknown): SupabaseClient {
   for (const metodo of ['select', 'eq', 'in', 'order', 'ilike', 'insert', 'update', 'maybeSingle', 'single']) {
     consulta[metodo] = () => consulta;
   }
-  return { from: () => consulta } as unknown as SupabaseClient;
+  return { from: () => consulta, rpc: async()=>respuesta } as unknown as SupabaseClient;
 }
 
 function sinColumnasSql(valor: unknown) {

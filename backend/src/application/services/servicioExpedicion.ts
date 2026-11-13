@@ -142,10 +142,11 @@ export class ServicioExpedicion {
     }
 
     const completada = await this.repoExpedicion.completarConfirmacionRetorno(expedicionId, senderistaId);
+    const confirmadoEn = completada.actualizadoEn ?? this.reloj.ahora().toISOString();
 
     return {
       expedicion: completada,
-      confirmadoEn: completada.actualizadoEn ?? this.reloj.ahora().toISOString(),
+      confirmadoEn,
     };
   }
 

@@ -13,9 +13,14 @@ export async function readOfflineJson<T>(
   try {
     if (typeof caches !== 'undefined') {
       const hit = await caches.match(dataUrl(key), { cacheName: cacheName(scope) });
+      if (scope !== getSessionScope()) {
+        await caches.delete(cacheName(scope));
+        return fallback;
+      }
       if (hit) {
         const value = await hit.json() as T;
-        return scope === getSessionScope() ? value : fallback;
+        if(scope !== getSessionScope()) { await caches.delete(cacheName(scope)); return fallback; }
+        return value;
       }
     }
   } catch { /* usar el fallback local de la misma sesion */ }

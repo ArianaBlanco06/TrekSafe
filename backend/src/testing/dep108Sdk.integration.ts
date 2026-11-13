@@ -73,6 +73,17 @@ try {
     assert.equal(envios,antes);
     assert.equal((await db.query('SELECT estado FROM public.outbox_notificaciones WHERE id=$1',[mail2.id])).rows[0].estado,'incierto');
     console.log('OK SDK: worker real sobre PostgREST, exclusión, simulación y reinicio tras aceptación con SQL caído');
+    const planRetorno=await repo.crearExpedicion(other,{...input,idsContactos:[foreignContact]});
+    await db.query("UPDATE public.expediciones SET estado='en_progreso' WHERE id=$1",[planRetorno.id]);
+    const retorno=await repo.completarConfirmacionRetorno(planRetorno.id,other);
+    assert.equal(retorno.estado,'completada');assert.equal(retorno.lugarInicio,input.lugarInicio);
+    const pendientes=(await db.query("SELECT cuerpo FROM public.outbox_notificaciones WHERE clave_evento=$1",[`RETORNO_SEGURO:${planRetorno.id}`])).rows;
+    assert.equal(pendientes.length,1);assert.match(pendientes[0].cuerpo,/Inicio SDK/);
+    const repetido=await sdk.rpc('treksafe_confirmar_retorno_con_outbox',{p_expedicion_id:planRetorno.id,p_senderista_id:other});
+    assert.equal(repetido.error,null);
+    assert.equal((await db.query('SELECT count(*)::int n FROM public.retornos_confirmados WHERE expedicion_id=$1',[planRetorno.id])).rows[0].n,1);
+    await assert.rejects(()=>repo.completarConfirmacionRetorno(planRetorno.id,actor),(e:unknown)=>e instanceof Error&&e.message.includes('no encontrada'));
+    console.log('OK SDK: retorno atómico por service_role y reconsumo idempotente');
     console.log('OK SDK: creación real, colecciones, error de propiedad, RPC ausente sin fallback y respuesta inválida');
 }
 finally {
