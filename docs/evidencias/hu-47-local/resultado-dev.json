@@ -1,0 +1,12 @@
+{
+  "historia": "HU-47",
+  "fechaComprobacion": "2026-11-13",
+  "proyecto": "ibnwggvqgjpeqcretjak",
+  "operacion": "GET de solo lectura del registro de migraciones",
+  "http": 200,
+  "versionesConsultadas": ["017", "019", "021", "025", "029"],
+  "versionesRegistradas": ["017", "019", "021", "025"],
+  "versionesNoRegistradas": ["029"],
+  "supabaseDevModificado": false,
+  "validacionFuncionalDev": "pendiente de aplicación coordinada de la migración y prueba del reporte"
+}

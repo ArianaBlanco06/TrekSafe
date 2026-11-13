@@ -53,7 +53,7 @@ Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos
 | `024_dep108_vencimientos_outbox.sql` | RPC nueva de vencimientos con estado y pendientes atómicos; no sustituye el cron legado | `000`, `015`, `022` |
 | `025_hu42_cerrar_incidente.sql` | Tabla `informes_cierre_incidente` (un informe por incidente, solo anexado, hora del servidor), `UPDATE (estado, cerrado_en, version)` sobre `incidentes` para `service_role` (solo aditivo, sin `REVOKE`), RPC `treksafe_cerrar_incidente`, `treksafe_marcar_incidente_localizado` y `treksafe_leer_ultimo_cierre_incidente`. No modifica `expediciones`. Aplicar una sola vez, **después de `021` si existe** | `017`, `019` |
 
-`015` es el esquema canónico de HU-45 preparado en DEP-04 (#108). El PR #90 contiene una propuesta llamada `012_hu45_outbox.sql`: **no aplicarla encima de esta tabla ni repetir su registro**. #109 debe conservar la identidad lógica obligatoria y adaptar el encolado/procesador al contrato canónico. Para nuevas migraciones, comprobar el siguiente número libre al momento del merge: hoy la `020` está en la rama de HU-49 (`020_hu49_creacion_plan_idempotente.sql`) y la `021` es de HU-40; el siguiente libre en las ramas remotas conocidas es la `025`.
+`015` es el esquema canónico de HU-45 preparado en DEP-04 (#108). El PR #90 contiene una propuesta llamada `012_hu45_outbox.sql`: **no aplicarla encima de esta tabla ni repetir su registro**. #109 debe conservar la identidad lógica obligatoria y adaptar el encolado/procesador al contrato canónico. Para nuevas migraciones, comprobar el siguiente número libre contra todas las ramas pendientes al momento del merge. John confirmó que 029 está libre para HU-47; su aplicación en DEV sigue pendiente de coordinación con Sebastian y Ariana.
 
 Para DEP-04, instalar primero la base y dependencias históricas (las dos HU-30 con fecha preceden a `008`/`009`). Después aplicar solo archivos realmente pendientes: `015`, `017`, `018`, `019`, `022`, `023`, `024`; no ordenarlos mediante glob alfabético. Los archivos nuevos son de una sola aplicación: abortan ante objetos/versiones ocupados, sin borrar ni ocultar divergencias. `020` y `021` no forman parte de esta entrega; comprobar disponibilidad de cualquier número contra las ramas pendientes antes de asignarlo. Detalle, pruebas y recuperación: [dossier DEP-04](../../docs/dep-108/README.md).
 
@@ -69,6 +69,53 @@ HU-30 conserva los nombres con fecha con los que se preparó y aplicó en DEV,
 según lo confirmado por Jhon. Sus dos archivos se ejecutan una sola vez y en el
 orden indicado; no son re-ejecutables. No dependen de HU-26. Sebastian mantiene
 el registro de aplicación por entorno con archivo, fecha y commit.
+
+## HU-47: estadísticas operativas de rescate
+
+`029_hu47_estadisticas_incidentes.sql` prepara la RPC de lectura
+`treksafe_consultar_estadisticas_incidentes` y dos índices de búsqueda por fecha
+sobre `incidentes.abierto_en` y `incidentes.cerrado_en`.
+**029 está confirmada para HU-47 por John**, quien indicó que está libre.
+Su aplicación en DEV sigue pendiente de coordinación con Sebastian y Ariana.
+No está aplicada en DEV por esta implementación.
+
+Requiere las tablas de 017 y 025, con sus dependencias. Si se instala HU-40, aplicar
+021 antes de 025 conforme a su contrato de permisos. El archivo nuevo usa una
+transacción y registra 029 condicionalmente con `ON CONFLICT DO NOTHING` si existe
+`treksafe_migraciones`. Rechaza una versión ya registrada y no es re-ejecutable.
+Si se renumera, cambiar archivo, cabecera, registro, runner y documentación juntos.
+
+La RPC comprueba que el actor tenga rol rescatista y perfil validado. El backend
+obtiene ese actor de su JWT. Solo `service_role` puede ejecutar la función;
+`PUBLIC`, `anon` y `authenticated` carecen de ese permiso. Se usa `SECURITY INVOKER`,
+`search_path` vacío y `STABLE`. No cambia permisos de las tablas ni crea políticas
+adicionales; conserva el RLS de 017 y 025.
+
+Los tres conteos salen del mismo conjunto y snapshot. El filtro de fecha admite
+apertura o cierre con extremo final exclusivo. Zona es texto literal del destino
+sin distinguir mayúsculas. El resultado se consulta mediante `EXISTS` sobre el
+informe único; notas y relevos no multiplican filas. Sin filtro de resultado se
+incluyen cierres históricos sin informe. La función solo devuelve tres conteos.
+
+Prueba reproducible con Node 22 y PostgreSQL nativo, desde la raíz:
+
+```powershell
+node backend/scripts/test-hu47-postgres.mjs --pg-bin "C:\Program Files\PostgreSQL\18\bin"
+```
+
+Con builds backend y PWA disponibles, se puede agregar
+`--postgrest "C:\ruta\postgrest.exe" --with-browser` para ejecutar también el
+flujo completo por SDK Supabase, PostgREST real, Express y navegador con worker
+activo. Genera capturas y resultado en
+[evidencia HU-47](../../docs/evidencias/hu-47-local/evidencia.md).
+
+El runner crea su propio clúster temporal en loopback y aplica el esquema real
+solo en `treksafe_hu47_desechable`. Usa datos ficticios y no carga `.env`,
+`DATABASE_URL` ni Supabase. Detiene su instancia al terminar y conserva los logs
+temporales para inspección. Sus 13 comprobaciones abarcan límites de fecha,
+destino literal, cierre, conjunto vacío, notas y relevo real, perfiles, permisos,
+1.205 incidentes de volumen, lectura sin escrituras y registro de la migración.
+El modo solo SQL no valida PostgREST. Ninguno de los modos aplica cambios en DEV.
 
 ## Despliegue
 
