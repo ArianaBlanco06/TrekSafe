@@ -50,28 +50,10 @@ export class SmtpTransporteAdapter implements ITransporteCorreo {
         modo: 'smtp',
         detalles: { messageId: res.messageId },
       };
-    } catch (err: any) {
-      const errorMsg = err?.message || String(err);
-
-      // Clasificación de timeouts / sockets ambiguos como 'incierto'
-      if (
-        errorMsg.toLowerCase().includes('timeout') ||
-        errorMsg.toLowerCase().includes('etimedout') ||
-        errorMsg.toLowerCase().includes('econnreset') ||
-        errorMsg.toLowerCase().includes('esocket')
-      ) {
-        return {
-          estado: 'incierto',
-          modo: 'smtp',
-          error: `Error ambiguo o de conexión SMTP: ${errorMsg}`,
-        };
-      }
-
-      return {
-        estado: 'fallido',
-        modo: 'smtp',
-        error: errorMsg,
-      };
+    } catch (err: unknown) {
+      const codigo=typeof err==='object'&&err!==null&&'responseCode' in err?Number(err.responseCode):0;
+      const rechazo=codigo>=400&&codigo<600;
+      return {estado:rechazo?'fallido':'incierto',modo:'smtp',error:rechazo?'RECHAZO_CONFIRMADO':'RESULTADO_INCIERTO'};
     }
   }
 }

@@ -68,10 +68,9 @@ export class ServicioNotificacionAlerta {
             metadata: { expedicionId, tipoDespacho: 'alerta_contacto' },
           });
           registrados++;
-          await this.repoDespacho.registrarEnvio(expedicionId, 'alerta_contacto', contacto.correoElectronico);
         } catch (err) {
           fallidos++;
-          console.error(`[Alerta] fallo al encolar outbox para ${contacto.correoElectronico}:`, err);
+          console.error('[Notificaciones] Operación fallida; revisar persistencia o transporte');
         }
       } else {
         try {
@@ -84,7 +83,7 @@ export class ServicioNotificacionAlerta {
           }
         } catch (err) {
           fallidos++;
-          console.error(`[Alerta] fallo envío a ${contacto.correoElectronico}:`, err);
+          console.error('[Notificaciones] Operación fallida; revisar persistencia o transporte');
         }
       }
     }
