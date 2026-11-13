@@ -317,29 +317,17 @@ export class RepositorioExpedicion implements IRepositorioExpedicion {
   }
 
   async completarConfirmacionRetorno(expedicionId: string, senderistaId: string): Promise<ExpedicionLeida> {
-    const confirmadoEn = new Date().toISOString();
-
-    const { data, error } = await this.supabase
-      .from('expediciones')
-      .update({ estado: 'completada', actualizado_en: confirmadoEn })
-      .eq('id', expedicionId)
-      .eq('senderista_id', senderistaId)
-      .in('estado', ['en_progreso', 'alerta'])
-      .select(
-        'id, lugar_inicio, lugar_fin, hora_inicio, hora_retorno_estimada, minutos_tolerancia, estado, version, actualizado_en',
-      )
-      .maybeSingle();
-
-    if (error) throw new ErrorAplicacion(500, error.message);
-    if (!data) {
-      throw new ErrorAplicacion(
-        409,
-        'La expedición no está en curso o ya fue finalizada',
-        'EXPEDICION_NO_ACTIVA',
-      );
+    const {data,error}=await this.supabase.rpc('treksafe_confirmar_retorno_con_outbox',{
+      p_expedicion_id:expedicionId,p_senderista_id:senderistaId,
+    });
+    if(error) {
+      if(error.message==='NO_ENCONTRADO') throw new ErrorAplicacion(404,'Expedición no encontrada','NO_ENCONTRADO');
+      if(error.message==='PROHIBIDO') throw new ErrorAplicacion(403,'Solo un senderista puede confirmar su retorno','PROHIBIDO');
+      if(error.message==='EXPEDICION_NO_ACTIVA') throw new ErrorAplicacion(409,'La expedición no está en curso o ya fue finalizada','EXPEDICION_NO_ACTIVA');
+      throw new ErrorAplicacion(503,'No se pudo confirmar el retorno y sus avisos');
     }
-
-    return mapearExpedicionPersistida(data);
+    if(!data||typeof data!=='object'||!data.id) throw new ErrorAplicacion(503,'Respuesta inválida al confirmar retorno');
+    return mapearExpedicionPersistida(data as FilaExpedicion);
   }
 
   async buscarEnProgresoParaRecordatorio(): Promise<

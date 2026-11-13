@@ -8,7 +8,9 @@ export function setUnauthorizedHandler(handler: ManejadorNoAutorizado | null) {
   onNoAutorizado = handler;
 }
 
-export function handleUnauthorized() {
-  if (onNoAutorizado) onNoAutorizado();
-  else void limpiarSesion().catch(() => console.error('No se pudo completar la limpieza local de la sesión.'));
+export function handleUnauthorized():Promise<void> {
+  // Invalida antes de navegar; ninguna respuesta tardía puede escribir en el ámbito anterior.
+  const limpieza=limpiarSesion();
+  if(onNoAutorizado) onNoAutorizado();
+  return limpieza;
 }

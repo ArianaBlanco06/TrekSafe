@@ -29,8 +29,10 @@ export type ContextoAlertaRescate = ContextoAlertaExpedicion & {
 export interface IRepositorioAlerta {
   buscarContextoAlerta(
     expedicionId: string,
+    permitirCualquierEstado?: boolean,
   ): Promise<ContextoAlertaExpedicion | null>;
   buscarContextoAlertaRescate(
     expedicionId: string,
+    permitirCualquierEstado?: boolean,
   ): Promise<ContextoAlertaRescate | null>;
 }
