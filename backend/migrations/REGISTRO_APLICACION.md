@@ -30,6 +30,11 @@ Solo se anotan aplicaciones reales sobre un entorno (DEV, producción u otro). L
 | `023_dep108_avisos_transaccionales.sql` | 023 | 2026-11-11 12:57:45 UTC | DEV | a988637 | Marko (PO), mediante Codex/Supabase | OK: evento y aviso transaccionales |
 | `024_dep108_vencimientos_outbox.sql` | 024 | 2026-11-11 12:57:50 UTC | DEV | a988637 | Marko (PO), mediante Codex/Supabase | OK: productor SQL futuro; cron legado sin cambios |
 | `019_hu41_bitacora_incidente.sql` | 019 | 2026-11-11 17:46 UTC | DEV | 2deb4af | Ariana | OK |
+| `025_hu42_cerrar_incidente.sql` | 025 | 2026-11-13 22:40 UTC | DEV | 84bca6e | Ariana | OK |
+| `020_hu49_creacion_plan_idempotente.sql` | 020 | 2026-11-13 22:45 UTC | DEV | fa02d7c | Ariana | OK |
+| `026_hu45_intentos_reservas.sql` | 026 | 2026-11-13 22:55 UTC | DEV | feca4ea | Ariana | OK |
+| `027_hu44_retorno_atomico.sql` | 027 | 2026-11-13 23:01 UTC | DEV | 9f0282d | Ariana | OK |
+| `028_hu46_reintento_persistido.sql` | 028 | 2026-11-13 23:06 UTC | DEV | 739d822 | Ariana | OK |
 
 HU-32: la estructura final está aplicada y verificada en Supabase DEV.
 El asiento administrativo 010 fue registrado correctamente en public.treksafe_migraciones el 2026-11-06 a las 05:23 UTC.
