@@ -123,3 +123,173 @@ export async function intentarAsumir(
     return { tipo: 'error', mensaje };
   }
 }
+
+// ---------------------------------------------------------------------------
+// HU-40: relevo de la coordinación
+// ---------------------------------------------------------------------------
+
+export const MOTIVO_RELEVO_MAXIMO = 280;
+export const ADVERTENCIA_MOTIVO_RELEVO = 'No incluyas datos médicos.';
+
+/** Solo el responsable vigente propone, y solo si no hay ya un relevo pendiente. */
+export function puedeProponerRelevo(coordinacion: Coordinacion | null | undefined): boolean {
+  return !!coordinacion && coordinacion.esMia && !coordinacion.relevoPendiente;
+}
+
+/** Solo el destinatario del relevo pendiente lo acepta. */
+export function puedeAceptarRelevo(coordinacion: Coordinacion | null | undefined): boolean {
+  return coordinacion?.relevoPendiente?.esParaMi === true;
+}
+
+/** Solo el destinatario del relevo pendiente lo rechaza. */
+export function puedeRechazarRelevo(coordinacion: Coordinacion | null | undefined): boolean {
+  return coordinacion?.relevoPendiente?.esParaMi === true;
+}
+
+/**
+ * Solo quien propuso cancela el relevo pendiente. Mientras el relevo está pendiente quien
+ * propuso sigue siendo el responsable vigente (`esMia`); el servidor lo vuelve a comprobar.
+ */
+export function puedeCancelarRelevo(coordinacion: Coordinacion | null | undefined): boolean {
+  return !!coordinacion && coordinacion.esMia && !!coordinacion.relevoPendiente;
+}
+
+/** Mensaje de error del motivo, o `null` si es válido (1 a 280 caracteres tras recortar). */
+export function validarMotivoRelevo(motivo: string): string | null {
+  const recortado = motivo.trim();
+  if (recortado === '') return 'Escribe el motivo del relevo.';
+  if (recortado.length > MOTIVO_RELEVO_MAXIMO) return `El motivo admite hasta ${MOTIVO_RELEVO_MAXIMO} caracteres.`;
+  return null;
+}
+
+/**
+ * Texto del relevo pendiente según quién consulta. El motivo solo se menciona para el
+ * destinatario; los demás rescatistas ven únicamente a quién se propone el relevo.
+ */
+export function textoRelevoPendiente(coordinacion: Coordinacion, zonaHoraria?: string): string | null {
+  const relevo = coordinacion.relevoPendiente;
+  if (!relevo) return null;
+  if (relevo.esParaMi) {
+    const base = `${coordinacion.nombreResponsable} te propone relevarlo`;
+    return relevo.motivo ? `${base}: ${relevo.motivo}` : base;
+  }
+  const hora = horaCorta(relevo.solicitadoEn, zonaHoraria);
+  const base = `Relevo pendiente a ${relevo.nombreDestinatario}`;
+  const conHora = hora ? `${base} desde ${hora}` : base;
+  return coordinacion.esMia ? `${conHora}. Sigues coordinando tú` : conHora;
+}
+
+export const AVISO_RELEVO_RECHAZADO = 'Rechazaste el relevo. Sigue coordinando quien lo propuso.';
+export const AVISO_RELEVO_CANCELADO = 'Cancelaste el relevo. Sigues coordinando tú y puedes proponer otro.';
+export const TEXTO_CONFIRMAR_RECHAZO = '¿Rechazar el relevo? Seguirá coordinando quien lo propuso.';
+export const TEXTO_CONFIRMAR_CANCELACION = '¿Cancelar el relevo? Seguirás coordinando tú y podrás proponer otro.';
+
+/** Cómo quedó un relevo que ya no estaba pendiente (extra `estadoRelevo` de RELEVO_YA_RESUELTO). */
+const TEXTO_RELEVO_YA_RESUELTO: Record<string, string> = {
+  aceptado: 'El relevo ya fue aceptado.',
+  rechazado: 'El relevo ya fue rechazado.',
+  cancelado: 'El relevo ya fue cancelado.',
+};
+
+export type ResultadoRelevoUi =
+  | { tipo: 'ok'; coordinacion: Coordinacion }
+  /** El estado cambió en el servidor: se muestra el motivo y se vuelve a leer la pantalla. */
+  | { tipo: 'releer'; mensaje: string }
+  | { tipo: 'error'; mensaje: string };
+
+/** Rechazos por un estado que cambió: no sirve reintentar, hay que releer. */
+const CODIGOS_RELEER_RELEVO = new Set([
+  'VERSION_DESACTUALIZADA',
+  'RELEVO_PENDIENTE',
+  'NO_ES_RESPONSABLE',
+  'RELEVO_YA_RESUELTO',
+  'NO_ES_DESTINATARIO',
+  'NO_ES_PROPONENTE',
+  'RELEVO_NO_ENCONTRADO',
+  'INCIDENTE_CERRADO',
+]);
+
+export type DatosRelevo = { destinatarioId: string; motivo: string; versionIncidente: number };
+export type ProponerRelevoFn = (
+  expedicionId: string,
+  datos: DatosRelevo,
+  operacionId: string,
+) => Promise<{ coordinacion: Coordinacion }>;
+export type AceptarRelevoFn = (
+  expedicionId: string,
+  relevoId: string,
+  operacionId: string,
+) => Promise<{ coordinacion: Coordinacion }>;
+/** Rechazar y cancelar tienen la misma forma que aceptar: relevo y operación, sin motivo ni versión. */
+export type RechazarRelevoFn = AceptarRelevoFn;
+export type CancelarRelevoFn = AceptarRelevoFn;
+
+/** Misma política de `operacionId` que `intentarAsumir`: se conserva solo si el resultado es incierto. */
+async function ejecutarRelevo(
+  gestor: GestorOperacion,
+  mensajePorDefecto: string,
+  operacion: (operacionId: string) => Promise<{ coordinacion: Coordinacion }>,
+): Promise<ResultadoRelevoUi> {
+  const operacionId = gestor.obtener();
+  try {
+    const { coordinacion } = await operacion(operacionId);
+    gestor.resolver();
+    return { tipo: 'ok', coordinacion };
+  } catch (error) {
+    const e = error as ErrorHttp;
+    const mensaje = e.message || mensajePorDefecto;
+    if (esResultadoIncierto(error)) return { tipo: 'error', mensaje };
+    gestor.resolver();
+    if (e.codigo === 'RELEVO_YA_RESUELTO') {
+      // El servidor dice cómo quedó el relevo: se le explica a quien actuó, sin adivinar.
+      const estado = e.extras?.estadoRelevo;
+      return { tipo: 'releer', mensaje: (typeof estado === 'string' && TEXTO_RELEVO_YA_RESUELTO[estado]) || mensaje };
+    }
+    if (e.codigo && CODIGOS_RELEER_RELEVO.has(e.codigo)) return { tipo: 'releer', mensaje };
+    return { tipo: 'error', mensaje };
+  }
+}
+
+export function intentarProponerRelevo(
+  expedicionId: string,
+  datos: DatosRelevo,
+  gestor: GestorOperacion,
+  proponer: ProponerRelevoFn,
+): Promise<ResultadoRelevoUi> {
+  return ejecutarRelevo(gestor, 'No se pudo proponer el relevo.', (operacionId) =>
+    proponer(expedicionId, { ...datos, motivo: datos.motivo.trim() }, operacionId),
+  );
+}
+
+export function intentarAceptarRelevo(
+  expedicionId: string,
+  relevoId: string,
+  gestor: GestorOperacion,
+  aceptar: AceptarRelevoFn,
+): Promise<ResultadoRelevoUi> {
+  return ejecutarRelevo(gestor, 'No se pudo aceptar el relevo.', (operacionId) =>
+    aceptar(expedicionId, relevoId, operacionId),
+  );
+}
+
+export function intentarRechazarRelevo(
+  expedicionId: string,
+  relevoId: string,
+  gestor: GestorOperacion,
+  rechazar: RechazarRelevoFn,
+): Promise<ResultadoRelevoUi> {
+  return ejecutarRelevo(gestor, 'No se pudo rechazar el relevo.', (operacionId) =>
+    rechazar(expedicionId, relevoId, operacionId),
+  );
+}
+
+export function intentarCancelarRelevo(
+  expedicionId: string,
+  relevoId: string,
+  gestor: GestorOperacion,
+  cancelar: CancelarRelevoFn,
+): Promise<ResultadoRelevoUi> {
+  return ejecutarRelevo(gestor, 'No se pudo cancelar el relevo.', (operacionId) =>
+    cancelar(expedicionId, relevoId, operacionId),
+  );
+}

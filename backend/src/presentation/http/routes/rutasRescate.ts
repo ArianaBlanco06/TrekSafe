@@ -1,61 +1,82 @@
 import { Router } from 'express';
-import { AgregarEntradaBitacora } from '../../../application/use-cases/AgregarEntradaBitacora.js';
-import { AsignarResponsable } from '../../../application/use-cases/AsignarResponsable.js';
-import { ConsultarBitacoraIncidente } from '../../../application/use-cases/ConsultarBitacoraIncidente.js';
-import { getSupabaseAdmin } from '../../../infrastructure/database/supabase.js';
-import { BitacoraIncidenteDAOSupabase } from '../../../infrastructure/repositories/BitacoraIncidenteDAOSupabase.js';
-import { IncidenteDAOSupabase } from '../../../infrastructure/repositories/IncidenteDAOSupabase.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
-import { middlewareAutenticacion, requerirRol } from '../middleware/middlewareAutenticacion.js';
 import {
-  listarAlertas,
-  obtenerDetalleAlerta,
-  listarExpediciones,
-  listarHistorial,
-  actualizarBitacoraRescate,
-  confirmarAlerta,
-} from '../controllers/controladorRescate.js';
+  middlewareAutenticacion,
+  requerirRol,
+} from '../middleware/middlewareAutenticacion.js';
+import { crearControladorRescate } from '../controllers/controladorRescate.js';
 import { crearControladorBitacoraIncidente } from '../controllers/controladorBitacoraIncidente.js';
 import { crearControladorCoordinacion } from '../controllers/controladorCoordinacion.js';
+import { crearControladorRelevo } from '../controllers/controladorRelevo.js';
+import { crearControladorRescatistas } from '../controllers/controladorRescatistas.js';
+import {
+  crearModuloRescate,
+  type ModuloRescate,
+} from '../../../infrastructure/composicion/servicios.js';
 
-export type DependenciasRutasRescate = {
-  /** Ejecutor de HU-39. Por defecto, con el DAO de Supabase; las pruebas inyectan uno propio. */
-  asignarResponsable?: AsignarResponsable;
-  /** Casos de uso de HU-41. Por defecto, con el DAO de Supabase; las pruebas inyectan los suyos. */
-  consultarBitacoraIncidente?: ConsultarBitacoraIncidente;
-  agregarEntradaBitacora?: AgregarEntradaBitacora;
-};
+/** Los casos inyectados no se sustituyen ni construyen adaptadores innecesarios. */
+export type DependenciasRutasRescate = Partial<ModuloRescate>;
 
-export function crearRutasRescate(dependencias: DependenciasRutasRescate = {}): Router {
+export function crearRutasRescate(
+  dependencias: DependenciasRutasRescate = {},
+): Router {
+  const modulo = crearModuloRescate(dependencias);
+  const {
+    listarAlertas,
+    obtenerDetalleAlerta,
+    listarExpediciones,
+    listarHistorial,
+    actualizarBitacoraRescate,
+    confirmarAlerta,
+  } = crearControladorRescate(modulo.servicio);
   const router = Router();
-  // Ensamblaje: las clases concretas se crean solo aquí.
-  const coordinacion = crearControladorCoordinacion(
-    dependencias.asignarResponsable ?? new AsignarResponsable(new IncidenteDAOSupabase(getSupabaseAdmin())),
+  const coordinacion = crearControladorCoordinacion(modulo.asignarResponsable);
+  // HU-40: relevo de la coordinación y catálogo de rescatistas validados.
+  const relevo = crearControladorRelevo(
+    modulo.proponerRelevo,
+    modulo.aceptarRelevo,
+    modulo.rechazarRelevo,
+    modulo.cancelarRelevo,
   );
-
-  // HU-41: un solo DAO se comparte entre lectura y escritura, y solo se crea si falta algún caso de uso.
-  const daoBitacora =
-    dependencias.consultarBitacoraIncidente && dependencias.agregarEntradaBitacora
-      ? null
-      : new BitacoraIncidenteDAOSupabase(getSupabaseAdmin());
+  const rescatistas = crearControladorRescatistas(modulo.rescatistas);
   const bitacora = crearControladorBitacoraIncidente({
-    consultar: dependencias.consultarBitacoraIncidente ?? new ConsultarBitacoraIncidente(daoBitacora!),
-    agregar: dependencias.agregarEntradaBitacora ?? new AgregarEntradaBitacora(daoBitacora!),
+    consultar: modulo.consultarBitacoraIncidente,
+    agregar: modulo.agregarEntradaBitacora,
   });
 
   router.use(middlewareAutenticacion, requerirRol('rescatista'));
-
   router.get('/expediciones', asyncHandler(listarExpediciones));
   router.get('/historial', asyncHandler(listarHistorial));
   router.get('/alertas', asyncHandler(listarAlertas));
   router.get('/alertas/:expedicionId', asyncHandler(obtenerDetalleAlerta));
-  router.patch('/alertas/:expedicionId/bitacora', asyncHandler(actualizarBitacoraRescate));
-  router.post('/alertas/:expedicionId/confirmar', asyncHandler(confirmarAlerta));
+  router.patch(
+    '/alertas/:expedicionId/bitacora',
+    asyncHandler(actualizarBitacoraRescate),
+  );
+  router.post(
+    '/alertas/:expedicionId/confirmar',
+    asyncHandler(confirmarAlerta),
+  );
   // HU-39: coordinación (incidente), separada de la recepción histórica de HU-14.
-  router.post('/alertas/:expedicionId/coordinacion', asyncHandler(coordinacion.asumir));
-  // HU-41: bitácora cronológica compartida del incidente (distinta de la bitácora personal de HU-14).
-  router.get('/incidentes/:incidenteId/bitacora', asyncHandler(bitacora.consultar));
-  router.post('/incidentes/:incidenteId/bitacora', asyncHandler(bitacora.agregar));
-
+  router.post(
+    '/alertas/:expedicionId/coordinacion',
+    asyncHandler(coordinacion.asumir),
+  );
+  // HU-40: relevo de la coordinación (proponer, aceptar, rechazar y cancelar).
+  // HU-40: rescatistas validados para elegir destinatario (solo id y nombre).
+  router.get('/rescatistas', asyncHandler(rescatistas.listar));
+  router.post('/alertas/:expedicionId/coordinacion/relevos', asyncHandler(relevo.proponer));
+  router.post('/alertas/:expedicionId/coordinacion/relevos/:relevoId/aceptar', asyncHandler(relevo.aceptar));
+  router.post('/alertas/:expedicionId/coordinacion/relevos/:relevoId/rechazar', asyncHandler(relevo.rechazar));
+  router.post('/alertas/:expedicionId/coordinacion/relevos/:relevoId/cancelar', asyncHandler(relevo.cancelar));
+  // HU-41: bitácora cronológica compartida; la bitácora personal anterior se conserva.
+  router.get(
+    '/incidentes/:incidenteId/bitacora',
+    asyncHandler(bitacora.consultar),
+  );
+  router.post(
+    '/incidentes/:incidenteId/bitacora',
+    asyncHandler(bitacora.agregar),
+  );
   return router;
 }

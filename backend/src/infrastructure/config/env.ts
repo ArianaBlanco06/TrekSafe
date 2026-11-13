@@ -6,7 +6,10 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // override: true → backend/.env tiene prioridad sobre PORT del sistema (evita 5010 vs 3000)
-config({ path: path.resolve(__dirname, '../../../.env'), override: true });
+export function inicializarEntorno(): void {
+  config({ path: path.resolve(__dirname, '../../../.env'), override: true });
+  cached = null;
+}
 
 export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),

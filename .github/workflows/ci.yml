@@ -96,3 +96,58 @@ jobs:
           name: evidencia-privacidad-pwa
           path: frontend/test-results/
           if-no-files-found: ignore
+
+  persistencia:
+    name: Persistencia - PostgreSQL 17 y PostgREST
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v7
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci --prefix backend
+
+      - name: Instalar PostgreSQL 17 desde PGDG
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo install -d /usr/share/postgresql-common/pgdg
+          curl --fail --location --retry 3 https://www.postgresql.org/media/keys/ACCC4CF8.asc -o "$RUNNER_TEMP/pgdg.asc"
+          gpg --show-keys --with-colons "$RUNNER_TEMP/pgdg.asc" | grep -F 'B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8'
+          sudo install -m 644 "$RUNNER_TEMP/pgdg.asc" /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+          echo 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main' | sudo tee /etc/apt/sources.list.d/treksafe-pgdg.list
+          sudo apt-get update
+          sudo apt-get install -y postgresql-17
+          /usr/lib/postgresql/17/bin/pg_ctl --version
+
+      - name: Descargar PostgREST 16.5 y verificar SHA256
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/postgrest"
+          curl --fail --location --retry 3 https://github.com/PostgREST/postgrest/releases/download/v16.5/postgrest-v16.5-linux-static-x86-64.tar.xz -o "$RUNNER_TEMP/postgrest.tar.xz"
+          echo "5099e7ada38f9f6846cd87c14c5f158b7c165f1e9959665ad412e61f4dceba95  $RUNNER_TEMP/postgrest.tar.xz" | sha256sum --check
+          tar -xJf "$RUNNER_TEMP/postgrest.tar.xz" -C "$RUNNER_TEMP/postgrest"
+          "$RUNNER_TEMP/postgrest/postgrest" --version
+
+      - name: Probar instalacion, actualizacion y RPC reales en base desechable
+        shell: bash
+        run: |
+          set -euo pipefail
+          node backend/scripts/test-dep108-postgres.mjs --pg-bin /usr/lib/postgresql/17/bin --postgrest "$RUNNER_TEMP/postgrest/postgrest" --dev-check backend/migrations/tests/dep108_dev_rollback.sql | tee "$RUNNER_TEMP/dep108.log"
+
+      - name: Adjuntar evidencia de persistencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencia-persistencia-dep108
+          path: ${{ runner.temp }}/dep108.log
+          if-no-files-found: ignore

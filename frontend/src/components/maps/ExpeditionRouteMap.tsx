@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react';
-import { MapContainer, Marker, Polyline, Popup, TileLayer } from 'react-leaflet';
+import { useCallback, useMemo, useState } from 'react';
+import { MapContainer, Marker, Polyline, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import '@/components/maps/leafletIconFix';
 import { parseDecimalCoordinates } from '@/lib/coordinates';
 import { FitMapBounds } from '@/components/maps/FitMapBounds';
 import { MapOnlineGate } from '@/components/maps/MapOnlineGate';
+import { TeselasRecorrido } from '@/components/maps/TeselasRecorrido';
 import {
   END_MARKER_COLOR,
   makeMarkerIcon,
@@ -13,8 +14,6 @@ import {
 } from '@/components/maps/mapMarkers';
 import {
   DEFAULT_ZOOM,
-  OSM_ATTRIBUTION,
-  OSM_TILE_URL,
   PERU_CENTER,
   ROUTE_ZOOM,
 } from '@/components/maps/mapDefaults';
@@ -41,6 +40,8 @@ export function ExpeditionRouteMap({
   puntos,
 }: ExpeditionRouteMapProps) {
   const [falloMapa, setFalloMapa] = useState(false);
+  const [cargaParcial, setCargaParcial] = useState(false);
+  const marcarNoDisponible = useCallback(() => setFalloMapa(true), []);
   const ordenados = useMemo(() => [...(puntos ?? [])].sort((a, b) => a.orden - b.orden), [puntos]);
   const { start, end, points } = useMemo(() => {
     const startParsed = startCoordinates ? parseDecimalCoordinates(startCoordinates) : null;
@@ -64,7 +65,7 @@ export function ExpeditionRouteMap({
   if (falloMapa) return <div className="space-y-3">
     <p role="status" className="text-sm text-muted-foreground">El mapa no está disponible. Puedes consultar el recorrido y sus coordenadas.</p>
     {lista}
-    <button type="button" className="min-h-11 text-primary font-semibold" onClick={() => setFalloMapa(false)}>Reintentar mapa</button>
+    <button type="button" className="min-h-11 text-primary font-semibold" onClick={() => { setCargaParcial(false); setFalloMapa(false); }}>Reintentar mapa</button>
   </div>;
 
   if (points.length === 0) {
@@ -95,8 +96,7 @@ export function ExpeditionRouteMap({
           scrollWheelZoom={false}
           className={`${mapHeightClass} w-full z-0`}
         >
-          <TileLayer attribution={OSM_ATTRIBUTION} url={OSM_TILE_URL}
-            eventHandlers={{ tileerror: () => setFalloMapa(true) }} />
+          <TeselasRecorrido onNoDisponible={marcarNoDisponible} onCargaParcial={setCargaParcial} />
           <FitMapBounds points={points} />
           {start && (
             <Marker position={start} icon={makeMarkerIcon(START_MARKER_COLOR)}>
@@ -147,6 +147,9 @@ export function ExpeditionRouteMap({
             />
           )}
         </MapContainer>
+        {cargaParcial && <p role="status" className="px-3 py-2 text-sm text-muted-foreground">
+          Algunas imágenes del mapa no cargaron. El recorrido y sus marcadores siguen disponibles.
+        </p>}
       </div>
     </MapOnlineGate>
   );

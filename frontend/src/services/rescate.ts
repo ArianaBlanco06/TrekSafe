@@ -1,6 +1,7 @@
 import { api } from './clienteApi';
 
 export type NivelRiesgoRescate = 'verde' | 'amarillo' | 'rojo';
+export type CriterioPrioridadRescate = 'tiempo_excedido' | 'tamano_grupo';
 
 /**
  * Responsable vigente de una alerta (HU-39). Lo ven todos los rescatistas autorizados y
@@ -13,10 +14,27 @@ export type Coordinacion = {
   nombreResponsable: string;
   asumidoEn: string;
   esMia: boolean;
+  /**
+   * Relevo pendiente (HU-40). La clave solo existe mientras haya un relevo pendiente: su
+   * ausencia significa "sin relevo". Lo ve todo rescatista autorizado; `motivo` solo llega al
+   * responsable y al destinatario.
+   */
+  relevoPendiente?: RelevoPendiente;
+};
+
+export type RelevoPendiente = {
+  relevoId: string;
+  destinatarioId: string;
+  nombreDestinatario: string;
+  solicitadoEn: string;
+  /** `true` si quien consulta es el destinatario. */
+  esParaMi: boolean;
+  motivo?: string;
 };
 
 export type ExpedicionRescate = {
   expedicionId: string;
+  numeroParticipantes: number;
   estado: 'en_progreso' | 'alerta';
   nivelRiesgo: NivelRiesgoRescate;
   nombreCompletoSenderista: string;
@@ -53,9 +71,15 @@ export type AlertaRescate = {
   coordinacion: Coordinacion | null;
 };
 
-export function obtenerExpedicionesRescate(zona?: string) {
-  const params = zona?.trim() ? `?zona=${encodeURIComponent(zona.trim())}` : '';
-  return api.get<{ expediciones: ExpedicionRescate[] }>(`/rescate/expediciones${params}`, true);
+export function obtenerExpedicionesRescate(zona?: string, criterio?: CriterioPrioridadRescate) {
+  const params = new URLSearchParams();
+  if (zona?.trim()) params.set('zona', zona.trim());
+  if (criterio) params.set('criterio', criterio);
+  const consulta = params.toString();
+  return api.get<{ expediciones: ExpedicionRescate[] }>(
+    `/rescate/expediciones${consulta ? `?${consulta}` : ''}`,
+    true,
+  );
 }
 
 export function obtenerAlertasRescate() {
@@ -101,6 +125,56 @@ export function confirmarAlertaRescate(expedicionId: string, notas?: string) {
 export function asumirCoordinacion(expedicionId: string, operacionId: string) {
   return api.post<{ coordinacion: Coordinacion }>(
     `/rescate/alertas/${expedicionId}/coordinacion`,
+    { operacionId },
+    true,
+  );
+}
+
+/** Rescatista validado al que se puede proponer un relevo (HU-40). Solo identidad. */
+export type RescatistaElegible = { id: string; nombreCompleto: string };
+
+export function obtenerRescatistasElegibles() {
+  return api.get<{ rescatistas: RescatistaElegible[] }>('/rescate/rescatistas', true);
+}
+
+export type DatosProponerRelevo = {
+  destinatarioId: string;
+  motivo: string;
+  /** Versión de la coordinación que vio el cliente (`coordinacion.version`). */
+  versionIncidente: number;
+};
+
+/** Propone el relevo de la coordinación (HU-40). `operacionId` identifica el intento. */
+export function proponerRelevo(expedicionId: string, datos: DatosProponerRelevo, operacionId: string) {
+  return api.post<{ coordinacion: Coordinacion }>(
+    `/rescate/alertas/${expedicionId}/coordinacion/relevos`,
+    { operacionId, ...datos },
+    true,
+  );
+}
+
+/** Acepta el relevo dirigido al rescatista (HU-40). Sin versión: solo la operación. */
+export function aceptarRelevo(expedicionId: string, relevoId: string, operacionId: string) {
+  return api.post<{ coordinacion: Coordinacion }>(
+    `/rescate/alertas/${expedicionId}/coordinacion/relevos/${relevoId}/aceptar`,
+    { operacionId },
+    true,
+  );
+}
+
+/** El destinatario rechaza el relevo pendiente (HU-40). Solo la operación: sin motivo ni versión. */
+export function rechazarRelevo(expedicionId: string, relevoId: string, operacionId: string) {
+  return api.post<{ coordinacion: Coordinacion }>(
+    `/rescate/alertas/${expedicionId}/coordinacion/relevos/${relevoId}/rechazar`,
+    { operacionId },
+    true,
+  );
+}
+
+/** Quien propuso cancela el relevo pendiente (HU-40). Solo la operación: sin motivo ni versión. */
+export function cancelarRelevo(expedicionId: string, relevoId: string, operacionId: string) {
+  return api.post<{ coordinacion: Coordinacion }>(
+    `/rescate/alertas/${expedicionId}/coordinacion/relevos/${relevoId}/cancelar`,
     { operacionId },
     true,
   );

@@ -1,7 +1,7 @@
-import { buildCorreoAlertaContacto } from '../../infrastructure/email/templates/contactAlertEmail.js';
-import { ServicioCorreo } from '../../infrastructure/email/ServicioCorreo.js';
-import { RepositorioAlerta } from '../../infrastructure/repositories/RepositorioAlerta.js';
-import { RepositorioDespachoCorreo } from '../../infrastructure/repositories/RepositorioDespachoCorreo.js';
+import { buildCorreoAlertaContacto } from '../mensajes/contactAlertEmail.js';
+import type { ICorreo } from '../ports/correo.js';
+import type { IRepositorioAlerta } from '../ports/RepositorioAlerta.js';
+import type { IRepositorioDespachoCorreo } from '../ports/RepositorioDespachoCorreo.js';
 
 export type ResultadoAlertaContacto = {
   expedicionId: string;
@@ -13,9 +13,9 @@ export type ResultadoAlertaContacto = {
 
 export class ServicioNotificacionAlerta {
   constructor(
-    private readonly repoAlerta = new RepositorioAlerta(),
-    private readonly correo = new ServicioCorreo(),
-    private readonly repoDespacho = new RepositorioDespachoCorreo(),
+    private readonly repoAlerta: IRepositorioAlerta,
+    private readonly correo: ICorreo,
+    private readonly repoDespacho: IRepositorioDespachoCorreo,
   ) {}
 
   async notificarContactosEmergencia(expedicionId: string): Promise<ResultadoAlertaContacto> {
