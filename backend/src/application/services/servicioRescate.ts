@@ -9,8 +9,6 @@ import type { IRepositorioAlerta } from '../ports/RepositorioAlerta.js';
 import { calcularFechaLimite } from '../../domain/entities/Expedicion.js';
 import type { IReloj } from '../../domain/services/IReloj.js';
 import type { IRepositorioRescate } from '../ports/RepositorioRescate.js';
-import type { IRepositorioUsuario } from '../ports/RepositorioUsuario.js';
-import type { IRepositorioAuditoriaAccesoMedico } from '../ports/RepositorioAuditoriaAccesoMedico.js';
 import type { NivelRiesgoExpedicion } from '../../domain/value-objects/enums.js';
 import type { Coordinacion, IIncidenteDAO } from '../../domain/repositories/IIncidenteDAO.js';
 import { OrdenadorAlertas } from '../../domain/services/OrdenadorAlertas.js';
@@ -123,12 +121,7 @@ export type DetalleAlertaRescate = {
   enAlertaDesde: string;
   acompanantes: string[];
   contactosEmergencia: { nombreCompleto: string; telefono: string; parentesco: string; correoElectronico: string }[];
-  fichaMedica: {
-    tipoSangre: string;
-    alergias: string;
-    condiciones: string;
-    medicamentos: string;
-  } | null;
+  // HU-50: la ficha médica solo se consulta en GET /incidentes/:id/ficha-medica
   bitacoraRescate: {
     id: string;
     estadoRescate: string;
@@ -157,8 +150,6 @@ export class ServicioRescate {
   constructor(
     private readonly repo: IRepositorioRescate,
     private readonly repoAlerta: IRepositorioAlerta,
-    private readonly repoUsuario: IRepositorioUsuario,
-    private readonly repoAuditoria: IRepositorioAuditoriaAccesoMedico,
     private readonly incidentes: IIncidenteDAO,
     private readonly reloj: IReloj = { ahora: () => new Date() },
     private readonly estrategiasPrioridad = ESTRATEGIAS_PRIORIDAD,
@@ -272,17 +263,7 @@ export class ServicioRescate {
       throw new ErrorAplicacion(404, 'Alerta no encontrada o expedición ya no está en alerta', 'NO_ENCONTRADO');
     }
 
-    const registroMedico = await this.repoUsuario.obtenerFichaMedica(contexto.senderistaId);
-    if (registroMedico?.consentimientoFirmado) {
-      await this.repoAuditoria.registrarAcceso({
-        senderistaId: contexto.senderistaId,
-        expedicionId,
-        idAccesor: rescatistaId,
-        rolAccesor: 'rescatista',
-        tipoAcceso: 'dossier_alerta_medico',
-      });
-    }
-
+    // HU-50: este detalle ya no lee ni audita la ficha médica; se consulta en GET /incidentes/:id/ficha-medica.
     const confirmacion = await this.repo.buscarConfirmacion(expedicionId, rescatistaId);
     const expedicion = await this.repo.buscarExpedicionEnAlerta(expedicionId);
     const coordinaciones = await this.incidentes.leerCoordinaciones([expedicionId], rescatistaId);
@@ -307,14 +288,6 @@ export class ServicioRescate {
         telefono: contexto.contactosEmergencia[i]?.telefono ?? '',
         parentesco: c.parentesco,
       })),
-      fichaMedica: registroMedico?.consentimientoFirmado
-        ? {
-            tipoSangre: registroMedico.tipoSangre,
-            alergias: registroMedico.carga.alergias,
-            condiciones: registroMedico.carga.condiciones,
-            medicamentos: registroMedico.carga.medicamentos,
-          }
-        : null,
       bitacoraRescate: confirmacion
         ? {
             id: confirmacion.id,

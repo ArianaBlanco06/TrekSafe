@@ -11,6 +11,7 @@ import {
 } from '../../application/services/servicioBandejaAvisos.js';
 import { AvisadorCambiosPlan } from '../../application/services/AvisadorCambiosPlan.js';
 import { FachadaEntregaAvisosIncidente } from '../../application/services/FachadaEntregaAvisosIncidente.js';
+import { FachadaFichaMedicaIncidente } from '../../application/services/FachadaFichaMedicaIncidente.js';
 import { ObtenerPlan } from '../../application/use-cases/ObtenerPlan.js';
 import { EditarPlan } from '../../application/use-cases/EditarPlan.js';
 import { CancelarPlan } from '../../application/use-cases/CancelarPlan.js';
@@ -30,7 +31,6 @@ import { RepositorioUsuario } from '../repositories/RepositorioUsuario.js';
 import { RepositorioExpedicion } from '../repositories/RepositorioExpedicion.js';
 import { RepositorioRescate } from '../repositories/RepositorioRescate.js';
 import { RepositorioAlerta } from '../repositories/RepositorioAlerta.js';
-import { RepositorioAuditoriaAccesoMedico } from '../repositories/RepositorioAuditoriaAccesoMedico.js';
 import { RepositorioDespachoCorreo } from '../repositories/RepositorioDespachoCorreo.js';
 import { RepositorioAvisosSupabase } from '../repositories/RepositorioAvisosSupabase.js';
 import { RepositorioOutboxSupabase } from '../repositories/RepositorioOutboxSupabase.js';
@@ -38,6 +38,8 @@ import { ExpedicionDAOSupabase } from '../repositories/ExpedicionDAOSupabase.js'
 import { IncidenteDAOSupabase } from '../repositories/IncidenteDAOSupabase.js';
 import { BitacoraIncidenteDAOSupabase } from '../repositories/BitacoraIncidenteDAOSupabase.js';
 import { CierreIncidenteDAOSupabase } from '../repositories/CierreIncidenteDAOSupabase.js';
+import { FichaMedicaIncidenteDAOSupabase } from '../repositories/FichaMedicaIncidenteDAOSupabase.js';
+import { DescifradorFichaMedicaAesGcm } from '../security/DescifradorFichaMedicaAesGcm.js';
 import { RescatistasDAOSupabase } from '../repositories/RescatistasDAOSupabase.js';
 import type { IRescatistasDAO } from '../../domain/repositories/IRescatistasDAO.js';
 import { ServicioCorreo } from '../email/ServicioCorreo.js';
@@ -106,6 +108,7 @@ export type ModuloRescate = {
   marcarIncidenteLocalizado: MarcarIncidenteLocalizado;
   consultarCierreIncidente: ConsultarCierreIncidente;
   entregaAvisos: FachadaEntregaAvisosIncidente;
+  fichaMedica: FachadaFichaMedicaIncidente; // HU-50
 };
 
 export function crearModuloRescate(
@@ -114,20 +117,21 @@ export function crearModuloRescate(
   let incidentes: IncidenteDAOSupabase | undefined;
   let bitacora: BitacoraIncidenteDAOSupabase | undefined;
   let cierre: CierreIncidenteDAOSupabase | undefined;
+  let ficha: FichaMedicaIncidenteDAOSupabase | undefined;
   const obtenerIncidentes = () =>
     (incidentes ??= new IncidenteDAOSupabase(getSupabaseAdmin()));
   const obtenerBitacora = () =>
     (bitacora ??= new BitacoraIncidenteDAOSupabase(getSupabaseAdmin()));
   const obtenerCierre = () =>
     (cierre ??= new CierreIncidenteDAOSupabase(getSupabaseAdmin()));
+  const obtenerFicha = () =>
+    (ficha ??= new FichaMedicaIncidenteDAOSupabase(getSupabaseAdmin()));
   return {
     servicio:
       dependencias.servicio ??
       new ServicioRescate(
         new RepositorioRescate(),
         new RepositorioAlerta(),
-        new RepositorioUsuario(),
-        new RepositorioAuditoriaAccesoMedico(),
         obtenerIncidentes(),
         new RelojSistema(),
       ),
@@ -165,6 +169,15 @@ export function crearModuloRescate(
       new FachadaEntregaAvisosIncidente(
         new RepositorioOutboxSupabase(),
         new RepositorioOutboxSupabase(),
+      ),
+    // HU-50: un solo DAO cumple los tres puertos (contexto, lectura cifrada y auditoría).
+    fichaMedica:
+      dependencias.fichaMedica ??
+      new FachadaFichaMedicaIncidente(
+        obtenerFicha(),
+        obtenerFicha(),
+        obtenerFicha(),
+        new DescifradorFichaMedicaAesGcm(),
       ),
   };
 }

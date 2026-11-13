@@ -116,7 +116,7 @@ try {
   const { cliente, peticiones } = clienteSupabaseRescatePostgresPruebas(pool);
   const incidentes = new IncidenteDAOSupabase(cliente);
   const bitacora = new BitacoraIncidenteDAOSupabase(cliente);
-  const servicio = new ServicioRescate(new RepositorioRescate(cliente), {}, {}, {}, incidentes,
+  const servicio = new ServicioRescate(new RepositorioRescate(cliente), {}, incidentes,
     { ahora: () => new Date('2030-01-15T12:00:00Z') });
   const rutas = crearRutasRescate({ servicio, asignarResponsable: new AsignarResponsable(incidentes),
     consultarBitacoraIncidente: new ConsultarBitacoraIncidente(bitacora), agregarEntradaBitacora: new AgregarEntradaBitacora(bitacora) });

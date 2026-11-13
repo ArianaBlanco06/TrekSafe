@@ -85,8 +85,6 @@ describe('ServicioRescate: relevoPendiente en la coordinación (HU-40)', () => {
     servicio = new ServicioRescate(
       repo as never,
       repoAlerta as never,
-      { obtenerFichaMedica: async () => null } as never,
-      { registrarAcceso: async () => undefined } as never,
       incidentes,
     );
   });

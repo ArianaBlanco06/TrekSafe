@@ -51,10 +51,8 @@ class IncidentesEspia extends IncidenteDAOMemoria {
 describe('ServicioRescate: campo coordinacion (HU-39, CA-03)', () => {
   let incidentes: IncidentesEspia;
   let servicio: InstanceType<typeof ServicioRescate>;
-  let leidasDeFichaMedica = 0;
 
   beforeEach(() => {
-    leidasDeFichaMedica = 0;
     incidentes = new IncidentesEspia(new Map(), new Map());
     incidentes.sembrar({
       id: '00000000-0000-4000-8000-000000000001', expedicionId: E_CON, estado: 'abierto', version: 1,
@@ -95,21 +93,8 @@ describe('ServicioRescate: campo coordinacion (HU-39, CA-03)', () => {
             }
           : null,
     };
-    const repoUsuario = {
-      obtenerFichaMedica: async () => {
-        leidasDeFichaMedica += 1;
-        return null;
-      },
-    };
-    const repoAuditoria = { registrarAcceso: async () => undefined };
 
-    servicio = new ServicioRescate(
-      repo as never,
-      repoAlerta as never,
-      repoUsuario as never,
-      repoAuditoria as never,
-      incidentes,
-    );
+    servicio = new ServicioRescate(repo as never, repoAlerta as never, incidentes);
   });
 
   it('GET /rescate/expediciones: una sola lectura para todas las expediciones, null donde no hay incidente vigente', async () => {
@@ -164,9 +149,11 @@ describe('ServicioRescate: campo coordinacion (HU-39, CA-03)', () => {
     }
   });
 
-  it('leer coordinaciones no consulta la ficha médica: ni la lista ni el monitor la leen', async () => {
+  it('HU-50: el detalle de la alerta no trae la clave fichaMedica ni ningún dato médico (la ficha se pide en su propia ruta)', async () => {
+    const detalle = await servicio.obtenerDetalleAlerta(BETO, E_CON);
+    assert.equal('fichaMedica' in detalle, false);
+    assert.ok(!PATRON_MEDICO.test(JSON.stringify(detalle)), `detalle con datos médicos: ${JSON.stringify(detalle)}`);
     await servicio.listarExpediciones(BETO);
     await servicio.listarAlertas(BETO);
-    assert.equal(leidasDeFichaMedica, 0);
   });
 });

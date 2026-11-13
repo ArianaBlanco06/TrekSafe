@@ -35,6 +35,8 @@ describe('Politica HTTP de privacidad', () => {
     '/expediciones/00000000-0000-4000-8000-000000000000/borrador',
     // HU-29 (plantillas personales de la cuenta).
     '/plantillas',
+    // HU-50: la ficha médica del incidente tampoco se almacena.
+    '/rescate/incidentes/00000000-0000-4000-8000-000000000000/ficha-medica',
   ]) {
     it(`${endpoint}: el rechazo sin autenticacion tampoco se almacena`, async () => {
       const response = await fetch(`${base}/api${endpoint}`);
