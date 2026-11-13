@@ -21,6 +21,9 @@ import { RechazarRelevo } from '../../application/use-cases/RechazarRelevo.js';
 import { CancelarRelevo } from '../../application/use-cases/CancelarRelevo.js';
 import { AgregarEntradaBitacora } from '../../application/use-cases/AgregarEntradaBitacora.js';
 import { ConsultarBitacoraIncidente } from '../../application/use-cases/ConsultarBitacoraIncidente.js';
+import { CerrarIncidente } from '../../application/use-cases/CerrarIncidente.js';
+import { ConsultarCierreIncidente } from '../../application/use-cases/ConsultarCierreIncidente.js';
+import { MarcarIncidenteLocalizado } from '../../application/use-cases/MarcarIncidenteLocalizado.js';
 import { RepositorioAutenticacionPostgres } from '../repositories/RepositorioAutenticacionPostgres.js';
 import { RepositorioUsuario } from '../repositories/RepositorioUsuario.js';
 import { RepositorioExpedicion } from '../repositories/RepositorioExpedicion.js';
@@ -32,6 +35,7 @@ import { RepositorioAvisosSupabase } from '../repositories/RepositorioAvisosSupa
 import { ExpedicionDAOSupabase } from '../repositories/ExpedicionDAOSupabase.js';
 import { IncidenteDAOSupabase } from '../repositories/IncidenteDAOSupabase.js';
 import { BitacoraIncidenteDAOSupabase } from '../repositories/BitacoraIncidenteDAOSupabase.js';
+import { CierreIncidenteDAOSupabase } from '../repositories/CierreIncidenteDAOSupabase.js';
 import { RescatistasDAOSupabase } from '../repositories/RescatistasDAOSupabase.js';
 import type { IRescatistasDAO } from '../../domain/repositories/IRescatistasDAO.js';
 import { ServicioCorreo } from '../email/ServicioCorreo.js';
@@ -95,6 +99,10 @@ export type ModuloRescate = {
   rescatistas: IRescatistasDAO;
   consultarBitacoraIncidente: ConsultarBitacoraIncidente;
   agregarEntradaBitacora: AgregarEntradaBitacora;
+  // HU-42: cierre del incidente con informe.
+  cerrarIncidente: CerrarIncidente;
+  marcarIncidenteLocalizado: MarcarIncidenteLocalizado;
+  consultarCierreIncidente: ConsultarCierreIncidente;
 };
 
 export function crearModuloRescate(
@@ -102,10 +110,13 @@ export function crearModuloRescate(
 ): ModuloRescate {
   let incidentes: IncidenteDAOSupabase | undefined;
   let bitacora: BitacoraIncidenteDAOSupabase | undefined;
+  let cierre: CierreIncidenteDAOSupabase | undefined;
   const obtenerIncidentes = () =>
     (incidentes ??= new IncidenteDAOSupabase(getSupabaseAdmin()));
   const obtenerBitacora = () =>
     (bitacora ??= new BitacoraIncidenteDAOSupabase(getSupabaseAdmin()));
+  const obtenerCierre = () =>
+    (cierre ??= new CierreIncidenteDAOSupabase(getSupabaseAdmin()));
   return {
     servicio:
       dependencias.servicio ??
@@ -137,6 +148,15 @@ export function crearModuloRescate(
     agregarEntradaBitacora:
       dependencias.agregarEntradaBitacora ??
       new AgregarEntradaBitacora(obtenerBitacora()),
+    // HU-42: un solo DAO compartido por los tres casos de uso.
+    cerrarIncidente:
+      dependencias.cerrarIncidente ?? new CerrarIncidente(obtenerCierre()),
+    marcarIncidenteLocalizado:
+      dependencias.marcarIncidenteLocalizado ??
+      new MarcarIncidenteLocalizado(obtenerCierre()),
+    consultarCierreIncidente:
+      dependencias.consultarCierreIncidente ??
+      new ConsultarCierreIncidente(obtenerCierre()),
   };
 }
 export function crearDependenciasCron() {

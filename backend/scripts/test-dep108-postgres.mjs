@@ -38,9 +38,9 @@ const baseMigrations = [
     '004_hu27_estado_cancelada', '005_hu27_rpc_cancelar_expedicion', '006_hu27_permiso_anonimizar_eventos', '007_hu35_rpc_ampliar_retorno',
     '20261101_hu30_listas_equipo', '20261101_hu30_operaciones_equipo', '008_hu31_preparacion_expedicion', '009_hu31_operaciones_preparacion',
     '010_hu32_puntos_ruta', '011_hu29_endurecer_permisos', '012_hu36_eventos_plan_solo_anexado', '013_hu37_avisos', '014_hu38_minutos_recordatorio',
-    '016_hu34_avances_expedicion', '017_hu39_asumir_coordinacion', '018_hu27_cancelar_salida_futura', '019_hu41_bitacora_incidente'
+    '016_hu34_avances_expedicion', '017_hu39_asumir_coordinacion', '018_hu27_cancelar_salida_futura', '019_hu41_bitacora_incidente', '021_hu40_transferir_coordinacion'
 ];
-const newMigrations = ['015_hu45_outbox', '022_dep108_crear_expedicion_atomica', '023_dep108_avisos_transaccionales', '024_dep108_vencimientos_outbox'];
+const newMigrations = ['015_hu45_outbox', '022_dep108_crear_expedicion_atomica', '023_dep108_avisos_transaccionales', '024_dep108_vencimientos_outbox', '025_hu42_cerrar_incidente'];
 const apply = async (client, names) => { for (const name of names)
     await client.query(await readFile(path.join(root, 'backend/migrations', `${name}.sql`), 'utf8')); };
 const roles = `CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN; CREATE ROLE service_role NOLOGIN BYPASSRLS;
@@ -252,7 +252,7 @@ try {
             await c.end();
         }
     } });
-    for (const hu of [30, 31, 36, 41]) {
+    for (const hu of [30, 31, 36, 41, 42]) {
         await test(`HU-${hu} contrato DAO y casos de uso reales sobre esquema DEP-04`, async () => {
             const output = await run(process.execPath, ['--import', 'tsx', '--test', '--test-concurrency=1', `src/testing/hu${hu}Postgres.integration.test.ts`], {
                 cwd: path.join(root, 'backend'),

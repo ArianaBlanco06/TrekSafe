@@ -7,6 +7,7 @@ import {
 import { crearControladorRescate } from '../controllers/controladorRescate.js';
 import { crearControladorBitacoraIncidente } from '../controllers/controladorBitacoraIncidente.js';
 import { crearControladorCoordinacion } from '../controllers/controladorCoordinacion.js';
+import { crearControladorCierreIncidente } from '../controllers/controladorCierreIncidente.js';
 import { crearControladorRelevo } from '../controllers/controladorRelevo.js';
 import { crearControladorRescatistas } from '../controllers/controladorRescatistas.js';
 import {
@@ -43,6 +44,11 @@ export function crearRutasRescate(
     consultar: modulo.consultarBitacoraIncidente,
     agregar: modulo.agregarEntradaBitacora,
   });
+  const cierre = crearControladorCierreIncidente({
+    cerrar: modulo.cerrarIncidente,
+    marcarLocalizado: modulo.marcarIncidenteLocalizado,
+    consultar: modulo.consultarCierreIncidente,
+  });
 
   router.use(middlewareAutenticacion, requerirRol('rescatista'));
   router.get('/expediciones', asyncHandler(listarExpediciones));
@@ -77,6 +83,19 @@ export function crearRutasRescate(
   router.post(
     '/incidentes/:incidenteId/bitacora',
     asyncHandler(bitacora.agregar),
+  );
+  // HU-42: localizar y cerrar el incidente con informe; lectura del último cierre por alerta.
+  router.post(
+    '/incidentes/:incidenteId/localizacion',
+    asyncHandler(cierre.marcarLocalizado),
+  );
+  router.post(
+    '/incidentes/:incidenteId/cierre',
+    asyncHandler(cierre.cerrar),
+  );
+  router.get(
+    '/alertas/:expedicionId/cierre',
+    asyncHandler(cierre.consultarPorExpedicion),
   );
   return router;
 }

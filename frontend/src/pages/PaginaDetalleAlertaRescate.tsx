@@ -15,8 +15,12 @@ import {
 import { ExpeditionRouteMapLazy } from '@/components/maps/ExpeditionRouteMapLazy';
 import { BitacoraIncidente } from '@/components/rescate/BitacoraIncidente';
 import { BloqueCoordinacion } from '@/components/rescate/BloqueCoordinacion';
+import { CierreIncidente } from '@/components/rescate/CierreIncidente';
+import { InformeCierreIncidente } from '@/components/rescate/InformeCierreIncidente';
 import { parseDecimalCoordinates } from '@/lib/coordinates';
 import { buildExternalMapUrl } from '@/lib/mapLinks';
+import { obtenerCierreAlerta, type InformeCierreIncidente as DatosInformeCierre } from '@/services/cierreIncidente';
+import type { BitacoraIncidente as DatosBitacora } from '@/services/bitacoraIncidente';
 import {
   confirmarAlertaRescate,
   obtenerDetalleAlertaRescate,
@@ -52,6 +56,10 @@ export function PaginaDetalleAlertaRescate() {
   const [notas, setNotas] = useState('');
   const [mensajeGuardado, setMensajeGuardado] = useState('');
   const [coordsCopiadas, setCoordsCopiadas] = useState(false);
+  // HU-42: informe del último cierre (la alerta sigue en `alerta` tras cerrar el incidente).
+  const [cierre, setCierre] = useState<DatosInformeCierre | null>(null);
+  const [vistaBitacora, setVistaBitacora] = useState<DatosBitacora | null>(null);
+  const [recargaBitacora, setRecargaBitacora] = useState(0);
 
   const cargarDetalle = useCallback(() => {
     if (!expedicionId) return;
@@ -66,7 +74,16 @@ export function PaginaDetalleAlertaRescate() {
       })
       .catch((e) => setError(e instanceof Error ? e.message : 'Error al cargar ficha'))
       .finally(() => setCargando(false));
+    // HU-42: si falla, la página sigue funcionando sin el informe.
+    obtenerCierreAlerta(expedicionId)
+      .then((r) => setCierre(r.cierre))
+      .catch(() => setCierre(null));
   }, [expedicionId]);
+
+  const trasCambioIncidente = useCallback(() => {
+    setRecargaBitacora((n) => n + 1);
+    cargarDetalle();
+  }, [cargarDetalle]);
 
   useEffect(() => {
     cargarDetalle();
@@ -221,11 +238,33 @@ export function PaginaDetalleAlertaRescate() {
 
       {/* HU-41: bitácora compartida del incidente (distinta de la bitácora personal de HU-14). */}
       {detalle.coordinacion && (
-        <BitacoraIncidente
-          key={detalle.coordinacion.incidenteId}
-          incidenteId={detalle.coordinacion.incidenteId}
-          alCambiarResponsable={cargarDetalle}
-        />
+        <>
+          <BitacoraIncidente
+            key={`${detalle.coordinacion.incidenteId}-${recargaBitacora}`}
+            incidenteId={detalle.coordinacion.incidenteId}
+            alCambiarResponsable={cargarDetalle}
+            alCargar={setVistaBitacora}
+          />
+          {/* HU-42: marcar localizada y cerrar con informe (solo el responsable vigente). */}
+          {vistaBitacora?.incidenteId === detalle.coordinacion.incidenteId && (
+            <CierreIncidente
+              key={detalle.coordinacion.incidenteId}
+              incidenteId={detalle.coordinacion.incidenteId}
+              estado={vistaBitacora.estado}
+              esResponsable={vistaBitacora.esResponsable}
+              nombreResponsable={vistaBitacora.responsable.nombreResponsable}
+              alCambiar={trasCambioIncidente}
+            />
+          )}
+        </>
+      )}
+
+      {/* HU-42: sin coordinación vigente pero con un cierre: informe y bitácora en solo lectura. */}
+      {!detalle.coordinacion && cierre && (
+        <>
+          <InformeCierreIncidente informe={cierre} />
+          <BitacoraIncidente key={`cerrado-${cierre.incidenteId}`} incidenteId={cierre.incidenteId} />
+        </>
       )}
 
       {mensajeGuardado && (
