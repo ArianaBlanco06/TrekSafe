@@ -3,7 +3,6 @@ import type { ICorreo } from '../ports/correo.js';
 import type { IRepositorioAlerta } from '../ports/RepositorioAlerta.js';
 import type { IRepositorioDespachoCorreo } from '../ports/RepositorioDespachoCorreo.js';
 import type { IRepositorioRescate } from '../ports/RepositorioRescate.js';
-import type { IRepositorioUsuario } from '../ports/RepositorioUsuario.js';
 import type { IRepositorioOutbox } from '../../domain/repositories/IRepositorioOutbox.js';
 
 export type ResultadoAlertaRescate = {
@@ -18,7 +17,6 @@ export class ServicioAlertaRescate {
   constructor(
     private readonly repoAlerta: IRepositorioAlerta,
     private readonly repoRescate: IRepositorioRescate,
-    _repoUsuario: IRepositorioUsuario,
     private readonly correo: ICorreo,
     private readonly repoDespacho: IRepositorioDespachoCorreo,
     private readonly repoOutbox?: IRepositorioOutbox,
@@ -35,8 +33,6 @@ export class ServicioAlertaRescate {
       console.warn(`[Rescate] expedición ${expedicionId}: sin rescatistas registrados`);
       return { expedicionId, enviados: 0, registrados: 0, fallidos: 0, omitidos: 0 };
     }
-
-    const fichaMedica = null; // El acceso médico se realiza en la PWA autorizada.
 
     let enviados = 0;
     let registrados = 0;
@@ -60,7 +56,6 @@ export class ServicioAlertaRescate {
         fechaLimite: contexto.fechaLimite,
         acompanantes: contexto.acompanantes,
         contactosEmergencia: contexto.contactosEmergencia,
-        fichaMedica,
       });
 
       if (this.repoOutbox) {

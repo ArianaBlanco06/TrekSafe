@@ -192,7 +192,6 @@ export function crearDependenciasCron() {
     alertasRescate: new ServicioAlertaRescate(
       alerta,
       new RepositorioRescate(),
-      new RepositorioUsuario(),
       correo,
       despacho,
     ),
