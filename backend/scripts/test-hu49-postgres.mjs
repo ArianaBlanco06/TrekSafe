@@ -58,7 +58,7 @@ try {
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon,authenticated,service_role;
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon,authenticated,service_role;`);
   await pool.query(await readFile(path.join(root,'init_schema.sql'),'utf8'));
-  for(const nombre of ['000_registro_migraciones','002_hu26_version_y_eventos_plan','014_hu38_minutos_recordatorio']) {
+  for(const nombre of ['000_registro_migraciones','002_hu26_version_y_eventos_plan','014_hu38_minutos_recordatorio','022_dep108_crear_expedicion_atomica']) {
     await pool.query(await readFile(path.join(root,'backend/migrations',`${nombre}.sql`),'utf8'));
   }
   // Fixture de registro: 019 ya pertenece a HU-41. HU-49 debe registrar 020

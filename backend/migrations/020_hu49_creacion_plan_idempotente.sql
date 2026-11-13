@@ -1,5 +1,5 @@
 -- HU-49. Número 020 propuesto por el equipo; pendiente de confirmar con Marko antes del merge.
--- Requiere esquema inicial, 002 y 014. Aplicación coordinada en DEV pendiente.
+-- Requiere esquema inicial, 002, 014 y 022 (núcleo transaccional). Aplicación coordinada en DEV pendiente.
 BEGIN;
 
 CREATE TABLE public.creaciones_plan_offline (
@@ -27,6 +27,7 @@ DECLARE
   v_contactos uuid[];
   v_contacto uuid;
   v_repetido boolean := false;
+  v_creada jsonb;
 BEGIN
   -- Un lock por cuenta serializa creaciones offline y reenvíos concurrentes.
   -- No modifica el plan, su cron ni los eventos de otras historias.
@@ -89,17 +90,21 @@ BEGIN
     END IF;
     v_ahora := clock_timestamp();
     IF v_inicio<=v_ahora THEN RETURN jsonb_build_object('tipo','fechas_invalidas'); END IF;
-    INSERT INTO public.expediciones(senderista_id,lugar_inicio,lugar_fin,coordenadas_inicio,coordenadas_fin,
-      hora_inicio,hora_retorno_estimada,minutos_tolerancia,minutos_recordatorio,estado)
-    VALUES(p_senderista_id,p_datos->>'lugarInicio',p_datos->>'lugarFin',nullif(p_datos->>'coordenadasInicio',''),
-      nullif(p_datos->>'coordenadasFin',''),v_inicio,v_retorno,(p_datos->>'minutosTolerancia')::integer,
-      (p_datos->>'minutosRecordatorio')::integer,
-      CASE WHEN v_inicio<=v_ahora+interval '1 minute' THEN 'en_progreso'::public.estado_expedicion_enum
-        ELSE 'programada'::public.estado_expedicion_enum END) RETURNING * INTO v_plan;
-    INSERT INTO public.vinculos_expedicion_contacto(expedicion_id,contacto_id)
-      SELECT v_plan.id,x FROM unnest(v_contactos) AS t(x);
-    INSERT INTO public.acompanantes_expedicion(expedicion_id,nombre_acompanante)
-      SELECT v_plan.id,x FROM jsonb_array_elements_text(p_datos->'nombresAcompanantes') AS t(x);
+    -- La misma transacción usa el núcleo de #108; no duplica escrituras ni compensaciones.
+    BEGIN
+      v_creada := public.treksafe_crear_expedicion(p_senderista_id, p_datos);
+      SELECT * INTO STRICT v_plan FROM public.expediciones WHERE id=(v_creada->>'id')::uuid;
+    EXCEPTION WHEN raise_exception THEN
+      CASE SQLERRM
+        WHEN 'EXPEDICION_ACTIVA_EXISTE' THEN RETURN jsonb_build_object('tipo','expedicion_activa');
+        WHEN 'CONTACTOS_INVALIDOS' THEN RETURN jsonb_build_object('tipo','contactos_invalidos');
+        WHEN 'HORA_INICIO_INVALIDA' THEN RETURN jsonb_build_object('tipo','fechas_invalidas');
+        WHEN 'HORA_RETORNO_INVALIDA' THEN RETURN jsonb_build_object('tipo','fechas_invalidas');
+        WHEN 'NO_ES_SENDERISTA' THEN RETURN jsonb_build_object('tipo','no_autorizado');
+        WHEN 'DATOS_INVALIDOS' THEN RETURN jsonb_build_object('tipo','datos_invalidos');
+        ELSE RAISE;
+      END CASE;
+    END;
     INSERT INTO public.creaciones_plan_offline(senderista_id,borrador_id,datos,expedicion_id)
       VALUES(p_senderista_id,p_borrador_id,p_datos,v_plan.id);
   END IF;
