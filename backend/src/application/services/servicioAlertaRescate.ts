@@ -18,7 +18,7 @@ export class ServicioAlertaRescate {
   constructor(
     private readonly repoAlerta: IRepositorioAlerta,
     private readonly repoRescate: IRepositorioRescate,
-    private readonly repoUsuario: IRepositorioUsuario,
+    _repoUsuario: IRepositorioUsuario,
     private readonly correo: ICorreo,
     private readonly repoDespacho: IRepositorioDespachoCorreo,
     private readonly repoOutbox?: IRepositorioOutbox,
@@ -36,16 +36,7 @@ export class ServicioAlertaRescate {
       return { expedicionId, enviados: 0, registrados: 0, fallidos: 0, omitidos: 0 };
     }
 
-    const registroMedico = await this.repoUsuario.obtenerFichaMedica(contexto.senderistaId);
-    const fichaMedica =
-      registroMedico?.consentimientoFirmado
-        ? {
-            tipoSangre: registroMedico.tipoSangre,
-            alergias: registroMedico.carga.alergias,
-            condiciones: registroMedico.carga.condiciones,
-            medicamentos: registroMedico.carga.medicamentos,
-          }
-        : null;
+    const fichaMedica = null; // El acceso médico se realiza en la PWA autorizada.
 
     let enviados = 0;
     let registrados = 0;
@@ -85,10 +76,10 @@ export class ServicioAlertaRescate {
             metadata: { expedicionId, tipoDespacho: 'alerta_rescate' },
           });
           registrados++;
-          await this.repoDespacho.registrarEnvio(expedicionId, 'alerta_rescate', rescatista.correoElectronico);
+          // Encolar no equivale a enviar; la outbox conserva el resultado.
         } catch (err) {
           fallidos++;
-          console.error(`[Rescate] fallo al encolar outbox para ${rescatista.correoElectronico}:`, err);
+          console.error('[Notificaciones] Operación fallida; revisar persistencia o transporte');
         }
       } else {
         try {
@@ -101,7 +92,7 @@ export class ServicioAlertaRescate {
           }
         } catch (err) {
           fallidos++;
-          console.error(`[Rescate] fallo envío a ${rescatista.correoElectronico}:`, err);
+          console.error('[Notificaciones] Operación fallida; revisar persistencia o transporte');
         }
       }
     }
