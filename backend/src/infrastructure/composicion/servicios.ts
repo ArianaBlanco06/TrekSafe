@@ -1,7 +1,6 @@
 import { ServicioAutenticacion } from '../../application/services/servicioAutenticacion.js';
 import { ServicioUsuario } from '../../application/services/servicioUsuario.js';
 import { ServicioExpedicion } from '../../application/services/servicioExpedicion.js';
-import { ServicioNotificacionRetornoSeguro } from '../../application/services/ServicioNotificacionRetornoSeguro.js';
 import { ServicioRescate } from '../../application/services/servicioRescate.js';
 import { ServicioNotificacionAlerta } from '../../application/services/servicioNotificacionAlerta.js';
 import { ServicioAlertaRescate } from '../../application/services/servicioAlertaRescate.js';
@@ -30,7 +29,6 @@ import { RepositorioAlerta } from '../repositories/RepositorioAlerta.js';
 import { RepositorioAuditoriaAccesoMedico } from '../repositories/RepositorioAuditoriaAccesoMedico.js';
 import { RepositorioDespachoCorreo } from '../repositories/RepositorioDespachoCorreo.js';
 import { RepositorioAvisosSupabase } from '../repositories/RepositorioAvisosSupabase.js';
-import { RepositorioOutboxSupabase } from '../repositories/RepositorioOutboxSupabase.js';
 import { ExpedicionDAOSupabase } from '../repositories/ExpedicionDAOSupabase.js';
 import { IncidenteDAOSupabase } from '../repositories/IncidenteDAOSupabase.js';
 import { BitacoraIncidenteDAOSupabase } from '../repositories/BitacoraIncidenteDAOSupabase.js';
@@ -70,14 +68,6 @@ export function crearServiciosAvisos() {
 export function crearModuloExpediciones() {
   const dao = new ExpedicionDAOSupabase(getSupabaseAdmin());
   const reloj = new RelojSistema();
-  const repoAlerta = new RepositorioAlerta();
-  const repoDespacho = new RepositorioDespachoCorreo();
-  const repoOutbox = new RepositorioOutboxSupabase();
-  const servicioNotificacionRetorno = new ServicioNotificacionRetornoSeguro(
-    repoOutbox,
-    repoAlerta,
-    repoDespacho,
-  );
   return {
     servicio: new ServicioExpedicion(
       new RepositorioExpedicion(),
@@ -85,7 +75,6 @@ export function crearModuloExpediciones() {
       new RepositorioAutenticacionPostgres(),
       verificarContrasena,
       reloj,
-      servicioNotificacionRetorno,
     ),
     obtener: new ObtenerPlan(dao),
     editar: new EditarPlan(dao, reloj),

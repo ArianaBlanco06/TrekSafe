@@ -8,7 +8,6 @@ import type { IRepositorioAutenticacionPostgres } from '../ports/RepositorioAute
 import type { IRepositorioUsuario } from '../ports/RepositorioUsuario.js';
 import type { VerificarContrasena } from '../ports/seguridad.js';
 import type { IReloj } from '../../domain/services/IReloj.js';
-import { ServicioNotificacionRetornoSeguro } from './ServicioNotificacionRetornoSeguro.js';
 
 export type ResumenExpedicionActiva = {
   id: string;
@@ -35,7 +34,6 @@ export class ServicioExpedicion {
     private readonly repoAuth: IRepositorioAutenticacionPostgres,
     private readonly verificarContrasena: VerificarContrasena,
     private readonly reloj: IReloj,
-    private readonly servicioNotificacionRetorno?: ServicioNotificacionRetornoSeguro,
   ) {}
 
   async crearExpedicion(senderistaId: string, entrada: EntradaCrearExpedicion) {
@@ -143,22 +141,8 @@ export class ServicioExpedicion {
       throw new ErrorAplicacion(401, 'Contraseña incorrecta', 'CONTRASENA_INVALIDA');
     }
 
-    const eraAlerta = expedicion.estado === 'alerta';
     const completada = await this.repoExpedicion.completarConfirmacionRetorno(expedicionId, senderistaId);
     const confirmadoEn = completada.actualizadoEn ?? this.reloj.ahora().toISOString();
-
-    // Notificar retorno seguro a contactos mediante el Outbox (HU-44)
-    if (this.servicioNotificacionRetorno) {
-      try {
-        await this.servicioNotificacionRetorno.notificarRetornoSeguro(
-          expedicionId,
-          confirmadoEn,
-          eraAlerta,
-        );
-      } catch (err) {
-        console.error(`[RetornoSeguro] Error al programar outbox para expedición ${expedicionId}:`, err);
-      }
-    }
 
     return {
       expedicion: completada,

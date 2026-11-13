@@ -279,6 +279,33 @@ test('fallback local sin Cache API mantiene aislamiento y se borra al expirar la
   expect(result.local).toEqual([]);
 });
 
+test('una lectura tardía no deja un caché del ámbito invalidado', async ({ page }) => {
+  await page.goto('/__tests__/vacio');
+  const result=await page.evaluate(async account=>{
+    const modulePath='/__tests__/probe.js';
+    const probe=await import(modulePath);
+    probe.sesion.guardarSesion('fixture-a',account);
+    const original=caches.match;
+    let release!:()=>void;let started!:()=>void;
+    const gate=new Promise<void>(resolve=>{release=resolve;});
+    const waiting=new Promise<void>(resolve=>{started=resolve;});
+    caches.match=async(_request,options)=>{
+      started();await gate;
+      if(!options?.cacheName) throw new Error('Falta ámbito');
+      const cache=await caches.open(options.cacheName);
+      await cache.put('/__treksafe_offline__/expedition-drafts',new Response('[]'));
+      return new Response('[{"dato":"cuenta-a"}]');
+    };
+    try{
+      const pending=probe.offline.readOfflineJson('expedition-drafts',[]);
+      await waiting;await probe.sesion.limpiarSesion();release();
+      return {datos:await pending,caches:await caches.keys()};
+    }finally{caches.match=original;}
+  },users.a);
+  expect(result.datos).toEqual([]);
+  expect(result.caches.filter(name=>name.startsWith('treksafe-offline-v2-'))).toEqual([]);
+});
+
 test('expiracion 401 limpia borradores y contactos igual que el cierre manual', async ({ page }) => {
   await login(page);
   await guardarOffline(page);

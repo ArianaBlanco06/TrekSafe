@@ -76,7 +76,7 @@ export async function peticionApi<T>(
 
   comprobarSesion();
   if (res.status === 401 && auth) {
-    handleUnauthorized();
+    await handleUnauthorized();
     throw new ErrorClienteApi('Sesión expirada. Inicia sesión nuevamente.', 401, 'UNAUTHORIZED');
   }
 

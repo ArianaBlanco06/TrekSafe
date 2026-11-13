@@ -73,22 +73,10 @@ export class RepositorioOutboxSupabase implements IRepositorioOutbox {
     return this.mapearFila(data);
   }
 
-  async obtenerParaProcesar(ahora: Date, limite = 10): Promise<MensajeOutbox[]> {
-    const ahoraIso = ahora.toISOString();
-    const { data, error } = await this.supabase
-      .from('outbox_notificaciones')
-      .select('*')
-      .eq('estado', 'pendiente')
-      .lte('proximo_intento_en', ahoraIso)
-      .or(`bloqueado_hasta.is.null,bloqueado_hasta.lt.${ahoraIso}`)
-      .order('proximo_intento_en', { ascending: true })
-      .limit(limite);
-
-    if (error) {
-      throw new ErrorAplicacion(500, `Error al consultar outbox: ${error.message}`);
-    }
-
-    return (data || []).map((d: any) => this.mapearFila(d));
+  async obtenerParaProcesar(_ahora:Date,limite=10):Promise<MensajeOutbox[]> {
+    const {data,error}=await this.supabase.rpc('treksafe_pendientes_outbox',{p_limite:limite});
+    if(error||!Array.isArray(data)) throw new ErrorAplicacion(503,'No se pudieron consultar pendientes');
+    return data.map(f=>this.mapearFila(f));
   }
 
   async adquirirLease(id:string,token:string,duracionMs:number,_ahora:Date):Promise<boolean> {
