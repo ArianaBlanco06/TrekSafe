@@ -93,8 +93,16 @@ BEGIN
     bloqueado_hasta=NULL,bloqueado_por=NULL,actualizado_en=t WHERE id=p_id;
   RETURN salida;
 END $$;
-REVOKE ALL ON FUNCTION public.treksafe_reservar_outbox(uuid,uuid,integer),public.treksafe_iniciar_intento_outbox(uuid,uuid),public.treksafe_finalizar_intento_outbox(uuid,uuid,text,text) FROM PUBLIC,anon,authenticated;
-GRANT EXECUTE ON FUNCTION public.treksafe_reservar_outbox(uuid,uuid,integer),public.treksafe_iniciar_intento_outbox(uuid,uuid),public.treksafe_finalizar_intento_outbox(uuid,uuid,text,text) TO service_role;
+CREATE FUNCTION public.treksafe_pendientes_outbox(p_limite integer DEFAULT 10)
+RETURNS jsonb LANGUAGE sql VOLATILE SECURITY INVOKER SET search_path='' AS $$
+  SELECT coalesce(jsonb_agg(to_jsonb(q) ORDER BY q.proximo_intento_en,q.id),'[]'::jsonb)
+  FROM (SELECT * FROM public.outbox_notificaciones
+    WHERE estado='pendiente' AND proximo_intento_en<=clock_timestamp()
+      AND (bloqueado_hasta IS NULL OR bloqueado_hasta<clock_timestamp())
+    ORDER BY proximo_intento_en,id LIMIT greatest(0,least(coalesce(p_limite,10),100))) q;
+$$;
+REVOKE ALL ON FUNCTION public.treksafe_pendientes_outbox(integer),public.treksafe_reservar_outbox(uuid,uuid,integer),public.treksafe_iniciar_intento_outbox(uuid,uuid),public.treksafe_finalizar_intento_outbox(uuid,uuid,text,text) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.treksafe_pendientes_outbox(integer),public.treksafe_reservar_outbox(uuid,uuid,integer),public.treksafe_iniciar_intento_outbox(uuid,uuid),public.treksafe_finalizar_intento_outbox(uuid,uuid,text,text) TO service_role;
 INSERT INTO public.treksafe_migraciones(version,nombre,hu) VALUES('026','hu45_intentos_reservas','HU-45');
 NOTIFY pgrst,'reload schema';
 COMMIT;
