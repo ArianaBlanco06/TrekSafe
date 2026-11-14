@@ -49,7 +49,12 @@ const run = (file, argv) => new Promise((resolve, reject) => {
 const control = argv => new Promise((resolve, reject) => {
   const hijo = spawn(exe('pg_ctl'), argv, { env, windowsHide: true, stdio: 'ignore' });
   hijo.once('error', reject);
-  hijo.once('exit', codigo => codigo === 0 ? resolve() : reject(new Error(`pg_ctl ${codigo}; log en ${carpeta}`)));
+  hijo.once('exit', async codigo => {
+    if (codigo === 0) return resolve();
+    const log = await readFile(path.join(carpeta, 'postgres.log'), 'utf8')
+      .catch(() => '(sin log de PostgreSQL)');
+    reject(new Error(`pg_ctl ${codigo}; ${carpeta}\n${log.slice(-6000)}`));
+  });
 });
 const config = { host: '127.0.0.1', port: puerto, user: 'postgres', password: '', database: base };
 let iniciado = false;
@@ -66,7 +71,10 @@ const firma = 'public.treksafe_consultar_estadisticas_incidentes(uuid,timestampt
 try {
   console.log(`PostgreSQL desechable ${historia.toUpperCase()}: ${carpeta}`);
   await run(exe('initdb'), ['-D', datos, '-U', 'postgres', '--auth=trust', '--encoding=UTF8', '--locale=C']);
-  await control(['-D', datos, '-l', path.join(carpeta, 'postgres.log'), '-w', 'start', '-o', `-h 127.0.0.1 -p ${puerto} -c timezone=UTC`]);
+  // En Linux el socket predeterminado puede pertenecer al usuario postgres.
+  // El runner usa su propio directorio temporal; Windows conecta solo por TCP.
+  const socket = process.platform === 'win32' ? '' : `-k "${carpeta}"`;
+  await control(['-D', datos, '-l', path.join(carpeta, 'postgres.log'), '-w', 'start', '-o', `-h 127.0.0.1 -p ${puerto} -c timezone=UTC ${socket}`]);
   iniciado = true;
   admin = new pg.Client({ ...config, database: 'postgres' });
   await admin.connect();
