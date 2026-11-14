@@ -14,7 +14,7 @@ genera respuestas de datos.
 
 Todos los servicios escucharon en loopback. La base fue
 `treksafe_hu48_desechable`, creada por el runner. Se aplicaron el esquema real y
-000, 002, 017, 019, 021, 025, 029 y la propuesta 031 exclusivamente allí.
+000, 002, 017, 019, 021, 025, 029 y 031 exclusivamente allí.
 Los datos, identidades y credenciales son ficticios. La sesión del navegador
 utilizó un JWT técnico emitido localmente; esta prueba no valida el formulario
 de inicio de sesión ni credenciales de DEV.

@@ -114,8 +114,8 @@ en navegador. No se realizaron acciones de Git/GitHub.
 
 ## Fases siguientes
 
-1. Backend. Completado en la fase 2 descrita abajo. La migración propuesta 031
-   queda pendiente de coordinación para DEV; la 029 aplicada se conserva.
+1. Backend. Completado en la fase 2 descrita abajo. La migración 031 tiene
+   numeración confirmada; queda pendiente su aplicación coordinada en DEV.
 2. Frontend. Completado en la fase 3 descrita abajo, con filtros aplicados,
    descarga, error/reintento, cancelación y protección de sesión.
 3. Integración. Completada localmente en la fase 4, con persistencia y PostgREST
@@ -169,12 +169,12 @@ interrumpe. El cliente debe consumir el cuerpo completo antes de guardar y
 rechazar un cuerpo truncado. Cancelar el consumo cierra el Iterator e impide
 continuar solicitando páginas.
 
-### Migración propuesta 031
+### Migración 031
 
 Se preparó `031_hu48_exportacion_incidentes.sql`. Durante esta fase se comprobó
 en GitHub que `030_hu50_ficha_medica_responsable.sql` ya existe en `develop`.
-Por eso no se utilizó 030. La numeración 031 sigue propuesta y necesita
-coordinación con Sebastian/Ariana antes de aplicar en DEV.
+Por eso no se utilizó 030. John confirmó posteriormente con el equipo que 031
+está libre para HU-48. Su aplicación en DEV se coordina con Sebastian/Ariana.
 
 La RPC `treksafe_leer_pagina_incidentes_reporte` requiere 029 con sus dependencias.
 Utiliza `SECURITY INVOKER`, `STABLE` y `search_path` vacío; revoca ejecución de
@@ -324,8 +324,10 @@ Se comprobó en solo lectura el proyecto DEV `ibnwggvqgjpeqcretjak`. Respondió
 consultado estaba en `a860fa8`, mientras la rama local seguía en `4c40cc6`.
 No se realizaron fetch, merge, commits, push ni publicaciones.
 
-John debe guardar los cambios y actualizar su rama con `develop` antes del PR,
-revalidar cualquier conflicto de composición/rutas, confirmar la numeración y
-coordinar la aplicación de 031 con Sebastian/Ariana. Después corresponde la
+John incorporó posteriormente `develop` y se resolvió el conflicto de composición
+conservando los servicios de HU-48 y HU-50. El backend compiló y las 30 pruebas
+ejecutadas de rutas, composición y privacidad pasaron. John también confirmó
+con el equipo la disponibilidad de 031 para HU-48. Queda coordinar su aplicación
+en DEV con Sebastian/Ariana. Después corresponde la
 [prueba compartida de DEV](validacion-dev.md), aceptación de Marko y revisión.
 El [texto del PR](pr.md) incluye `Closes #50` y pendientes explícitos.

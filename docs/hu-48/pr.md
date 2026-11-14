@@ -31,7 +31,7 @@ alcance de HU-47, `STABLE`, `SECURITY INVOKER`, `search_path` vacío y ejecució
 exclusiva de `service_role`. Requiere 029 y sus dependencias. No modifica la 029
 aplicada ni crea tablas nuevas.
 
-031 es numeración propuesta pendiente de coordinación con Sebastian/Ariana.
+John confirmó con el equipo la disponibilidad de 031 para HU-48.
 030 ya corresponde a HU-50. La 031 no se aplicó en DEV mediante este trabajo.
 
 ## Validación
@@ -52,7 +52,8 @@ Evidencia, capturas, CSV y hashes:
 ## Pendiente antes de integrar y cerrar
 
 - [ ] Incorporar el `develop` vigente y revalidar la integración.
-- [ ] Confirmar la numeración 031 y coordinar su aplicación en DEV.
+- [x] Numeración 031 confirmada por John con el equipo.
+- [ ] Coordinar su aplicación en DEV con Sebastian/Ariana.
 - [ ] Adjuntar evidencia funcional del CSV en DEV.
 - [ ] Validación de Marko, incluida apertura del CSV en la hoja de cálculo del equipo.
 - [ ] CI aprobado y revisión técnica del PR.

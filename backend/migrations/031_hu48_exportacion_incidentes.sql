@@ -1,4 +1,4 @@
--- 031 · HU-48, numeración propuesta pendiente de coordinación con Sebastian/Ariana.
+-- 031 · HU-48, numeración confirmada por John con el equipo.
 -- 030 ya corresponde a HU-50 en develop. No modifica la 029 aplicada en DEV.
 -- Requiere 029 (y por ella 017/025 con sus dependencias). Aplicar una sola vez.
 BEGIN;

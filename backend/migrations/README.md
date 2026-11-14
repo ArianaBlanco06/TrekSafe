@@ -120,8 +120,8 @@ El modo solo SQL no valida PostgREST. Ninguno de los modos aplica cambios en DEV
 
 ## HU-48: exportación paginada de incidentes
 
-`031_hu48_exportacion_incidentes.sql` es una **propuesta de numeración** pendiente
-de coordinación con Sebastian/Ariana. Durante su preparación se comprobó que
+`031_hu48_exportacion_incidentes.sql` tiene **numeración confirmada** por John
+con el equipo. Su aplicación en DEV se coordina con Sebastian/Ariana. Durante su preparación se comprobó que
 030 ya pertenece a HU-50 en `develop`. La migración requiere 029 y sus
 dependencias; no modifica la 029 ya aplicada ni crea tablas nuevas.
 

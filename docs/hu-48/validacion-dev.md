@@ -4,8 +4,8 @@ Responsable de la historia: John. Aplicación de SQL coordinada con Sebastian/Ar
 
 ## Antes de probar
 
-1. Confirmar que 031 queda asignada a HU-48. En la comprobación local, 030
-   pertenecía a HU-50 y DEV no registraba 031.
+1. Numeración confirmada: John recibió del equipo la confirmación de que 031
+   está libre para HU-48. Esto no confirma su aplicación en DEV.
 2. Aplicar una sola vez `backend/migrations/031_hu48_exportacion_incidentes.sql`
    en el DEV del equipo, con 029 y sus dependencias presentes.
 3. Confirmar archivo y registro aplicados mediante estas consultas de lectura:
