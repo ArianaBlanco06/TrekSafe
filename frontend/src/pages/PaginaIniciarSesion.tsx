@@ -4,6 +4,7 @@ import { Mountain, Shield } from 'lucide-react';
 import { iniciarSesion } from '@/services/autenticacion';
 import { useAutenticacion } from '@/context/ContextoAutenticacion';
 import { FieldLabel, LogoHeader, MobileShell } from '@/components/Layout';
+import { AyudaInstalacionPwa } from '@/components/AyudaInstalacionPwa';
 
 type TabLogin = 'senderista' | 'rescatista';
 
@@ -73,6 +74,8 @@ export function PaginaIniciarSesion() {
     <MobileShell>
       <div className="px-6 flex flex-col py-10">
         <LogoHeader variant={tab} />
+
+        <AyudaInstalacionPwa />
 
         <div className="flex bg-muted rounded-xl p-1 mb-5">
           {(['senderista', 'rescatista'] as const).map((t) => {

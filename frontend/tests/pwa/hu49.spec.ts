@@ -1,7 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
+import { cerrarAyudaInstalacion } from '../helpers/ayudaInstalacion.js';
 
 async function login(page: Page, cuenta = 'a') {
   await page.goto('/iniciar-sesion');
+  await cerrarAyudaInstalacion(page);
   await page.getByLabel('Correo electrónico', { exact:true }).fill(`cuenta-${cuenta}@example.invalid`);
   await page.getByLabel('Contraseña', { exact:true }).fill('Fixture123!');
   await page.getByRole('button',{name:'Iniciar sesión',exact:true}).click();

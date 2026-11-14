@@ -93,7 +93,7 @@ Se mantienen las dos tablas porque tienen ciclos de vida distintos: el relevo ya
 
 ### 1.3 Cambios sobre `incidentes` (tabla de HU-39)
 
-- Permiso nuevo: `GRANT UPDATE (responsable_id, version, asumido_en) ON public.incidentes TO service_role`. Es a nivel de columna: no abre `estado` ni `cerrado_en` (eso es de HU-42). `anon` y `authenticated` siguen sin ningún acceso (RLS con `treksafe_deny_anon_authenticated` y `REVOKE ALL` de HU-39); la migración no les concede nada y la suite SQL lo comprueba.
+- Permiso nuevo: `GRANT UPDATE (responsable_id, version, asumido_en) ON public.incidentes TO service_role`. Es a nivel de columna: la 021 por sí sola no abre `estado` ni `cerrado_en`; esas columnas las abre la 025 (HU-42). `anon` y `authenticated` siguen sin ningún acceso (RLS con `treksafe_deny_anon_authenticated` y `REVOKE ALL` de HU-39); la migración no les concede nada y la suite SQL lo comprueba.
 - Sin columnas nuevas ni cambios de restricciones.
 - **Semántica de `asumido_en` (declarada):** pasa a significar "desde cuándo coordina el responsable actual". En la asunción de HU-39 vale lo mismo que antes (la hora en que asumió); tras un relevo se actualiza con la hora de aceptación. `abierto_en` conserva la apertura original. Así el "desde HH:MM" de la consola sigue siendo verdadero para el responsable actual.
 - **HU-39 no cambia:** es una aclaración de significado, no de esquema ni de código. Los tests de HU-39 (SQL, backend y frontend) deben pasar sin modificarlos; se comprueba en la verificación (sección 10).
@@ -187,7 +187,7 @@ Decisiones:
 
 ### 2.4 Al cerrar el incidente: estado derivado (sin trigger, sin tocar el cierre)
 
-**Cómo se cierra hoy un incidente.** En `develop` no existe código de cierre: ni RPC, ni caso de uso, ni ruta (`feat/hu-42-cerrar-incidente` no tiene commits propios). Lo único que existe es el esquema de la 017: `incidentes.estado = 'cerrado'` y `cerrado_en` van juntos en un solo `UPDATE` (`chk_incidentes_cierre`), y la 021 **no** concede a `service_role` `UPDATE` sobre `estado` ni `cerrado_en`, así que HU-42 tendrá que pedirlo. Las pruebas de concurrencia simulan el cierre con ese `UPDATE` desde el superusuario. Este diseño no modifica el código ni las RPC del cierre (es de HU-42).
+**Cómo se cierra hoy un incidente.** En `develop` el cierre ya existe (HU-42): la migración 025 con la RPC `treksafe_cerrar_incidente`, `CierreIncidenteDAOSupabase`, el caso de uso `CerrarIncidente`, su comando y su controlador. Parte del esquema de la 017: `incidentes.estado = 'cerrado'` y `cerrado_en` van juntos en un solo `UPDATE` (`chk_incidentes_cierre`), y la 021 por sí sola **no** concede a `service_role` `UPDATE` sobre `estado` ni `cerrado_en`; la 025 (HU-42) los abre. Las pruebas de concurrencia simulan el cierre con ese `UPDATE` desde el superusuario. Este diseño no modifica el código ni las RPC del cierre (es de HU-42).
 
 | | (1) Trigger sobre `incidentes` que marca el relevo como `invalidado` | (2) Estado derivado (**adoptada**) |
 |---|---|---|
@@ -197,7 +197,7 @@ Decisiones:
 | Historial | Queda `invalidado` explícito | Un relevo `pendiente` de un incidente `cerrado` se interpreta como invalidado |
 | Riesgo | Acopla HU-40 con HU-42 | Un caso **reabierto** reviviría el relevo pendiente (abajo) |
 
-**Qué debe saber HU-42 (para coordinarlo con Sebastian):** el cierre no cambia por HU-40. Solo debe (a) pedir el permiso `UPDATE (estado, cerrado_en)` sobre `incidentes` para `service_role`, (b) tomar el bloqueo de la fila del incidente, que cualquier `UPDATE` de esa fila ya toma, y (c) saber que un relevo pendiente queda inerte, y que aceptar, rechazar, cancelar y proponer ya respetan el cierre (con pruebas de carrera, sección 5).
+**Qué debe saber HU-42 (para coordinarlo con Sebastian):** el cierre no cambia por HU-40. Solo debe (a) abrir el permiso `UPDATE (estado, cerrado_en)` sobre `incidentes` para `service_role` (lo hace la 025, que se aplica después de la 021), (b) tomar el bloqueo de la fila del incidente, que cualquier `UPDATE` de esa fila ya toma, y (c) saber que un relevo pendiente queda inerte, y que aceptar, rechazar, cancelar y proponer ya respetan el cierre (con pruebas de carrera, sección 5).
 
 **Riesgo del caso reabierto.** La 017 menciona que reabrir exige limpiar `cerrado_en` en el mismo `UPDATE`. Si HU-42 o una historia posterior reabre un incidente, su relevo `pendiente` volvería a ser visible y aceptable, porque nunca se marcó como invalidado. Con estado derivado eso es un efecto, no un error: la historia que implemente reabrir **debe decidir** qué hace con ese relevo (por ejemplo, cancelarlo en la misma operación de reabrir, o aceptar que revive). Hasta entonces no hay reapertura en el sistema. Si se prefiere cerrar el riesgo desde ya, el cambio es el trigger de la opción (1) más el estado `invalidado` en el `CHECK`; el modelo lo admite.
 
@@ -408,7 +408,7 @@ Queda fuera: notificaciones o avisos al destinatario (decidido: sin notificació
 
 1. **Caso reabierto.** Con estado derivado, un incidente que se reabra haría revivir su relevo pendiente. Quien implemente reabrir (HU-42 u otra) debe decidir si lo cancela en la misma operación (sección 2.4). Hoy no existe reapertura.
 2. **Destinatario que pierde el perfil validado.** La clave foránea `fk_relevos_destinatario` es `ON DELETE RESTRICT`, así que mientras exista el relevo no se puede borrar su perfil; el paso 9b de aceptar es una defensa adicional. Si en el futuro se permite revocar o quitar perfiles, hay que decidir si los relevos pendientes de esa persona se cancelan o invalidan solos. Mientras tanto no se cambia nada.
-3. **Permiso de cierre.** HU-42 debe pedir `UPDATE (estado, cerrado_en)` sobre `incidentes` para `service_role`; la 021 no lo concede (coordinar con Sebastian).
+3. **Permiso de cierre.** La 021 por sí sola no concede `UPDATE (estado, cerrado_en)` sobre `incidentes` a `service_role`; la 025 (HU-42) lo concede, y debe aplicarse después de la 021.
 4. **¿Se exige `alerta` para relevar?** Se decidió solo "no cerrado" (los estados de incidente abierto de HU-39). Si el PO prefiere exigir `alerta`, es un paso más de la RPC.
 5. **Versión.** Decidido: proponer la compara; aceptar, rechazar y cancelar no (razón en 2.2 y 2.3). Confirmar con Sebastian y HU-42 que todo cambio relevante del incidente (por ejemplo `localizado`) sube `version`, para que la comparación al proponer sea útil.
 6. **Nombre y alcance de `transferencias_coordinacion`.** Confirmar con Sebastian que HU-41 no define una bitácora propia que deba absorberla.

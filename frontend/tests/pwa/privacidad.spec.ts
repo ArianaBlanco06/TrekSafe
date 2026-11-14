@@ -1,5 +1,6 @@
 import { test, expect, type Page, type TestInfo } from '@playwright/test';
 import { writeFile } from 'node:fs/promises';
+import { cerrarAyudaInstalacion } from '../helpers/ayudaInstalacion.js';
 
 const users = {
   a: { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', correoElectronico: 'cuenta-a@example.invalid', rol: 'senderista' },
@@ -30,6 +31,7 @@ async function aceptarActualizacion(page: Page) {
 
 async function login(page: Page, account: 'a' | 'b' = 'a') {
   await page.goto('/iniciar-sesion');
+  await cerrarAyudaInstalacion(page);
   await page.getByLabel('Correo electrónico', { exact: true }).fill(users[account].correoElectronico);
   await page.getByLabel('Contraseña', { exact: true }).fill('Fixture123!');
   await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click();
@@ -188,6 +190,7 @@ test('dos cuentas en el mismo navegador: logout elimina datos privados y conserv
   expect(await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith('treksafe:offline')))).toEqual([]);
   await evidencia(page, info, 'logout-sin-datos-privados');
   await page.reload();
+  await cerrarAyudaInstalacion(page);
   await expect(page.getByRole('button', { name: 'Iniciar sesión', exact: true })).toBeVisible();
   await context.setOffline(false);
   await login(page, 'b');

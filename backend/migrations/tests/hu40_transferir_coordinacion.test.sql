@@ -1,6 +1,8 @@
 -- Solo PostgreSQL local desechable; todos los datos de prueba se revierten (ROLLBACK final).
 -- Requiere: los roles anon, authenticated y service_role con los privilegios por defecto
 -- de Supabase, el esquema base, las migraciones 000 a 018, la 019 de HU-41, la 022 a la 024 de DEP-04 y la 021 aplicadas.
+-- La 025 (HU-42) es opcional: si se aplicó después de la 021, la prueba espera que service_role
+-- pueda actualizar estado y cerrado_en; sin ella, que no pueda (casos 1 y 14).
 -- Cubre proponer, aceptar, rechazar y cancelar el relevo (casos 1 a 23).
 -- Se ejecuta con backend/scripts/test-hu40-postgres.mjs, que prepara ese entorno. Cada caso
 -- imprime un aviso "OK n: ..."; el primero que falla aborta el archivo con su mensaje.
@@ -151,7 +153,13 @@ DECLARE
     v_rol TEXT;
     v_columnas TEXT;
     v_col TEXT;
+    v_025 BOOLEAN;
 BEGIN
+    -- La 025 (HU-42) se detecta por la existencia de treksafe_cerrar_incidente. Aplicada después
+    -- de la 021 (orden del README), concede a service_role UPDATE (estado, cerrado_en, version)
+    -- sobre incidentes; aplicada antes, el REVOKE de la 021 lo retira. La prueba tolera ambos
+    -- estados: sin 025 exige que estado y cerrado_en estén cerrados; con 025, que estén abiertos.
+    v_025 := to_regprocedure('public.treksafe_cerrar_incidente(uuid,uuid,text,text,uuid)') IS NOT NULL;
     FOREACH v_tabla IN ARRAY ARRAY['relevos_coordinacion', 'transferencias_coordinacion'] LOOP
         IF NOT (SELECT relrowsecurity FROM pg_class WHERE oid = ('public.' || v_tabla)::REGCLASS) THEN
             RAISE EXCEPTION '% debe tener RLS activo', v_tabla;
@@ -190,8 +198,17 @@ BEGIN
             RAISE EXCEPTION 'service_role debe poder actualizar incidentes.%', v_col;
         END IF;
     END LOOP;
-    FOREACH v_col IN ARRAY ARRAY['id', 'expedicion_id', 'estado', 'abierto_en', 'cerrado_en', 'operacion_id'] LOOP
+    FOREACH v_col IN ARRAY ARRAY['id', 'expedicion_id', 'abierto_en', 'operacion_id'] LOOP
         IF has_column_privilege('service_role', 'public.incidentes', v_col, 'UPDATE') THEN
+            RAISE EXCEPTION 'service_role no debe poder actualizar incidentes.%', v_col;
+        END IF;
+    END LOOP;
+    -- estado y cerrado_en: cerrados con la 021 sola; abiertos por la 025 (HU-42).
+    FOREACH v_col IN ARRAY ARRAY['estado', 'cerrado_en'] LOOP
+        IF v_025 AND NOT has_column_privilege('service_role', 'public.incidentes', v_col, 'UPDATE') THEN
+            RAISE EXCEPTION 'Con la 025, service_role debe poder actualizar incidentes.%', v_col;
+        END IF;
+        IF NOT v_025 AND has_column_privilege('service_role', 'public.incidentes', v_col, 'UPDATE') THEN
             RAISE EXCEPTION 'service_role no debe poder actualizar incidentes.%', v_col;
         END IF;
     END LOOP;
@@ -276,7 +293,7 @@ BEGIN
     IF v_columnas <> 'abierto_en,asumido_en,cerrado_en,estado,expedicion_id,id,operacion_id,responsable_id,version' THEN
         RAISE EXCEPTION 'incidentes no debe cambiar de columnas: %', v_columnas;
     END IF;
-    RAISE NOTICE 'OK 1: RLS, índice único parcial, UPDATE por columna en incidentes y relevos, funciones SECURITY INVOKER con search_path vacío, sin columnas médicas';
+    RAISE NOTICE 'OK 1: RLS, índice único parcial, UPDATE por columna en incidentes (estado y cerrado_en según la 025) y relevos, funciones SECURITY INVOKER con search_path vacío, sin columnas médicas';
 END $$;
 
 -- 2) anon y authenticated no leen, escriben ni ejecutan nada de HU-40.
@@ -663,16 +680,21 @@ END $$;
 DO $$
 DECLARE
     v_id UUID;
+    v_025 BOOLEAN := to_regprocedure('public.treksafe_cerrar_incidente(uuid,uuid,text,text,uuid)') IS NOT NULL;
 BEGIN
     SELECT id INTO v_id FROM public.incidentes WHERE expedicion_id = hu40_prueba.e(1);
-    BEGIN
-        UPDATE public.incidentes SET estado = 'localizado' WHERE id = v_id;
-        RAISE EXCEPTION 'service_role pudo cambiar el estado del incidente';
-    EXCEPTION WHEN insufficient_privilege THEN NULL; END;
-    BEGIN
-        UPDATE public.incidentes SET cerrado_en = now() WHERE id = v_id;
-        RAISE EXCEPTION 'service_role pudo cambiar cerrado_en';
-    EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+    -- Sin la 025, estado y cerrado_en están cerrados. Con la 025 (HU-42) service_role puede
+    -- cambiarlos a propósito, así que esas dos comprobaciones solo valen sin ella.
+    IF NOT v_025 THEN
+        BEGIN
+            UPDATE public.incidentes SET estado = 'localizado' WHERE id = v_id;
+            RAISE EXCEPTION 'service_role pudo cambiar el estado del incidente';
+        EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+        BEGIN
+            UPDATE public.incidentes SET cerrado_en = now() WHERE id = v_id;
+            RAISE EXCEPTION 'service_role pudo cambiar cerrado_en';
+        EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+    END IF;
     BEGIN
         DELETE FROM public.incidentes WHERE id = v_id;
         RAISE EXCEPTION 'service_role pudo borrar un incidente';
@@ -693,7 +715,7 @@ BEGIN
         DELETE FROM public.transferencias_coordinacion;
         RAISE EXCEPTION 'service_role pudo borrar una transferencia';
     EXCEPTION WHEN insufficient_privilege THEN NULL; END;
-    RAISE NOTICE 'OK 14: service_role no cambia estado ni cierre, no borra y no modifica motivos ni transferencias';
+    RAISE NOTICE 'OK 14: service_role no borra y no modifica motivos ni transferencias; sin la 025 tampoco cambia estado ni cierre';
 END $$;
 
 RESET ROLE;

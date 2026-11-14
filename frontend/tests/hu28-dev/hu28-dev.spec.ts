@@ -2,6 +2,7 @@ import path from 'node:path';
 import { test, expect } from '@playwright/test';
 import { validarHu28Dev } from '../../../backend/src/testing/validacionHu28Dev';
 import { isoADatetimeLocal } from '../../src/lib/fechaLocal';
+import { cerrarAyudaInstalacion } from '../helpers/ayudaInstalacion';
 
 test('HU-28: PWA, login, API y persistencia reales en Supabase DEV', async ({ page, context }, info) => {
   expect(process.env.HU28_DEV_RUN, 'Ejecutar únicamente con HU28_DEV_RUN=1 y backend/.env de DEV.').toBe('1');
@@ -23,6 +24,7 @@ test('HU-28: PWA, login, API y persistencia reales en Supabase DEV', async ({ pa
       }
       async function login(indice: number) {
         await page.goto(`${origenWeb}/iniciar-sesion`);
+        await cerrarAyudaInstalacion(page);
         await page.getByLabel('Correo electrónico', { exact: true }).fill(cuentas[indice].correo);
         await page.getByLabel('Contraseña', { exact: true }).fill(contrasena);
         await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click();
