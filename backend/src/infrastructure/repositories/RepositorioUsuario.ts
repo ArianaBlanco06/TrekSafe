@@ -221,7 +221,9 @@ export class RepositorioUsuario {
     };
   }
 
-  async anonimizarHistorialRutas(senderistaId: string): Promise<{ expedicionesAnonimizadas: number }> {
+  async anonimizarHistorialRutas(
+    senderistaId: string,
+  ): Promise<{ expedicionesAnonimizadas: number; notasAvanceAnonimizadas: number }> {
     if (await this.tieneExpedicionBloqueante(senderistaId)) {
       throw new ErrorAplicacion(
         409,
@@ -238,7 +240,19 @@ export class RepositorioUsuario {
     if (errorConsulta) throw new ErrorAplicacion(500, errorConsulta.message);
 
     const ids = (expediciones ?? []).map((e) => e.id);
-    if (ids.length === 0) return { expedicionesAnonimizadas: 0 };
+    if (ids.length === 0) return { expedicionesAnonimizadas: 0, notasAvanceAnonimizadas: 0 };
+
+    // HU-50: las notas de avance (HU-34) son texto libre y pueden contener datos personales o
+    // de salud. service_role no accede a la tabla; la RPC definidora limpia solo las notas
+    // de las expediciones completadas o canceladas de este senderista.
+    const { data: notasLimpiadas, error: errorNotas } = await this.supabase.rpc(
+      'treksafe_anonimizar_notas_avance',
+      { p_senderista_id: senderistaId, p_expedicion_ids: ids },
+    );
+    if (errorNotas) {
+      console.error('[ARCO] no se pudieron anonimizar las notas de avance:', errorNotas.message);
+      throw new ErrorAplicacion(500, 'No se pudieron anonimizar las notas de avance');
+    }
 
     const ahora = new Date().toISOString();
     const { error: errorActualizar } = await this.supabase
@@ -267,6 +281,9 @@ export class RepositorioUsuario {
       .in('expedicion_id', ids);
     if (errorEventos) throw new ErrorAplicacion(500, errorEventos.message);
 
-    return { expedicionesAnonimizadas: ids.length };
+    return {
+      expedicionesAnonimizadas: ids.length,
+      notasAvanceAnonimizadas: typeof notasLimpiadas === 'number' ? notasLimpiadas : 0,
+    };
   }
 }

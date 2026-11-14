@@ -74,7 +74,7 @@ function crearContexto() {
     buscarConfirmacionesPorExpediciones: async () => new Map(),
   };
   const servicio = new ServicioRescate(
-    repo as never, {} as never, {} as never, {} as never, incidentes,
+    repo as never, {} as never, incidentes,
     { ahora: () => new Date(ahora) },
   );
   return { servicio, filas, enCurso, lecturas, zonas };

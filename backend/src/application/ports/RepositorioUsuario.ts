@@ -40,5 +40,7 @@ export interface IRepositorioUsuario {
   }>;
   anonimizarHistorialRutas(senderistaId: string): Promise<{
     expedicionesAnonimizadas: number;
+    /** HU-50: notas libres de avance (HU-34) dejadas en blanco. */
+    notasAvanceAnonimizadas: number;
   }>;
 }

@@ -16,8 +16,10 @@ import { ExpeditionRouteMapLazy } from '@/components/maps/ExpeditionRouteMapLazy
 import { BitacoraIncidente } from '@/components/rescate/BitacoraIncidente';
 import { BloqueCoordinacion } from '@/components/rescate/BloqueCoordinacion';
 import { CierreIncidente } from '@/components/rescate/CierreIncidente';
+import { FichaMedicaIncidente } from '@/components/rescate/FichaMedicaIncidente';
 import { InformeCierreIncidente } from '@/components/rescate/InformeCierreIncidente';
 import { parseDecimalCoordinates } from '@/lib/coordinates';
+import { TEXTO_FICHA_SIN_COORDINACION } from '@/lib/fichaMedicaIncidente';
 import { buildExternalMapUrl } from '@/lib/mapLinks';
 import { obtenerCierreAlerta, type InformeCierreIncidente as DatosInformeCierre } from '@/services/cierreIncidente';
 import type { BitacoraIncidente as DatosBitacora } from '@/services/bitacoraIncidente';
@@ -322,33 +324,21 @@ export function PaginaDetalleAlertaRescate() {
         </div>
       </section>
 
-      <section className="bg-card border border-border rounded-2xl p-4 mb-4">
-        <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-1">
-          <Heart size={14} /> Ficha médica autorizada
-        </h3>
-        {detalle.fichaMedica ? (
-          <dl className="space-y-2 text-sm">
-            <div>
-              <dt className="text-muted-foreground text-xs">Tipo de sangre</dt>
-              <dd className="font-medium">{detalle.fichaMedica.tipoSangre}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground text-xs">Alergias</dt>
-              <dd>{detalle.fichaMedica.alergias || 'No declaradas'}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground text-xs">Condiciones</dt>
-              <dd>{detalle.fichaMedica.condiciones || 'No declaradas'}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground text-xs">Medicación</dt>
-              <dd>{detalle.fichaMedica.medicamentos || 'No declarada'}</dd>
-            </div>
-          </dl>
-        ) : (
-          <p className="text-sm text-muted-foreground">Sin ficha médica autorizada registrada.</p>
-        )}
-      </section>
+      {/* HU-50: la ficha médica solo la consulta el responsable vigente, bajo demanda y con auditoría. */}
+      {detalle.coordinacion ? (
+        <FichaMedicaIncidente
+          key={`${detalle.coordinacion.incidenteId}-${detalle.coordinacion.responsableId}`}
+          incidenteId={detalle.coordinacion.incidenteId}
+          esResponsable={detalle.coordinacion.esMia}
+        />
+      ) : (
+        <section className="bg-card border border-border rounded-2xl p-4 mb-4">
+          <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-1">
+            <Heart size={14} /> Ficha médica autorizada
+          </h3>
+          <p className="text-sm text-muted-foreground">{TEXTO_FICHA_SIN_COORDINACION}</p>
+        </section>
+      )}
 
       <section className="bg-card border border-border rounded-2xl p-4 mb-4">
         <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-1">

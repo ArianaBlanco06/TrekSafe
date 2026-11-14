@@ -1,9 +1,9 @@
-export type InfoMedicaRescate = {
-  tipoSangre: string;
-  alergias: string;
-  condiciones: string;
-  medicamentos: string;
-};
+/**
+ * HU-50: el correo nunca lleva datos de salud ni dice si existe una ficha. Un aviso fijo
+ * indica dónde consultarla. Una ficha, aunque exista, no se menciona de otra manera.
+ */
+export const AVISO_FICHA_MEDICA_CORREO =
+  'La ficha médica no se envía por correo. Solo el responsable vigente del incidente puede consultarla en TrekSafe.';
 
 export type DatosCorreoAlertaRescate = {
   nombreRescatista: string;
@@ -16,7 +16,6 @@ export type DatosCorreoAlertaRescate = {
   fechaLimite: string;
   acompanantes: string[];
   contactosEmergencia: { nombreCompleto: string; telefono: string; parentesco: string }[];
-  fichaMedica: InfoMedicaRescate | null;
 };
 
 function formatearFechaHora(iso: string): string {
@@ -32,37 +31,6 @@ function escaparHtml(valor: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
-}
-
-function bloqueInfoMedica(fichaMedica: InfoMedicaRescate | null): { html: string; text: string } {
-  if (!fichaMedica) {
-    return {
-      html: '<p style="color:#587060;font-size:14px;">Ficha médica no registrada en el sistema.</p>',
-      text: 'Ficha médica: no registrada.',
-    };
-  }
-
-  const filas = [
-    ['Tipo de sangre', fichaMedica.tipoSangre],
-    ['Alergias', fichaMedica.alergias || 'No declaradas'],
-    ['Condiciones', fichaMedica.condiciones || 'No declaradas'],
-    ['Medicación', fichaMedica.medicamentos || 'No declarada'],
-  ];
-
-  const html = `
-    <table style="width:100%;border-collapse:collapse;font-size:14px;">
-      ${filas
-        .map(
-          ([etiqueta, valor]) =>
-            `<tr><td style="padding:6px 0;color:#587060;width:40%;">${escaparHtml(etiqueta)}</td>` +
-            `<td style="padding:6px 0;"><strong>${escaparHtml(valor)}</strong></td></tr>`,
-        )
-        .join('')}
-    </table>`;
-
-  const text = filas.map(([etiqueta, valor]) => `${etiqueta}: ${valor}`).join('\n');
-
-  return { html, text };
 }
 
 export function buildCorreoAlertaRescate(datos: DatosCorreoAlertaRescate): {
@@ -84,8 +52,6 @@ export function buildCorreoAlertaRescate(datos: DatosCorreoAlertaRescate): {
           .join('\n')
       : 'Sin contactos vinculados';
 
-  const med = bloqueInfoMedica(datos.fichaMedica);
-
   const text = [
     `Estimado/a ${datos.nombreRescatista},`,
     '',
@@ -104,8 +70,8 @@ export function buildCorreoAlertaRescate(datos: DatosCorreoAlertaRescate): {
     'Contactos de emergencia vinculados:',
     textoContactos,
     '',
-    'Ficha médica (descifrada para emergencia):',
-    med.text,
+    'Información médica:',
+    AVISO_FICHA_MEDICA_CORREO,
     '',
     '— TrekSafe · Despacho institucional de alerta',
   ].join('\n');
@@ -142,8 +108,8 @@ export function buildCorreoAlertaRescate(datos: DatosCorreoAlertaRescate): {
     <h3 style="font-size:15px;margin:20px 0 8px;">Contactos de emergencia</h3>
     <p style="font-size:14px;margin:0;white-space:pre-line;">${escaparHtml(textoContactos)}</p>
 
-    <h3 style="font-size:15px;margin:20px 0 8px;">Ficha médica (emergencia)</h3>
-    ${med.html}
+    <h3 style="font-size:15px;margin:20px 0 8px;">Información médica</h3>
+    <p style="font-size:14px;margin:0;">${escaparHtml(AVISO_FICHA_MEDICA_CORREO)}</p>
   </div>
   <p style="font-size:12px;color:#587060;text-align:center;margin-top:16px;">TrekSafe · Uso exclusivo institucional de rescate</p>
 </body>
