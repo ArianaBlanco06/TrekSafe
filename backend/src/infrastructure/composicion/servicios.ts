@@ -24,6 +24,7 @@ import { AgregarEntradaBitacora } from '../../application/use-cases/AgregarEntra
 import { ConsultarBitacoraIncidente } from '../../application/use-cases/ConsultarBitacoraIncidente.js';
 import { CerrarIncidente } from '../../application/use-cases/CerrarIncidente.js';
 import { ConsultarCierreIncidente } from '../../application/use-cases/ConsultarCierreIncidente.js';
+import { ConsultarEstadisticasRescate } from '../../application/use-cases/ConsultarEstadisticasRescate.js';
 import { MarcarIncidenteLocalizado } from '../../application/use-cases/MarcarIncidenteLocalizado.js';
 import { RepositorioAutenticacionPostgres } from '../repositories/RepositorioAutenticacionPostgres.js';
 import { RepositorioUsuario } from '../repositories/RepositorioUsuario.js';
@@ -38,6 +39,7 @@ import { ExpedicionDAOSupabase } from '../repositories/ExpedicionDAOSupabase.js'
 import { IncidenteDAOSupabase } from '../repositories/IncidenteDAOSupabase.js';
 import { BitacoraIncidenteDAOSupabase } from '../repositories/BitacoraIncidenteDAOSupabase.js';
 import { CierreIncidenteDAOSupabase } from '../repositories/CierreIncidenteDAOSupabase.js';
+import { ReporteIncidentesDAOSupabase } from '../repositories/ReporteIncidentesDAOSupabase.js';
 import { RescatistasDAOSupabase } from '../repositories/RescatistasDAOSupabase.js';
 import type { IRescatistasDAO } from '../../domain/repositories/IRescatistasDAO.js';
 import { ServicioCorreo } from '../email/ServicioCorreo.js';
@@ -105,6 +107,7 @@ export type ModuloRescate = {
   cerrarIncidente: CerrarIncidente;
   marcarIncidenteLocalizado: MarcarIncidenteLocalizado;
   consultarCierreIncidente: ConsultarCierreIncidente;
+  consultarEstadisticasRescate: ConsultarEstadisticasRescate;
   entregaAvisos: FachadaEntregaAvisosIncidente;
 };
 
@@ -160,6 +163,9 @@ export function crearModuloRescate(
     consultarCierreIncidente:
       dependencias.consultarCierreIncidente ??
       new ConsultarCierreIncidente(obtenerCierre()),
+    consultarEstadisticasRescate:
+      dependencias.consultarEstadisticasRescate ??
+      new ConsultarEstadisticasRescate(new ReporteIncidentesDAOSupabase(getSupabaseAdmin())),
     entregaAvisos:
       dependencias.entregaAvisos ??
       new FachadaEntregaAvisosIncidente(

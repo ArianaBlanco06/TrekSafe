@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { AlertTriangle, History, LogOut, Navigation, Shield } from 'lucide-react';
+import { AlertTriangle, BarChart3, History, LogOut, Navigation, Shield } from 'lucide-react';
 import { useAutenticacion } from '@/context/ContextoAutenticacion';
 import { MobileShell } from '@/components/Layout';
 import { BannerOffline } from '@/components/BannerOffline';
@@ -79,6 +79,10 @@ export function RescatistaLayout() {
           <NavLink to="/rescatista/historial" className={navClass}>
             <History size={22} />
             Historial
+          </NavLink>
+          <NavLink to="/rescatista/estadisticas" className={navClass}>
+            <BarChart3 size={22} />
+            Estadísticas
           </NavLink>
         </nav>
       </div>
