@@ -200,12 +200,7 @@ export type DetalleAlertaRescate = {
     parentesco: string;
     correoElectronico: string;
   }[];
-  fichaMedica: {
-    tipoSangre: string;
-    alergias: string;
-    condiciones: string;
-    medicamentos: string;
-  } | null;
+  // HU-50: la ficha médica ya no viene en el detalle; se pide en /rescate/incidentes/:id/ficha-medica.
   bitacora: {
     id: string;
     estadoRescate: string;
