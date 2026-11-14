@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
+import { cerrarAyudaInstalacion } from '../helpers/ayudaInstalacion.js';
 
 const planId = 'b1d0d5c0-8327-4af1-9cc1-2e83ae7e0320';
 const path = `/senderista/expedicion/${planId}/puntos`;
@@ -213,6 +214,7 @@ test('cambio de usuario no reutiliza puntos de la sesión anterior ni offline', 
   await saveButton(page).click();
   await expect(page.getByText('Puntos de ruta guardados', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Cerrar sesión' }).click();
+  await cerrarAyudaInstalacion(page);
   await page.getByLabel('Correo electrónico', { exact: true }).fill('otro@example.invalid');
   await page.getByLabel('Contraseña', { exact: true }).fill('Treksafe123!');
   await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click();

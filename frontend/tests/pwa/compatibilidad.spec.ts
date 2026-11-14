@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { cerrarAyudaInstalacion } from '../helpers/ayudaInstalacion.js';
 
 // Compatibilidad del fix de privacidad con historias ya integradas en develop:
 // HU-26 (editar expedicion, registerType 'prompt') y HU-30 (listas de equipo).
@@ -12,6 +13,7 @@ const planId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 
 async function login(page: Page, account: 'a' | 'b' = 'a') {
   await page.goto('/iniciar-sesion');
+  await cerrarAyudaInstalacion(page);
   await page.getByLabel('Correo electrónico', { exact: true }).fill(users[account].correoElectronico);
   await page.getByLabel('Contraseña', { exact: true }).fill('Fixture123!');
   await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click();

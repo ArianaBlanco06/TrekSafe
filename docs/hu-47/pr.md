@@ -33,6 +33,8 @@ nueva no se ha aplicado en DEV mediante este trabajo.
 - Backend: 1.031 pruebas aprobadas.
 - Frontend: 260 aprobadas y 2 omitidas por depender de entornos específicos.
 - TypeScript y compilaciones backend/PWA aprobados.
+- Suite completa de privacidad PWA: 30 pruebas aprobadas. Los recorridos de login
+  cierran el aviso de instalación antes de interactuar con el formulario.
 - PostgreSQL real desechable: 13 comprobaciones aprobadas.
 - Navegador → PWA → Express → SDK Supabase → PostgREST → PostgreSQL: 10 escenarios
   aprobados con datos ficticios, incluido volumen de 1.205 incidentes, relevos,
