@@ -1,7 +1,7 @@
 -- Solo PostgreSQL local desechable; todos los datos de prueba se revierten (ROLLBACK final).
 -- Requiere: los roles anon, authenticated y service_role con los privilegios por defecto
 -- de Supabase, el esquema base, las migraciones 000 a 019, 021, 022 a 024 (más 015) y la 025
--- y la 029 aplicadas. Se ejecuta con backend/scripts/test-hu50-postgres.mjs, que prepara
+-- y la 030 aplicadas. Se ejecuta con backend/scripts/test-hu50-postgres.mjs, que prepara
 -- ese entorno. Cada caso imprime un aviso "OK n: ..."; el primero que falla aborta el
 -- archivo con su mensaje. La carrera real entre sesiones se prueba en el script .mjs.
 -- Un senderista distinto por expedición: DEP-04 (022) permite una sola expedición
@@ -637,13 +637,13 @@ BEGIN
         RAISE EXCEPTION 'Falta treksafe_migraciones (aplicar 000 antes)';
     END IF;
     IF NOT EXISTS (SELECT 1 FROM public.treksafe_migraciones
-        WHERE version = '029' AND nombre = 'hu50_ficha_medica_responsable' AND hu = 'HU-50') THEN
-        RAISE EXCEPTION '029 no quedó registrada';
+        WHERE version = '030' AND nombre = 'hu50_ficha_medica_responsable' AND hu = 'HU-50') THEN
+        RAISE EXCEPTION '030 no quedó registrada';
     END IF;
     IF obj_description('public.auditoria_acceso_medico'::REGCLASS, 'pg_class') NOT LIKE 'Legado (HU-18)%' THEN
         RAISE EXCEPTION 'Falta el COMMENT de la tabla legada';
     END IF;
-    RAISE NOTICE 'OK 14: la 029 quedó registrada en treksafe_migraciones y la tabla legada quedó marcada como no escrita';
+    RAISE NOTICE 'OK 14: la 030 quedó registrada en treksafe_migraciones y la tabla legada quedó marcada como no escrita';
 END $$;
 
 ROLLBACK;

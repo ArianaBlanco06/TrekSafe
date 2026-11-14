@@ -11,7 +11,7 @@ Closes #52
 
 La ficha médica de un senderista solo la consulta el **responsable vigente** de un incidente **no cerrado** (abierto o localizado), con consentimiento vigente, **bajo demanda** y con **auditoría de cada intento** (permitido o denegado). El servidor decide antes de descifrar; si no puede auditar un acceso permitido, no muestra la ficha. Un relevo o un cierre en medio de la consulta no entregan datos.
 
-- **SQL (029):** tabla `accesos_ficha_medica` (solo anexado, hora del servidor, sin datos de salud, con cascada del ARCO), `GRANT UPDATE (version) ON incidentes` (aditivo, **sin ningún `REVOKE`**), tres RPC `SECURITY INVOKER` (`treksafe_contexto_ficha_medica`, `treksafe_leer_ficha_cifrada_responsable` con `FOR SHARE`, `treksafe_registrar_acceso_ficha_medica`) y la RPC ARCO `treksafe_anonimizar_notas_avance` (`SECURITY DEFINER`).
+- **SQL (030):** tabla `accesos_ficha_medica` (solo anexado, hora del servidor, sin datos de salud, con cascada del ARCO), `GRANT UPDATE (version) ON incidentes` (aditivo, **sin ningún `REVOKE`**), tres RPC `SECURITY INVOKER` (`treksafe_contexto_ficha_medica`, `treksafe_leer_ficha_cifrada_responsable` con `FOR SHARE`, `treksafe_registrar_acceso_ficha_medica`) y la RPC ARCO `treksafe_anonimizar_notas_avance` (`SECURITY DEFINER`).
 - **Backend:** `GET /api/rescate/incidentes/:incidenteId/ficha-medica`; `AutorizadorFichaIncidente` (dominio puro), `FachadaFichaMedicaIncidente`, interfaces de lectura de contexto, lectura cifrada y auditoría, puerto `IDescifradorFichaMedica`, DAO de Supabase y de memoria. `GET /api/rescate/alertas/:expedicionId` **ya no devuelve `fichaMedica`**.
 - **Correo:** la plantilla de alerta a rescatistas ya no tiene campos médicos ni dice si existe una ficha; muestra un aviso fijo.
 - **ARCO:** al anonimizar rutas se limpian también las notas libres de avance (HU-34); la respuesta añade `notasAvanceAnonimizadas`.
@@ -25,7 +25,7 @@ La ficha médica de un senderista solo la consulta el **responsable vigente** de
 - `ServicioAlertaRescate` (firma sin `IRepositorioUsuario`) y `rescueAlertEmail.ts`.
 - `servicios.ts` y `rutasRescate.ts`: bloques añadidos y comentados `// HU-50`.
 - `RepositorioUsuario.anonimizarHistorialRutas` y su puerto; `services/usuario.ts` (frontend).
-- `backend/migrations/README.md`: fila de la 029 y sección "HU-50".
+- `backend/migrations/README.md`: fila de la 030 y sección "HU-50".
 
 ### Decisiones D1 a D11 (a validar con Marko)
 
@@ -43,19 +43,19 @@ D1 "abierto" incluye `localizado`; D2 "consentimiento revocado" = no hay ficha (
 
 ### Avisos
 
-- **Ariana:** esta PR trae la migración **029** (no re-ejecutable; requiere el esquema base, 016 y 017). Aplicarla una sola vez, **después de la 021 y la 025**, y **recargar el esquema de PostgREST** (4 RPC nuevas). Anotarlo en `REGISTRO_APLICACION.md` (no se modifica aquí). Comprobación de solo lectura: `SELECT has_table_privilege('service_role','public.accesos_ficha_medica','UPDATE');` debe dar `false`. No se aplicó en ningún entorno remoto.
+- **Ariana:** esta PR trae la migración **030** (no re-ejecutable; requiere el esquema base, 016 y 017). Aplicarla una sola vez, **después de la 021 y la 025**, y **recargar el esquema de PostgREST** (4 RPC nuevas). Anotarlo en `REGISTRO_APLICACION.md` (no se modifica aquí). Comprobación de solo lectura: `SELECT has_table_privilege('service_role','public.accesos_ficha_medica','UPDATE');` debe dar `false`. No se aplicó en ningún entorno remoto.
 - **Fernando:** cambió la plantilla del correo de alerta a rescatistas y la firma de `ServicioAlertaRescate` (ya no recibe `IRepositorioUsuario`).
 - **Favio (HU-40):** se ajustaron las pruebas de HU-39 y HU-40 a la firma nueva de `ServicioRescate`; el contrato de `responsable_id` se mantiene (el relevo mueve el acceso a la ficha).
-- **Jhon:** se tocaron las pruebas y el script de HU-43 (solo la firma). Revisar D3 y D11. A `test-dep108-postgres.mjs` le falta la 029: es un script ajeno y no se tocó.
+- **Jhon:** se tocaron las pruebas y el script de HU-43 (solo la firma). Revisar D3 y D11. A `test-dep108-postgres.mjs` le falta la 030: es un script ajeno y no se tocó.
 - **Marko:** validar D1 a D11.
 
 ### Prueba manual
 
-Pendiente en DEV tras aplicar la 029 (`docs/hu-50/evidencias/prueba-manual.md`).
+Pendiente en DEV tras aplicar la 030 (`docs/hu-50/evidencias/prueba-manual.md`).
 
 ## División de commits
 
-1. `feat(sql): migración 029 con acceso a la ficha médica, auditoría y ARCO de avances (HU-50)`: la 029, su suite SQL, `test-hu50-postgres.mjs` y la fila y sección del `migrations/README.md`.
+1. `feat(sql): migración 030 con acceso a la ficha médica, auditoría y ARCO de avances (HU-50)`: la 030, su suite SQL, `test-hu50-postgres.mjs` y la fila y sección del `migrations/README.md`.
 2. `feat(backend): autorizador, auditoría y descifrado separados de la ficha médica (HU-50)`.
 3. `feat(backend): ruta de ficha médica del responsable y detalle de alerta sin datos médicos (HU-50)`.
 4. `fix(privacidad): correo de alerta sin datos médicos y ARCO de notas de avance (HU-50)`.

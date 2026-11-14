@@ -1,4 +1,4 @@
-// PostgreSQL desechable para HU-50 (029_hu50_ficha_medica_responsable.sql).
+// PostgreSQL desechable para HU-50 (030_hu50_ficha_medica_responsable.sql).
 //
 // Uso (desde la raíz del repositorio):
 //   node backend/scripts/test-hu50-postgres.mjs                    # Docker: postgres:18, puerto 55432
@@ -10,7 +10,7 @@
 // nombre no contenga "desechable". No puede tocar Supabase ni el DEV del equipo.
 //
 // Aplica init_schema.sql completo y las migraciones reales hasta la 019 (más 015, 021 y 022
-// a 024), después la 025 y la 029. Ejecuta backend/migrations/tests/hu50_ficha_medica_responsable.test.sql
+// a 024), después la 025 y la 030. Ejecuta backend/migrations/tests/hu50_ficha_medica_responsable.test.sql
 // (14 casos), las suites SQL de HU-42 (13 casos) y HU-41 (16 casos) como regresión, pruebas de
 // concurrencia con sesiones reales (relevo y cierre frente a la lectura de la ficha; 20
 // registros de auditoría desde 2 sesiones) y la suite TypeScript hu50Postgres.integration.test.ts
@@ -158,7 +158,7 @@ const MIGRACIONES_PREVIAS = [
   '022_dep108_crear_expedicion_atomica.sql', '023_dep108_avisos_transaccionales.sql',
   '024_dep108_vencimientos_outbox.sql',
 ];
-const MIGRACIONES_POSTERIORES = ['025_hu42_cerrar_incidente.sql', '029_hu50_ficha_medica_responsable.sql'];
+const MIGRACIONES_POSTERIORES = ['025_hu42_cerrar_incidente.sql', '030_hu50_ficha_medica_responsable.sql'];
 const CASOS_SQL_HU50 = 14;
 const CASOS_SQL_HU42 = 13;
 const CASOS_SQL_HU41 = 16;
@@ -380,14 +380,14 @@ async function principal() {
   for (const archivo of [...MIGRACIONES_PREVIAS, ...MIGRACIONES_POSTERIORES]) {
     await q(await readFile(path.join(migraciones, archivo), 'utf8'));
   }
-  console.log(`init_schema.sql y ${MIGRACIONES_PREVIAS.length} migraciones previas aplicados (000 a 019, 021 y 022 a 024, con la 015), más la 025 y la 029.\n`);
+  console.log(`init_schema.sql y ${MIGRACIONES_PREVIAS.length} migraciones previas aplicados (000 a 019, 021 y 022 a 024, con la 015), más la 025 y la 030.\n`);
 
   // --- Suites SQL de una sola sesión --------------------------------------
   await ejecutarSuiteSql('HU-50', 'tests/hu50_ficha_medica_responsable.test.sql', CASOS_SQL_HU50, 'hu50_sql');
   console.log('');
-  await ejecutarSuiteSql('HU-42 (regresión tras la 029)', 'tests/hu42_cerrar_incidente.test.sql', CASOS_SQL_HU42, 'hu50_sql_hu42');
+  await ejecutarSuiteSql('HU-42 (regresión tras la 030)', 'tests/hu42_cerrar_incidente.test.sql', CASOS_SQL_HU42, 'hu50_sql_hu42');
   console.log('');
-  await ejecutarSuiteSql('HU-41 (regresión tras la 029)', 'tests/hu41_bitacora_incidente.test.sql', CASOS_SQL_HU41, 'hu50_sql_hu41');
+  await ejecutarSuiteSql('HU-41 (regresión tras la 030)', 'tests/hu41_bitacora_incidente.test.sql', CASOS_SQL_HU41, 'hu50_sql_hu41');
 
   // --- Concurrencia con sesiones reales -----------------------------------
   console.log('\n== Concurrencia con sesiones reales ==');

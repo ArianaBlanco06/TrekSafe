@@ -1,5 +1,5 @@
 -- =============================================================================
--- 029 · HU-50: ficha médica solo para el responsable vigente de un incidente abierto
+-- 030 · HU-50: ficha médica solo para el responsable vigente de un incidente abierto
 -- Requiere: el esquema base (fichas_medicas, perfiles_rescatista, expediciones), 016
 -- (avances_expedicion) y 017 (incidentes). Se recomienda aplicarla DESPUÉS de la 021
 -- (HU-40) y de la 025 (HU-42): la 021 hace REVOKE UPDATE de tabla sobre incidentes y
@@ -38,17 +38,17 @@ BEGIN;
 DO $$
 BEGIN
     IF to_regclass('public.incidentes') IS NULL THEN
-        RAISE EXCEPTION '029 requiere la migración 017';
+        RAISE EXCEPTION '030 requiere la migración 017';
     END IF;
     IF to_regclass('public.avances_expedicion') IS NULL THEN
-        RAISE EXCEPTION '029 requiere la migración 016';
+        RAISE EXCEPTION '030 requiere la migración 016';
     END IF;
     IF to_regclass('public.fichas_medicas') IS NULL THEN
-        RAISE EXCEPTION '029 requiere el esquema base';
+        RAISE EXCEPTION '030 requiere el esquema base';
     END IF;
     IF to_regclass('public.treksafe_migraciones') IS NOT NULL
-       AND EXISTS (SELECT 1 FROM public.treksafe_migraciones WHERE version = '029') THEN
-        RAISE EXCEPTION '029 ya está registrada: no volver a aplicarla';
+       AND EXISTS (SELECT 1 FROM public.treksafe_migraciones WHERE version = '030') THEN
+        RAISE EXCEPTION '030 ya está registrada: no volver a aplicarla';
     END IF;
 END
 $$;
@@ -405,7 +405,7 @@ BEGIN
     IF to_regclass('public.treksafe_migraciones') IS NOT NULL THEN
         EXECUTE $sql$
             INSERT INTO public.treksafe_migraciones (version, nombre, hu)
-            VALUES ('029', 'hu50_ficha_medica_responsable', 'HU-50')
+            VALUES ('030', 'hu50_ficha_medica_responsable', 'HU-50')
             ON CONFLICT (version) DO NOTHING
         $sql$;
     END IF;

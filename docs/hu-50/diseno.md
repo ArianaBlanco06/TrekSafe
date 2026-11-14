@@ -1,4 +1,4 @@
-> **Estado:** implementado y verificado en local. Las decisiones D1 a D11 son valores por defecto pendientes de validar con Marko; D3 y D11 también con Jhon. Aplicación DEV de la 029 pendiente de Ariana.
+> **Estado:** implementado y verificado en local. Las decisiones D1 a D11 son valores por defecto pendientes de validar con Marko; D3 y D11 también con Jhon. Aplicación DEV de la 030 pendiente de Ariana.
 
 # HU-50: restringir la ficha médica al responsable vigente
 
@@ -162,11 +162,11 @@ Todo está probado con sesiones reales en `test-hu50-postgres.mjs`: (a) relevo p
 | `FichaMedicaIncidente`: sin ser responsable, mensaje y ninguna llamada; si lo es, botón "Ver ficha médica", los cuatro campos y "Ocultar ficha"; un error borra lo mostrado; los datos solo viven en el estado | `services/fichaMedicaIncidente.ts` |
 | `lib`: mensajes por motivo y `mensajeErrorFicha` (0 sin conexión, 503 auditoría, motivo conocido, genérico) | `ErrorClienteApi` |
 
-## Migración 029
+## Migración 030
 
 | Archivo | Contenido |
 |---|---|
-| `029_hu50_ficha_medica_responsable.sql` | Tabla `accesos_ficha_medica` con RLS, índices, 4 triggers (hora del servidor y solo anexado) y `GRANT SELECT, INSERT` a `service_role`; `GRANT UPDATE (version) ON incidentes` (aditivo); RPC `treksafe_contexto_ficha_medica`, `treksafe_leer_ficha_cifrada_responsable` y `treksafe_registrar_acceso_ficha_medica` (todas `SECURITY INVOKER`, `search_path` vacío); RPC ARCO `treksafe_anonimizar_notas_avance` (`SECURITY DEFINER`); `COMMENT` en la tabla legada; registro en `treksafe_migraciones`. Requiere el esquema base, `016` y `017`. Aplicar una sola vez, después de `021` y `025`. |
+| `030_hu50_ficha_medica_responsable.sql` | Tabla `accesos_ficha_medica` con RLS, índices, 4 triggers (hora del servidor y solo anexado) y `GRANT SELECT, INSERT` a `service_role`; `GRANT UPDATE (version) ON incidentes` (aditivo); RPC `treksafe_contexto_ficha_medica`, `treksafe_leer_ficha_cifrada_responsable` y `treksafe_registrar_acceso_ficha_medica` (todas `SECURITY INVOKER`, `search_path` vacío); RPC ARCO `treksafe_anonimizar_notas_avance` (`SECURITY DEFINER`); `COMMENT` en la tabla legada; registro en `treksafe_migraciones`. Requiere el esquema base, `016` y `017`. Aplicar una sola vez, después de `021` y `025`. |
 
 - **FK de la auditoría:** solo `senderista_id → usuarios ON DELETE CASCADE`. `incidente_id`, `expedicion_id` y `actor_id` no llevan FK: se audita también un incidente inexistente y la auditoría no impide borrar incidentes ni perfiles. El `DELETE` solo se permite en la cascada del ARCO (la cuenta del senderista ya no existe); un `DELETE` directo, un `UPDATE` o un `TRUNCATE` dan `ACCESO_FICHA_INMUTABLE`.
 - **`CHECK`s:** `chk_accesos_ficha_coherencia` (permitido ⇔ `RESPONSABLE_VIGENTE`) y `chk_accesos_ficha_permitido_completo` (un permitido siempre tiene expedición y senderista).
@@ -188,7 +188,7 @@ Todo está probado con sesiones reales en `test-hu50-postgres.mjs`: (a) relevo p
 - **ISP:** `ILectorContextoFichaIncidente`, `ILectorFichaCifradaResponsable` e `IRegistroAccesoFicha` son interfaces separadas; la fachada depende de las tres y un mismo DAO las cumple.
 - **DIP:** dominio y aplicación no importan infraestructura (lo vigila `importaciones.test.ts`); el descifrado es un puerto (`IDescifradorFichaMedica`). Los concretos solo se crean en `servicios.ts`, con un DAO perezoso compartido.
 - **LSP:** `verificarContratoFichaMedicaIncidenteDAO` ejecuta los mismos casos contra el DAO en memoria y contra PostgreSQL real.
-- **DRY:** los motivos se declaran una vez (`accesoFichaMedica.ts`) y una prueba comprueba que coinciden con el `CHECK` y la RPC de la 029 y con el frontend; el mapa motivo → HTTP está solo en `errorDenegacionFicha`.
+- **DRY:** los motivos se declaran una vez (`accesoFichaMedica.ts`) y una prueba comprueba que coinciden con el `CHECK` y la RPC de la 030 y con el frontend; el mapa motivo → HTTP está solo en `errorDenegacionFicha`.
 
 ## Código de otras HU que se tocó
 
@@ -196,7 +196,7 @@ Todo está probado con sesiones reales en `test-hu50-postgres.mjs`: (a) relevo p
 - **Pruebas de HU-39 y HU-40** (`servicioRescate.coordinacion.test.ts`, `servicioRescate.relevo.test.ts`) y de **HU-43** (`rutasPrioridadRescate.test.ts`, `backend/scripts/test-hu43-integracion.mjs`): solo la firma del constructor. En coordinación, el caso "no consulta la ficha médica" se sustituyó por la comprobación de que el detalle no trae la clave `fichaMedica` ni coincide con el patrón médico.
 - **`servicios.ts` y `rutasRescate.ts`:** bloques añadidos y comentados `// HU-50`.
 - **`ServicioAlertaRescate` (HU-13/45):** firma nueva `(repoAlerta, repoRescate, correo, repoDespacho, repoOutbox?)` y la plantilla `rescueAlertEmail.ts` sin campos médicos.
-- **`RepositorioUsuario.anonimizarHistorialRutas` (HU-18/ARCO):** llama a la RPC de la 029 y devuelve `notasAvanceAnonimizadas`. `obtenerFichaMedica` se conserva: lo usa la ficha propia del senderista (`ServicioUsuario`).
+- **`RepositorioUsuario.anonimizarHistorialRutas` (HU-18/ARCO):** llama a la RPC de la 030 y devuelve `notasAvanceAnonimizadas`. `obtenerFichaMedica` se conserva: lo usa la ficha propia del senderista (`ServicioUsuario`).
 - **Frontend:** `PaginaDetalleAlertaRescate.tsx`, `services/rescate.ts` (se quitó `fichaMedica` del tipo) y `services/usuario.ts` (`notasAvanceAnonimizadas?`).
 
 ## Desviaciones respecto al plan
@@ -213,10 +213,10 @@ Todo está probado con sesiones reales en `test-hu50-postgres.mjs`: (a) relevo p
 
 | Persona | Aviso |
 |---|---|
-| Ariana | Aplicar la 029 después de la 021 y la 025, una sola vez, y recargar PostgREST. Anotarlo en `REGISTRO_APLICACION.md`. |
+| Ariana | Aplicar la 030 después de la 021 y la 025, una sola vez, y recargar PostgREST. Anotarlo en `REGISTRO_APLICACION.md`. |
 | Fernando | Cambió la plantilla de correo de alerta a rescatistas y la firma de `ServicioAlertaRescate` (ya no recibe `IRepositorioUsuario`). |
 | Favio | Se ajustaron las pruebas de HU-39 y HU-40 por la firma de `ServicioRescate`; el contrato de `responsable_id` se mantiene. El relevo mueve el acceso a la ficha. |
-| Jhon | Se tocaron las pruebas y el script de HU-43 (solo la firma). Revisar D3 (el 403 expone el motivo) y D11 (`tipo_sangre` en claro). A `test-dep108-postgres.mjs` le falta la 029: es un script ajeno y no se tocó. |
+| Jhon | Se tocaron las pruebas y el script de HU-43 (solo la firma). Revisar D3 (el 403 expone el motivo) y D11 (`tipo_sangre` en claro). A `test-dep108-postgres.mjs` le falta la 030: es un script ajeno y no se tocó. |
 | Marko | Validar D1 a D11. |
 
 ## Frontend
@@ -231,7 +231,7 @@ Resumen; el detalle con la salida real está en `evidencias/resultado-postgres.m
 | Evidencia | Resultado |
 |---|---|
 | Suite SQL de HU-50 (`hu50_ficha_medica_responsable.test.sql`) sobre PostgreSQL 17.6 desechable | 14 de 14 casos |
-| Regresión: suites SQL de HU-42 y HU-41 tras la 029 | 13 de 13 y 16 de 16 |
+| Regresión: suites SQL de HU-42 y HU-41 tras la 030 | 13 de 13 y 16 de 16 |
 | Concurrencia con sesiones reales (`test-hu50-postgres.mjs`) | 6 de 6 casos |
 | Suite TypeScript sobre Postgres real | 17 de 17 pruebas |
 | `test-hu50-postgres.mjs` completo | 50 de 50 casos |

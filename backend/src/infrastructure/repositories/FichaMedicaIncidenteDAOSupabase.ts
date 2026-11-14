@@ -103,7 +103,7 @@ function leerRegistro(datos: unknown): RegistroAccesoFicha | null {
   });
 }
 
-/** Adaptador Supabase de las tres RPC de HU-50 (migración 029). */
+/** Adaptador Supabase de las tres RPC de HU-50 (migración 030). */
 export class FichaMedicaIncidenteDAOSupabase implements IFichaMedicaIncidenteDAO {
   constructor(private readonly cliente: Pick<SupabaseClient, 'rpc'>) {}
 

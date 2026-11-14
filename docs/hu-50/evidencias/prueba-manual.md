@@ -1,10 +1,10 @@
 # HU-50 · Prueba manual de la ficha médica del responsable
 
-Estado: **pendiente en DEV tras aplicar la 029**. No se aplicó en ningún entorno remoto durante el desarrollo. Hasta entonces la única evidencia es la local: `resultado-postgres.md` y `resultado-suites.md`.
+Estado: **pendiente en DEV tras aplicar la 030**. No se aplicó en ningún entorno remoto durante el desarrollo. Hasta entonces la única evidencia es la local: `resultado-postgres.md` y `resultado-suites.md`.
 
 ## Antes de empezar (Ariana, solo lectura)
 
-1. Aplicar `029_hu50_ficha_medica_responsable.sql` una sola vez, **después de la 021 y la 025** (requiere `016` y `017`). Anotarlo en `REGISTRO_APLICACION.md`.
+1. Aplicar `030_hu50_ficha_medica_responsable.sql` una sola vez, **después de la 021 y la 025** (requiere `016` y `017`). Anotarlo en `REGISTRO_APLICACION.md`.
 2. Consulta de solo lectura (debe dar `false`): `SELECT has_table_privilege('service_role','public.accesos_ficha_medica','UPDATE');`
 3. Recargar el esquema de PostgREST para exponer `treksafe_contexto_ficha_medica`, `treksafe_leer_ficha_cifrada_responsable`, `treksafe_registrar_acceso_ficha_medica` y `treksafe_anonimizar_notas_avance`.
 

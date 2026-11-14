@@ -14,7 +14,7 @@ Creando clúster temporal en <carpeta temporal> (puerto 55432)...
 PostgreSQL: PostgreSQL 17.6 on x86_64-windows, compiled by msvc-19.44.35217, 64-bit
 Modo: --pg-bin C:\Program Files\PostgreSQL\17\bin · 127.0.0.1:55432/treksafe_desechable
 
-init_schema.sql y 26 migraciones previas aplicados (000 a 019, 021 y 022 a 024, con la 015), más la 025 y la 029.
+init_schema.sql y 26 migraciones previas aplicados (000 a 019, 021 y 022 a 024, con la 015), más la 025 y la 030.
 
 == Suite SQL HU-50 (tests/hu50_ficha_medica_responsable.test.sql) ==
 OK   SQL HU-50 1: RLS, política, columnas sin datos médicos, un solo FK (senderista, cascada), 4 triggers, 3 RPC y 2 triggers INVOKER con search_path vacío, RPC ARCO DEFINER con search_path fijo, sin EXECUTE para PUBLIC, anon ni authenticated; service_role solo SELECT e INSERT en la auditoría y UPDATE (version) en incidentes
@@ -30,40 +30,40 @@ OK   SQL HU-50 10: parámetros nulos, resultado o motivo fuera del catálogo e i
 OK   SQL HU-50 11: UPDATE, DELETE directo y TRUNCATE dan ACCESO_FICHA_INMUTABLE; service_role no puede actualizar, borrar ni truncar; DELETE FROM usuarios arrastra solo los accesos de ese senderista
 OK   SQL HU-50 12: ninguna columna de la auditoría es médica y to_jsonb de sus filas no contiene el tipo de sangre ni el texto cifrado de prueba
 OK   SQL HU-50 13: ARCO limpia las notas de las expediciones completada y cancelada (devuelve 2, luego 0); conserva la de la expedición en alerta y la de otro senderista; service_role no accede directo a avances_expedicion; parámetros nulos dan DATOS_INVALIDOS
-OK   SQL HU-50 14: la 029 quedó registrada en treksafe_migraciones y la tabla legada quedó marcada como no escrita
+OK   SQL HU-50 14: la 030 quedó registrada en treksafe_migraciones y la tabla legada quedó marcada como no escrita
 
-== Suite SQL HU-42 (regresión tras la 029) (tests/hu42_cerrar_incidente.test.sql) ==
-OK   SQL HU-42 (regresión tras la 029) 1: RLS, política, uniques, CHECK de resultado y resumen, FK (cascada y restrict, ninguno hacia la bitácora), 4 triggers, columnas sin datos médicos, funciones SECURITY INVOKER con search_path vacío y sin EXECUTE para PUBLIC, anon ni authenticated
-OK   SQL HU-42 (regresión tras la 029) 2: anon y authenticated no leen, escriben ni ejecutan; service_role solo SELECT e INSERT en informes y UPDATE (estado, cerrado_en, version) en incidentes
-OK   SQL HU-42 (regresión tras la 029) 3: marcar localizado (solo el responsable, una nota fija, version+1, repetición sin escribir, ya localizado, no responsable con el vigente, inexistente, UUID ajeno y datos nulos)
-OK   SQL HU-42 (regresión tras la 029) 4: el cierre devuelve el informe; cerrado_en del informe = el del incidente, version+1, entrada cierre con el resumen y operacion_id = comando
-OK   SQL HU-42 (regresión tras la 029) 5: resultado fuera del catálogo, resumen vacío, en blanco o de 2001 y datos nulos dan DATOS_INVALIDOS sin escribir; 2000 caracteres se acepta
-OK   SQL HU-42 (regresión tras la 029) 6: abierto da INCIDENTE_NO_LOCALIZADO; no responsable, 403 con el vigente; inexistente; tras un relevo A recibe NO_ES_RESPONSABLE y B cierra; los rechazos no escriben
-OK   SQL HU-42 (regresión tras la 029) 7: mismo comando = mismo informe (repetido); otros datos = OPERACION_YA_REGISTRADA; otro comando sobre cerrado = INCIDENTE_CERRADO; sobrevive al relevo; comandos usados en una nota, un incidente o localizado se rechazan
-OK   SQL HU-42 (regresión tras la 029) 8: tras el cierre la bitácora conserva ids, textos y horas, el cierre va al final y es único; la RPC de HU-41 y localizar dan INCIDENTE_CERRADO
-OK   SQL HU-42 (regresión tras la 029) 9: el incidente queda cerrado con cerrado_en, sin otro incidente abierto en la expedición; el último cierre se lee por expedición (NULL si no hay)
-OK   SQL HU-42 (regresión tras la 029) 10: con la expedición en alerta y en completada, expediciones (estado, version, actualizado_en y toda la fila) queda idéntica y no hay eventos, avisos ni outbox nuevos
-OK   SQL HU-42 (regresión tras la 029) 11: UPDATE, DELETE directo y TRUNCATE del informe dan INFORME_CIERRE_INMUTABLE; service_role no puede actualizar; la cascada del ARCO arrastra incidente, entradas e informe; el autor queda restringido
-OK   SQL HU-42 (regresión tras la 029) 12: con REVOKE de tabla y GRANT (responsable_id, version, asumido_en) el cierre falla con permission denied; con GRANT (estado, cerrado_en, version) funciona
-OK   SQL HU-42 (regresión tras la 029) 13: la 025 quedó registrada en treksafe_migraciones
+== Suite SQL HU-42 (regresión tras la 030) (tests/hu42_cerrar_incidente.test.sql) ==
+OK   SQL HU-42 (regresión tras la 030) 1: RLS, política, uniques, CHECK de resultado y resumen, FK (cascada y restrict, ninguno hacia la bitácora), 4 triggers, columnas sin datos médicos, funciones SECURITY INVOKER con search_path vacío y sin EXECUTE para PUBLIC, anon ni authenticated
+OK   SQL HU-42 (regresión tras la 030) 2: anon y authenticated no leen, escriben ni ejecutan; service_role solo SELECT e INSERT en informes y UPDATE (estado, cerrado_en, version) en incidentes
+OK   SQL HU-42 (regresión tras la 030) 3: marcar localizado (solo el responsable, una nota fija, version+1, repetición sin escribir, ya localizado, no responsable con el vigente, inexistente, UUID ajeno y datos nulos)
+OK   SQL HU-42 (regresión tras la 030) 4: el cierre devuelve el informe; cerrado_en del informe = el del incidente, version+1, entrada cierre con el resumen y operacion_id = comando
+OK   SQL HU-42 (regresión tras la 030) 5: resultado fuera del catálogo, resumen vacío, en blanco o de 2001 y datos nulos dan DATOS_INVALIDOS sin escribir; 2000 caracteres se acepta
+OK   SQL HU-42 (regresión tras la 030) 6: abierto da INCIDENTE_NO_LOCALIZADO; no responsable, 403 con el vigente; inexistente; tras un relevo A recibe NO_ES_RESPONSABLE y B cierra; los rechazos no escriben
+OK   SQL HU-42 (regresión tras la 030) 7: mismo comando = mismo informe (repetido); otros datos = OPERACION_YA_REGISTRADA; otro comando sobre cerrado = INCIDENTE_CERRADO; sobrevive al relevo; comandos usados en una nota, un incidente o localizado se rechazan
+OK   SQL HU-42 (regresión tras la 030) 8: tras el cierre la bitácora conserva ids, textos y horas, el cierre va al final y es único; la RPC de HU-41 y localizar dan INCIDENTE_CERRADO
+OK   SQL HU-42 (regresión tras la 030) 9: el incidente queda cerrado con cerrado_en, sin otro incidente abierto en la expedición; el último cierre se lee por expedición (NULL si no hay)
+OK   SQL HU-42 (regresión tras la 030) 10: con la expedición en alerta y en completada, expediciones (estado, version, actualizado_en y toda la fila) queda idéntica y no hay eventos, avisos ni outbox nuevos
+OK   SQL HU-42 (regresión tras la 030) 11: UPDATE, DELETE directo y TRUNCATE del informe dan INFORME_CIERRE_INMUTABLE; service_role no puede actualizar; la cascada del ARCO arrastra incidente, entradas e informe; el autor queda restringido
+OK   SQL HU-42 (regresión tras la 030) 12: con REVOKE de tabla y GRANT (responsable_id, version, asumido_en) el cierre falla con permission denied; con GRANT (estado, cerrado_en, version) funciona
+OK   SQL HU-42 (regresión tras la 030) 13: la 025 quedó registrada en treksafe_migraciones
 
-== Suite SQL HU-41 (regresión tras la 029) (tests/hu41_bitacora_incidente.test.sql) ==
-OK   SQL HU-41 (regresión tras la 029) 1: RLS, política, índice de cierre único, columnas sin datos médicos, 4 triggers, FK (cascada y restrict), funciones SECURITY INVOKER con search_path vacío y sin EXECUTE para PUBLIC, anon ni authenticated
-OK   SQL HU-41 (regresión tras la 029) 2: anon y authenticated no leen, escriben ni ejecutan; service_role solo SELECT e INSERT y UPDATE (version) en incidentes
-OK   SQL HU-41 (regresión tras la 029) 3: el responsable añade una nota; devuelve id, tipo, texto recortado, autor, hora y repetido=false
-OK   SQL HU-41 (regresión tras la 029) 4: registrada_en la fija el servidor (ignora 2000-01-01) y secuencia es GENERATED ALWAYS
-OK   SQL HU-41 (regresión tras la 029) 5: UPDATE, DELETE directo y TRUNCATE dan ENTRADA_BITACORA_INMUTABLE; service_role no puede actualizar; la entrada sigue intacta
-OK   SQL HU-41 (regresión tras la 029) 6: otro rescatista o un UUID desconocido reciben NO_ES_RESPONSABLE con el responsable vigente, sin escribir
-OK   SQL HU-41 (regresión tras la 029) 7: localizado admite entradas; cerrado da INCIDENTE_CERRADO; inexistente da INCIDENTE_NO_ENCONTRADO
-OK   SQL HU-41 (regresión tras la 029) 8: nulos, vacío, solo blancos y 2001 caracteres dan DATOS_INVALIDOS; 2000 pasa; el texto se guarda recortado; la interna valida el tipo
-OK   SQL HU-41 (regresión tras la 029) 9: la corrección es una entrada nueva y la original no cambia; CORRECCION_INVALIDA; CHECK y FK compuesta en INSERT directo
-OK   SQL HU-41 (regresión tras la 029) 10: idempotencia (misma entrada con repetido=true), otro contenido, actor o UUID de incidentes/eventos_plan dan OPERACION_YA_REGISTRADA
-OK   SQL HU-41 (regresión tras la 029) 11: tras el relevo R1 recibe NO_ES_RESPONSABLE (vigente R2), R2 escribe, la autoría se conserva y el reintento previo da repetido=true
-OK   SQL HU-41 (regresión tras la 029) 12: 5 entradas en la misma transacción salen en orden estricto por (registrada_en, secuencia), sin empates en secuencia
-OK   SQL HU-41 (regresión tras la 029) 13: con UPDATE (version) la RPC funciona; sin ningún UPDATE sobre incidentes da insufficient_privilege (dependencia documentada)
-OK   SQL HU-41 (regresión tras la 029) 14: la interna anexa el cierre junto al UPDATE a cerrado, un segundo cierre da OPERACION_YA_REGISTRADA y la RPC pública da INCIDENTE_CERRADO
-OK   SQL HU-41 (regresión tras la 029) 15: borrar la expedición arrastra incidente y entradas (con una corrección); borrar el perfil del autor queda restringido
-OK   SQL HU-41 (regresión tras la 029) 16: la 019 quedó registrada en treksafe_migraciones
+== Suite SQL HU-41 (regresión tras la 030) (tests/hu41_bitacora_incidente.test.sql) ==
+OK   SQL HU-41 (regresión tras la 030) 1: RLS, política, índice de cierre único, columnas sin datos médicos, 4 triggers, FK (cascada y restrict), funciones SECURITY INVOKER con search_path vacío y sin EXECUTE para PUBLIC, anon ni authenticated
+OK   SQL HU-41 (regresión tras la 030) 2: anon y authenticated no leen, escriben ni ejecutan; service_role solo SELECT e INSERT y UPDATE (version) en incidentes
+OK   SQL HU-41 (regresión tras la 030) 3: el responsable añade una nota; devuelve id, tipo, texto recortado, autor, hora y repetido=false
+OK   SQL HU-41 (regresión tras la 030) 4: registrada_en la fija el servidor (ignora 2000-01-01) y secuencia es GENERATED ALWAYS
+OK   SQL HU-41 (regresión tras la 030) 5: UPDATE, DELETE directo y TRUNCATE dan ENTRADA_BITACORA_INMUTABLE; service_role no puede actualizar; la entrada sigue intacta
+OK   SQL HU-41 (regresión tras la 030) 6: otro rescatista o un UUID desconocido reciben NO_ES_RESPONSABLE con el responsable vigente, sin escribir
+OK   SQL HU-41 (regresión tras la 030) 7: localizado admite entradas; cerrado da INCIDENTE_CERRADO; inexistente da INCIDENTE_NO_ENCONTRADO
+OK   SQL HU-41 (regresión tras la 030) 8: nulos, vacío, solo blancos y 2001 caracteres dan DATOS_INVALIDOS; 2000 pasa; el texto se guarda recortado; la interna valida el tipo
+OK   SQL HU-41 (regresión tras la 030) 9: la corrección es una entrada nueva y la original no cambia; CORRECCION_INVALIDA; CHECK y FK compuesta en INSERT directo
+OK   SQL HU-41 (regresión tras la 030) 10: idempotencia (misma entrada con repetido=true), otro contenido, actor o UUID de incidentes/eventos_plan dan OPERACION_YA_REGISTRADA
+OK   SQL HU-41 (regresión tras la 030) 11: tras el relevo R1 recibe NO_ES_RESPONSABLE (vigente R2), R2 escribe, la autoría se conserva y el reintento previo da repetido=true
+OK   SQL HU-41 (regresión tras la 030) 12: 5 entradas en la misma transacción salen en orden estricto por (registrada_en, secuencia), sin empates en secuencia
+OK   SQL HU-41 (regresión tras la 030) 13: con UPDATE (version) la RPC funciona; sin ningún UPDATE sobre incidentes da insufficient_privilege (dependencia documentada)
+OK   SQL HU-41 (regresión tras la 030) 14: la interna anexa el cierre junto al UPDATE a cerrado, un segundo cierre da OPERACION_YA_REGISTRADA y la RPC pública da INCIDENTE_CERRADO
+OK   SQL HU-41 (regresión tras la 030) 15: borrar la expedición arrastra incidente y entradas (con una corrección); borrar el perfil del autor queda restringido
+OK   SQL HU-41 (regresión tras la 030) 16: la 019 quedó registrada en treksafe_migraciones
 
 == Concurrencia con sesiones reales ==
 OK   (a) el relevo toma la fila primero: la lectura de A espera y luego recibe NULL (0 datos); B recibe la ficha
@@ -90,7 +90,7 @@ PostgreSQL: PostgreSQL 17.6 on x86_64-windows, compiled by msvc-19.44.35217, 64-
 Casos: 39 · pasaron: 39 · fallaron: 0
 ```
 
-Con la 029 aplicada la suite de HU-42 sigue completa: 13 casos SQL, 16 de HU-41, 9 de concurrencia y 20 pruebas TypeScript (39 de 39 casos del script).
+Con la 030 aplicada la suite de HU-42 sigue completa: 13 casos SQL, 16 de HU-41, 9 de concurrencia y 20 pruebas TypeScript (39 de 39 casos del script).
 
 ## Regresión: `test-hu41-postgres.mjs` (resumen)
 

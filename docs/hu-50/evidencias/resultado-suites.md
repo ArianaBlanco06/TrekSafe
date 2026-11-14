@@ -17,7 +17,7 @@ Pruebas nuevas de HU-50 en el backend:
 | Archivo | Cubre |
 |---|---|
 | `domain/services/AutorizadorFichaIncidente.test.ts` | Un caso por motivo, las tres precedencias, localizado permitido, relevo (anterior y nuevo), el catálogo alcanzado excluye `CONTEXTO_CAMBIADO`, solo las claves `permitido`, `motivo` e `incidenteId`, entrada no modificada |
-| `domain/value-objects/accesoFichaMedica.test.ts` | Cada motivo figura en el `CHECK` y en la RPC de registro de la 029 y en el frontend; la 029 no modifica `expediciones` ni `fichas_medicas` |
+| `domain/value-objects/accesoFichaMedica.test.ts` | Cada motivo figura en el `CHECK` y en la RPC de registro de la 030 y en el frontend; la 030 no modifica `expediciones` ni `fichas_medicas` |
 | `application/services/FachadaFichaMedicaIncidente.test.ts` | Orden exacto `contexto, auditar:permitido, leerCifrada, descifrar`; cada denegación sin lectura ni descifrado y con `extras = {motivo}` y sin valores médicos; 503 fail-closed; 403 que sobrevive a un fallo de auditoría; `CONTEXTO_CAMBIADO`; 500 `FICHA_ILEGIBLE` sin datos en el log; ZodError sin auditoría; 20 consultas de un no responsable; relevo, cierre y consentimiento con el DAO en memoria |
 | `infrastructure/repositories/FichaMedicaIncidenteDAOSupabase.test.ts` | Nombres y parámetros de las RPC, parseo, normalización ISO, formas inválidas (500 sin detalles) y que el log no contiene `details`, `data` ni el texto cifrado |
 | `infrastructure/repositories/memoria/FichaMedicaIncidenteDAOMemoria.test.ts` + `testing/contratoFichaMedicaIncidenteDAO.ts` | Contrato LSP de 10 casos (memoria y Postgres real) y la lista `accesos` |

@@ -25,7 +25,7 @@ type FilaIncidente = {
 const MOTIVOS = new Set<string>([MOTIVO_PERMITIDO_FICHA, ...MOTIVOS_DENEGACION_FICHA]);
 
 /**
- * Doble de prueba de `IFichaMedicaIncidenteDAO`. Replica las tres RPC de la 029: el contexto
+ * Doble de prueba de `IFichaMedicaIncidenteDAO`. Replica las tres RPC de la 030: el contexto
  * nunca incluye la ficha, la guarda devuelve el texto cifrado solo al responsable de un
  * incidente no cerrado con ficha, y el registro valida el catálogo (DATOS_INVALIDOS se lanza
  * como ErrorAplicacion 500) y fija la hora del "servidor". Es de solo anexado: no hay forma
