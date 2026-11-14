@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it, type TestContext } from 'node:test';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { PaginaEstadisticasRescate } from './PaginaEstadisticasRescate';
+import { setImmediate as turno } from 'node:timers/promises';
 
 function texto(nodo: unknown): string {
   if (typeof nodo === 'string' || typeof nodo === 'number') return String(nodo);
@@ -100,6 +101,7 @@ describe('HU-47: pantalla de estadísticas', () => {
     await h.cambiar('reporte-zona', 'Cusco');
     await h.enviar();
     assert.match(h.contenido(), /Actualizando. Se muestra la última consulta correcta/);
+    assert.equal(h.arbol.root.findAllByType('button').find(b => texto(b) === 'Descargar CSV')!.props.disabled, true);
     assert.match(h.contenido(), /Destino: Todos/);
     await act(async () => pendiente.resolver(respuesta(h.peticiones[1], 8)));
     assert.equal(texto(h.arbol.root.findByProps({ 'data-testid': 'conteo-atendidos' })), '8');
@@ -115,6 +117,7 @@ describe('HU-47: pantalla de estadísticas', () => {
     await h.cambiar('reporte-zona', 'Cusco');
     await h.enviar();
     assert.match(h.contenido(), /Se conserva la última consulta correcta/);
+    assert.equal(h.arbol.root.findAllByType('button').find(b => texto(b) === 'Descargar CSV')!.props.disabled, true);
     assert.match(h.contenido(), /Destino: Todos/);
     fallo = false;
     await act(async () => h.arbol.root.findAllByType('button').find(b => texto(b) === 'Reintentar consulta')!.props.onClick());
@@ -141,4 +144,31 @@ describe('HU-47: pantalla de estadísticas', () => {
     assert.match(h.contenido(), /Destino: Reciente/);
     assert.equal(texto(h.arbol.root.findByProps({ 'data-testid': 'conteo-atendidos' })), '8');
   });
+});
+
+it('HU-48: editar el formulario sin aplicar conserva los filtros del reporte para el CSV', async t => {
+  const h = await montar(t, url => url.pathname.endsWith('.csv')
+    ? new Response('"id","zona"\r\n', { headers: { 'Content-Type': 'text/csv' } }) : respuesta(url));
+  const anterior = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  Object.defineProperty(globalThis, 'document', { configurable: true, value: {
+    createElement: () => ({ href: '', download: '', click() {}, remove() {} }), body: { appendChild() {} },
+  } });
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  t.mock.method(URL, 'createObjectURL', () => 'blob:fixture');
+  t.mock.method(URL, 'revokeObjectURL', () => {});
+  t.after(() => {
+    t.mock.timers.tick(1000);
+    if (anterior) Object.defineProperty(globalThis, 'document', anterior); else Reflect.deleteProperty(globalThis, 'document');
+  });
+  await h.cambiar('reporte-zona', 'Destino sin aplicar');
+  await h.cambiar('reporte-criterio', 'cierre');
+  await h.cambiar('reporte-resultado', 'evacuado');
+  await act(async () => {
+    h.arbol.root.findAllByType('button').find(b => texto(b) === 'Descargar CSV')!.props.onClick(); await turno();
+  });
+  const exportacion = h.peticiones.find(p => p.pathname.endsWith('.csv'))!;
+  assert.equal(exportacion.searchParams.get('criterioFecha'), 'apertura');
+  assert.equal(exportacion.searchParams.has('zona'), false);
+  assert.equal(exportacion.searchParams.has('resultado'), false);
+  assert.equal(exportacion.searchParams.get('fechaDesde'), h.peticiones[0].searchParams.get('fechaDesde'));
 });

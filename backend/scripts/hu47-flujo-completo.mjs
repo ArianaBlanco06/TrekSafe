@@ -26,14 +26,17 @@ async function cerrar(server) {
 function proxy(req, res, destino, ruta = req.url) {
   const r = request(new URL(ruta, destino), { method: req.method, headers: { ...req.headers, host: new URL(destino).host } }, respuesta => {
     res.writeHead(respuesta.statusCode, respuesta.headers);
+    respuesta.on('aborted', () => res.destroy());
+    respuesta.on('error', () => res.destroy());
     respuesta.pipe(res);
   });
-  r.on('error', () => { res.writeHead(502); res.end(); });
+  r.on('error', () => { if (res.headersSent) res.destroy(); else { res.writeHead(502); res.end(); } });
+  res.on('close', () => { if (!res.writableFinished) r.destroy(); });
   req.pipe(r);
 }
 
-export async function probarFlujoCompletoHu47({ admin, config, carpeta, root, postgrest, actores, desde, hasta }) {
-  const evidencia = path.join(root, 'docs/evidencias/hu-47-local');
+export async function probarFlujoCompletoHu47({ admin, config, carpeta, root, postgrest, actores, desde, hasta, hu48 = false }) {
+  const evidencia = path.join(root, hu48 ? 'docs/evidencias/hu-48-local' : 'docs/evidencias/hu-47-local');
   await mkdir(evidencia, { recursive: true });
   const dist = path.join(root, 'frontend/dist');
   await readFile(path.join(dist, 'sw.js')); // Exige el build PWA real previo.
@@ -70,9 +73,15 @@ export async function probarFlujoCompletoHu47({ admin, config, carpeta, root, po
       if (i >= 80) throw new Error(`PostgREST no inició: ${diagnostico.join('').replaceAll(password, '[oculto]').replaceAll(claveRest, '[oculto]')}`);
       await delay(250);
     }
+    const paginasCsv = [];
     // Solo adapta el prefijo /rest/v1 del SDK. No simula consultas ni respuestas.
     supabaseProxy = createServer((req, res) => {
       if (!req.url.startsWith('/rest/v1/')) { res.writeHead(404); res.end(); return; }
+      if (hu48 && req.url.split('?')[0].endsWith('/rpc/treksafe_leer_pagina_incidentes_reporte')) {
+        let cuerpo = '';
+        req.on('data', b => { cuerpo += b; });
+        req.on('end', () => { paginasCsv.push(JSON.parse(cuerpo)); });
+      }
       proxy(req, res, restUrl, req.url.slice('/rest/v1'.length));
     });
     const supabaseUrl = await escuchar(supabaseProxy);
@@ -99,6 +108,7 @@ export async function probarFlujoCompletoHu47({ admin, config, carpeta, root, po
     const esperado = { atendidos: 1212, abiertos: 3, cerrados: 1209 };
     const snapshot = () => admin.query(`SELECT md5(string_agg(row_to_json(i)::text, '' ORDER BY id)) AS s FROM public.incidentes i`).then(r => r.rows[0].s);
     const antes = await snapshot();
+    if (!hu48) {
     await caso('Express y SDK contra PostgREST real devuelven el agregado completo para dos rescatistas', async () => {
       for (const actor of [actores.ana, actores.beto]) {
         const res = await api(actor);
@@ -119,6 +129,7 @@ export async function probarFlujoCompletoHu47({ admin, config, carpeta, root, po
         assert.equal(res.headers.get('cache-control'), 'no-store');
       }
     });
+    }
     const tipos = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html', '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
     webServer = createServer(async (req, res) => {
       if (req.url.startsWith('/api/')) return proxy(req, res, apiUrl);
@@ -135,6 +146,11 @@ export async function probarFlujoCompletoHu47({ admin, config, carpeta, root, po
     const webUrl = await escuchar(webServer);
     const { chromium } = await import(pathToFileURL(path.join(root, 'frontend/node_modules/@playwright/test/index.mjs')).href);
     browser = await chromium.launch({ channel: process.platform === 'win32' ? 'msedge' : undefined, headless: true });
+    if (hu48) {
+      const { probarFlujoCompletoHu48 } = await import('./hu48-flujo-completo.mjs');
+      await probarFlujoCompletoHu48({ admin, root, carpeta, evidencia, browser, apiUrl, webUrl, firmarToken, actores, desde, hasta, paginasCsv });
+      return;
+    }
     const contexto = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'allow' });
     await contexto.addInitScript(({ actor, token }) => {
       if (!sessionStorage.getItem('treksafe:token')) {

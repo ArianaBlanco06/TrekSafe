@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 
 export function useEstadoEnLinea(): boolean {
   const [enLinea, setEnLinea] = useState(
-    typeof navigator !== 'undefined' ? navigator.onLine : true,
+    typeof navigator === 'undefined' || navigator.onLine !== false,
   );
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     const alConectarse = () => setEnLinea(true);
     const alDesconectarse = () => setEnLinea(false);
     window.addEventListener('online', alConectarse);

@@ -12,15 +12,16 @@ import pg from 'pg';
 const args = process.argv.slice(2);
 const valor = clave => { const i = args.indexOf(clave); return i < 0 ? null : args[i + 1]; };
 for (const arg of args.filter(a => a.startsWith('--'))) {
-  assert.ok(['--pg-bin', '--postgrest', '--with-browser'].includes(arg), `Opción desconocida: ${arg}`);
+  assert.ok(['--pg-bin', '--postgrest', '--with-browser', '--hu48'].includes(arg), `Opción desconocida: ${arg}`);
 }
 assert.ok(valor('--pg-bin') && !valor('--pg-bin').startsWith('--'), 'Usar --pg-bin <directorio de PostgreSQL>');
 if (args.includes('--with-browser')) assert.ok(valor('--postgrest'), '--with-browser requiere --postgrest <binario>');
 const bin = path.resolve(valor('--pg-bin'));
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const carpeta = await mkdtemp(path.join(tmpdir(), 'treksafe-hu47-'));
+const historia = args.includes('--hu48') ? 'hu48' : 'hu47';
+const carpeta = await mkdtemp(path.join(tmpdir(), `treksafe-${historia}-`));
 const datos = path.join(carpeta, 'pgdata');
-const base = 'treksafe_hu47_desechable';
+const base = `treksafe_${historia}_desechable`;
 const puerto = await new Promise((resolve, reject) => {
   const s = net.createServer();
   s.once('error', reject);
@@ -48,7 +49,12 @@ const run = (file, argv) => new Promise((resolve, reject) => {
 const control = argv => new Promise((resolve, reject) => {
   const hijo = spawn(exe('pg_ctl'), argv, { env, windowsHide: true, stdio: 'ignore' });
   hijo.once('error', reject);
-  hijo.once('exit', codigo => codigo === 0 ? resolve() : reject(new Error(`pg_ctl ${codigo}; log en ${carpeta}`)));
+  hijo.once('exit', async codigo => {
+    if (codigo === 0) return resolve();
+    const log = await readFile(path.join(carpeta, 'postgres.log'), 'utf8')
+      .catch(() => '(sin log de PostgreSQL)');
+    reject(new Error(`pg_ctl ${codigo}; ${carpeta}\n${log.slice(-6000)}`));
+  });
 });
 const config = { host: '127.0.0.1', port: puerto, user: 'postgres', password: '', database: base };
 let iniciado = false;
@@ -63,9 +69,12 @@ const consulta = (actor, desde, hasta, criterio = 'apertura', zona = null, resul
 const firma = 'public.treksafe_consultar_estadisticas_incidentes(uuid,timestamptz,timestamptz,text,text,text)';
 
 try {
-  console.log(`PostgreSQL desechable HU-47: ${carpeta}`);
+  console.log(`PostgreSQL desechable ${historia.toUpperCase()}: ${carpeta}`);
   await run(exe('initdb'), ['-D', datos, '-U', 'postgres', '--auth=trust', '--encoding=UTF8', '--locale=C']);
-  await control(['-D', datos, '-l', path.join(carpeta, 'postgres.log'), '-w', 'start', '-o', `-h 127.0.0.1 -p ${puerto} -c timezone=UTC`]);
+  // En Linux el socket predeterminado puede pertenecer al usuario postgres.
+  // El runner usa su propio directorio temporal; Windows conecta solo por TCP.
+  const socket = process.platform === 'win32' ? '' : `-k "${carpeta}"`;
+  await control(['-D', datos, '-l', path.join(carpeta, 'postgres.log'), '-w', 'start', '-o', `-h 127.0.0.1 -p ${puerto} -c timezone=UTC ${socket}`]);
   iniciado = true;
   admin = new pg.Client({ ...config, database: 'postgres' });
   await admin.connect();
@@ -206,11 +215,16 @@ try {
     await admin.query('ROLLBACK');
     assert.deepEqual((await admin.query("SELECT * FROM public.treksafe_migraciones WHERE version='029'")).rows, registro);
   });
+  if (args.includes('--hu48')) {
+    const { probarSqlHu48 } = await import('./hu48-sql.mjs');
+    pasadas += await probarSqlHu48({ admin, servicio, root, actores: { ana, beto, sinPerfil, senderista }, desde, hasta });
+  }
   if (args.includes('--with-browser')) {
     const { probarFlujoCompletoHu47 } = await import('./hu47-flujo-completo.mjs');
     await probarFlujoCompletoHu47({
       admin, config, carpeta, root, postgrest: path.resolve(valor('--postgrest')),
       actores: { ana, beto, sinPerfil, senderista }, desde, hasta,
+      hu48: args.includes('--hu48'),
     });
   }
   console.log(`${pasadas}/${pasadas} comprobaciones PostgreSQL aprobadas. Solo base local desechable; sin Supabase.`);

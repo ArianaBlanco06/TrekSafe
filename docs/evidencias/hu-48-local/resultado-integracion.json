@@ -1,0 +1,75 @@
+{
+  "historia": "HU-48",
+  "ejecutadoEn": "2026-11-14T05:28:49.798Z",
+  "entorno": "PostgreSQL 18 desechable + PostgREST 16.5 real + SDK Supabase + Express + build PWA + Edge con worker activo",
+  "datos": "ficticios",
+  "supabaseDevModificado": false,
+  "columnas": [
+    "id",
+    "zona",
+    "fecha_apertura",
+    "fecha_cierre",
+    "estado",
+    "resultado"
+  ],
+  "archivos": [
+    {
+      "archivo": "exportacion-1205.csv",
+      "filas": 1205,
+      "paginas": 7,
+      "sha256": "53af47d8ffe8c910ef91bccde24d746fe2f44d23b78d9cdc181cdf4b45fd9c69"
+    },
+    {
+      "archivo": "exportacion-caracteres.csv",
+      "filas": 7,
+      "sha256": "7c8546a1ce8417d2163a5a6826851765cdf95f3156bba4ea7be400a68e90b1fc"
+    }
+  ],
+  "casos": [
+    {
+      "nombre": "API, DAO, SDK y PostgREST exportan 1205 ids reales en siete páginas estables",
+      "resultado": "aprobado"
+    },
+    {
+      "nombre": "mismo alcance para dos rescatistas y conteos fieles a HU-47 para todos los filtros",
+      "resultado": "aprobado"
+    },
+    {
+      "nombre": "el CSV real conserva acentos/comillas/saltos y protege prefijos de fórmula",
+      "resultado": "aprobado"
+    },
+    {
+      "nombre": "401/403/400 reales se devuelven sin cabeceras de archivo ni campos sensibles",
+      "resultado": "aprobado"
+    },
+    {
+      "nombre": "fallo SQL inicial devuelve JSON 500 antes del CSV",
+      "resultado": "aprobado"
+    },
+    {
+      "nombre": "navegador descarga 1205 filas idénticas a la API e ignora filtros sin aplicar",
+      "resultado": "aprobado"
+    },
+    {
+      "nombre": "filtros de cierre/resultado y conjunto vacío producen los CSV correspondientes",
+      "resultado": "aprobado"
+    },
+    {
+      "nombre": "fallo SQL en otra página corta el cuerpo, no ofrece archivo y el reintento funciona",
+      "resultado": "aprobado"
+    },
+    {
+      "nombre": "actualizar el reporte cancela una lectura real pendiente sin ofrecer archivo tardío",
+      "resultado": "aprobado"
+    },
+    {
+      "nombre": "worker activo no almacena CSV; offline bloquea y reconectar no descarga",
+      "resultado": "aprobado"
+    },
+    {
+      "nombre": "consultas no cambian datos y el navegador no registra errores JavaScript",
+      "resultado": "aprobado"
+    }
+  ],
+  "aperturaExcelComprobada": false
+}

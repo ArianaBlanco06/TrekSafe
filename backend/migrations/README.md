@@ -118,6 +118,41 @@ destino literal, cierre, conjunto vacío, notas y relevo real, perfiles, permiso
 1.205 incidentes de volumen, lectura sin escrituras y registro de la migración.
 El modo solo SQL no valida PostgREST. Ninguno de los modos aplica cambios en DEV.
 
+## HU-48: exportación paginada de incidentes
+
+`031_hu48_exportacion_incidentes.sql` tiene **numeración confirmada** por John
+con el equipo. Su aplicación en DEV se coordina con Sebastian/Ariana. Durante su preparación se comprobó que
+030 ya pertenece a HU-50 en `develop`. La migración requiere 029 y sus
+dependencias; no modifica la 029 ya aplicada ni crea tablas nuevas.
+
+Añade `treksafe_leer_pagina_incidentes_reporte`, de solo lectura, `STABLE`,
+`SECURITY INVOKER`, con `search_path` vacío y ejecución exclusiva de `service_role`.
+Revalida perfil y rol en cada página y reutiliza los criterios de HU-47.
+Devuelve solo id, zona, apertura, cierre, estado y resultado. Pagina por id
+ascendente y cursor exclusivo, con límite máximo de 500 y una fila adicional
+para determinar `hayMas`; el backend utiliza páginas de 200.
+
+El registro de 031 es condicional a la existencia de `treksafe_migraciones`, con
+`ON CONFLICT DO NOTHING`. El DDL y una versión ya registrada impiden reaplicarla.
+Esta implementación la ejecutó únicamente en una base desechable local.
+
+```powershell
+node backend/scripts/test-hu48-postgres.mjs --pg-bin "C:\Program Files\PostgreSQL\18\bin"
+```
+
+El runner usa una instancia propia de loopback y datos ficticios, sin `.env` ni
+Supabase. Verifica las 13 comprobaciones de HU-47 y 8 de HU-48, incluida la
+equivalencia entre páginas y conteos con 1.205 filas. Detiene la instancia al
+terminar. La suite SQL también se incorpora al job de backend de CI.
+
+Con los builds backend/PWA previos, agregar
+`--postgrest "C:\ruta\postgrest.exe" --with-browser` ejecuta el recorrido real
+por SDK Supabase, PostgREST, Express y navegador con worker activo. Los once
+escenarios completos aprobaron y generan CSV, hashes y capturas en
+[evidencia HU-48](../../docs/evidencias/hu-48-local/evidencia.md).
+Ambos modos usan exclusivamente servicios locales desechables.
+Contrato y alcance: [diseño HU-48](../../docs/hu-48/diseno.md).
+
 ## Despliegue
 
 Aplica las migraciones **antes** de desplegar el backend. El código de HU-26
