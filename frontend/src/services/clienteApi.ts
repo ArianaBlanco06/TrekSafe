@@ -42,11 +42,11 @@ export class ErrorClienteApi extends Error {
   }
 }
 
-export async function peticionApi<T>(
+async function solicitarRespuestaApi(
   path: string,
   options: RequestInit = {},
   auth = false,
-): Promise<T> {
+): Promise<{ respuesta: Response; comprobarSesion: () => void }> {
   const scope = auth ? getSessionScope() : null;
   const token = auth ? getToken() : null;
   const comprobarSesion = () => {
@@ -92,10 +92,29 @@ export async function peticionApi<T>(
     );
   }
 
-  if (res.status === 204) return undefined as T;
-  const data = await res.json() as T;
+  return { respuesta: res, comprobarSesion };
+}
+
+export async function peticionApi<T>(path: string, options: RequestInit = {}, auth = false): Promise<T> {
+  const { respuesta, comprobarSesion } = await solicitarRespuestaApi(path, options, auth);
+  if (respuesta.status === 204) return undefined as T;
+  const data = await respuesta.json() as T;
   comprobarSesion();
   return data;
+}
+
+/** Consume el cuerpo completo antes de exponer el archivo a la interfaz. */
+export async function peticionArchivoApi(path: string, options: RequestInit = {}, auth = false): Promise<Blob> {
+  const { respuesta, comprobarSesion } = await solicitarRespuestaApi(path, options, auth);
+  let archivo: Blob;
+  try { archivo = await respuesta.blob(); }
+  catch {
+    comprobarSesion();
+    throw new ErrorClienteApi('No se pudo completar la descarga del archivo.', 0, 'DESCARGA_INCOMPLETA');
+  }
+  comprobarSesion();
+  if (options.signal?.aborted) throw new ErrorClienteApi('Descarga cancelada.', 0, 'SOLICITUD_CANCELADA');
+  return archivo;
 }
 
 export const api = {

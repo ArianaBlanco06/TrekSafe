@@ -1,0 +1,27 @@
+{
+  "historia": "HU-48",
+  "fase": 3,
+  "comprobadoEn": "2026-11-14T05:01:38.870Z",
+  "entorno": "Build PWA real y Edge con Service Worker activo contra API ficticia de pruebas local",
+  "datos": "ficticios",
+  "supabaseDevModificado": false,
+  "frontend": {
+    "aprobadas": 277,
+    "omitidas": 2
+  },
+  "pwa": {
+    "aprobadas": 32,
+    "fallos": 0
+  },
+  "archivo": {
+    "nombre": "incidentes-apertura-2026-10-16_2026-11-14.csv",
+    "filasDatos": 1000,
+    "bomUtf8": [
+      239,
+      187,
+      191
+    ],
+    "sha256": "1985513bbcf81197f222c68a1ddf7902f88d0471f27f42cc5327470f4c3ee35a"
+  },
+  "alcancePendiente": "Integracion CSV completa por API backend, SDK Supabase, PostgREST real y PostgreSQL; aplicacion coordinada de 031 y validacion DEV"
+}

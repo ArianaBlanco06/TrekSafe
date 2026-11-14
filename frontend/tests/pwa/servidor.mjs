@@ -28,6 +28,7 @@ const users = {
 const created = [];
 const creacionesOffline = new Map();
 const fallosOffline = { a: {}, b: {} };
+const fallosCsvHu48 = new Set();
 // HU-26 (plan editable con version) y HU-30 (listas de equipo) en memoria, por cuenta.
 const planId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 const contactoId = account => `${account}ccccccc-cccc-4ccc-8ccc-cccccccccccc`;
@@ -178,6 +179,31 @@ const server = createServer(async (req, res) => {
         return json(res, 201, { expedicion: { id: crypto.randomUUID(), estado: 'programada', version: 1, ...data } });
       }
       if (url.pathname === '/api/expediciones') return json(res, 200, { expediciones: [] });
+      // Fixtures HU-48: prueban el cliente y el worker, sin Supabase ni autorización real.
+      if (['/api/rescate/estadisticas', '/api/rescate/estadisticas.csv'].includes(url.pathname)) {
+        const f = {
+          fechaDesde: url.searchParams.get('fechaDesde'), fechaHasta: url.searchParams.get('fechaHasta'),
+          criterioFecha: url.searchParams.get('criterioFecha') || 'apertura', zona: url.searchParams.get('zona'),
+          resultado: url.searchParams.get('resultado'), zonaHoraria: 'UTC',
+          desdeInclusivo: `${url.searchParams.get('fechaDesde')}T00:00:00.000Z`,
+          hastaExclusivo: new Date(Date.parse(`${url.searchParams.get('fechaHasta')}T00:00:00Z`) + 86400000).toISOString(),
+        };
+        const total = f.zona === 'Sin coincidencias HU48' ? 0 : 1000;
+        if (!url.pathname.endsWith('.csv')) return json(res, 200, { resumen: { atendidos: total, abiertos: 0, cerrados: total }, filtros: f });
+        const celda = valor => `"${String(valor).replaceAll('"', '""')}"`;
+        const encabezado = '\uFEFF"id","zona","fecha_apertura","fecha_cierre","estado","resultado"\r\n';
+        res.writeHead(200, { 'Content-Type': 'text/csv; charset=utf-8', 'Cache-Control': 'private, max-age=3600' });
+        const claveFallo = `${account}:${f.zona}`;
+        if (f.zona === 'CSV interrumpido HU48' && !fallosCsvHu48.has(claveFallo)) {
+          fallosCsvHu48.add(claveFallo); res.flushHeaders(); res.write(encabezado);
+          setTimeout(() => res.destroy(), 80); return;
+        }
+        const filas = Array.from({ length: total }, (_, i) => [
+          `00000000-0000-4000-8000-${(i + 1).toString(16).padStart(12, '0')}`,
+          f.zona || 'Áncash, "Sector sur"', f.desdeInclusivo, `${f.fechaHasta}T12:00:00.000Z`, 'cerrado', f.resultado || 'evacuado',
+        ].map(celda).join(',')).join('\r\n');
+        res.end(encabezado + filas + (total ? '\r\n' : '')); return;
+      }
       if (url.pathname.startsWith('/api/rescate/')) return json(res, 200, { alertas: [], privado: `rescate-${account}` });
       return json(res, 200, { privado: `dato-${account}` });
     }

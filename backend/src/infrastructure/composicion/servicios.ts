@@ -25,6 +25,8 @@ import { ConsultarBitacoraIncidente } from '../../application/use-cases/Consulta
 import { CerrarIncidente } from '../../application/use-cases/CerrarIncidente.js';
 import { ConsultarCierreIncidente } from '../../application/use-cases/ConsultarCierreIncidente.js';
 import { ConsultarEstadisticasRescate } from '../../application/use-cases/ConsultarEstadisticasRescate.js';
+import { ExportarReporteIncidentes } from '../../application/use-cases/ExportarReporteIncidentes.js';
+import { ExportadorCsv } from '../../application/services/ExportadorCsv.js';
 import { MarcarIncidenteLocalizado } from '../../application/use-cases/MarcarIncidenteLocalizado.js';
 import { RepositorioAutenticacionPostgres } from '../repositories/RepositorioAutenticacionPostgres.js';
 import { RepositorioUsuario } from '../repositories/RepositorioUsuario.js';
@@ -108,6 +110,7 @@ export type ModuloRescate = {
   marcarIncidenteLocalizado: MarcarIncidenteLocalizado;
   consultarCierreIncidente: ConsultarCierreIncidente;
   consultarEstadisticasRescate: ConsultarEstadisticasRescate;
+  exportarReporteIncidentes: ExportarReporteIncidentes;
   entregaAvisos: FachadaEntregaAvisosIncidente;
 };
 
@@ -117,6 +120,8 @@ export function crearModuloRescate(
   let incidentes: IncidenteDAOSupabase | undefined;
   let bitacora: BitacoraIncidenteDAOSupabase | undefined;
   let cierre: CierreIncidenteDAOSupabase | undefined;
+  let reportes: ReporteIncidentesDAOSupabase | undefined;
+  const obtenerReportes = () => (reportes ??= new ReporteIncidentesDAOSupabase(getSupabaseAdmin()));
   const obtenerIncidentes = () =>
     (incidentes ??= new IncidenteDAOSupabase(getSupabaseAdmin()));
   const obtenerBitacora = () =>
@@ -165,7 +170,9 @@ export function crearModuloRescate(
       new ConsultarCierreIncidente(obtenerCierre()),
     consultarEstadisticasRescate:
       dependencias.consultarEstadisticasRescate ??
-      new ConsultarEstadisticasRescate(new ReporteIncidentesDAOSupabase(getSupabaseAdmin())),
+      new ConsultarEstadisticasRescate(obtenerReportes()),
+    exportarReporteIncidentes:
+      dependencias.exportarReporteIncidentes ?? new ExportarReporteIncidentes(obtenerReportes(), new ExportadorCsv()),
     entregaAvisos:
       dependencias.entregaAvisos ??
       new FachadaEntregaAvisosIncidente(

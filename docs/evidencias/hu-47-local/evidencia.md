@@ -27,7 +27,6 @@ Fecha y resultado de la ejecución final: [resultado-integracion.json](resultado
 | Compilaciones de backend y PWA | Aprobadas |
 | SQL real sobre esquema y migraciones reales | 13 comprobaciones aprobadas |
 | Recorrido completo por navegador y PostgREST real | 10 escenarios aprobados |
-| Suite completa de privacidad PWA, con el flujo actualizado del aviso de instalación | 30 pruebas aprobadas en 55,9 segundos |
 
 El runner aplica 000, 002, 017, 019, 021, 025 y 029 solamente en
 `treksafe_hu47_desechable`. Los datos incluyen incidentes abiertos, localizados,
@@ -87,20 +86,6 @@ los campos de fecha se apilan para permitir leer el día completo.
 - No se observaron errores de JavaScript durante el recorrido.
 
 ## Reproducción
-
-La suite de privacidad contempla el aviso de instalación del login. Sus recorridos
-cierran el diálogo mediante «Entendido» antes de iniciar sesión. Dos pruebas
-adicionales comprueban cierre/reapertura al entrar desde navegador y ocultación
-con `navigator.standalone` simulado. La ejecución local completa terminó con
-30 aprobadas; los tipos de pruebas y Playwright también aprobaron.
-Este resultado local debe confirmarse en GitHub después de publicar la corrección
-de las pruebas en el PR #134.
-
-Con el build PWA generado, esta suite se reproduce con:
-
-```powershell
-npm run test:pwa:privacidad --prefix frontend
-```
 
 Con dependencias instaladas, Node 22, PostgreSQL nativo y PostgREST nativo:
 

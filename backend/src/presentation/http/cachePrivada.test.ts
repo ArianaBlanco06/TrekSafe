@@ -28,7 +28,7 @@ describe('Politica HTTP de privacidad', () => {
     await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
   });
   for (const endpoint of [
-    '/usuario/ficha-medica', '/usuario/contactos', '/expediciones', '/rescate/alertas', '/rescate/estadisticas',
+    '/usuario/ficha-medica', '/usuario/contactos', '/expediciones', '/rescate/alertas', '/rescate/estadisticas', '/rescate/estadisticas.csv',
     // HU-30 (listas de equipo) y HU-26 (plan a editar) tambien son datos privados.
     '/usuario/listas-equipo', '/expediciones/00000000-0000-4000-8000-000000000000',
     '/expediciones/00000000-0000-4000-8000-000000000000/equipo',

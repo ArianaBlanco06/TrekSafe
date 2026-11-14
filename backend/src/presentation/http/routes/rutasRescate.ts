@@ -12,6 +12,7 @@ import { crearControladorRelevo } from '../controllers/controladorRelevo.js';
 import { crearControladorRescatistas } from '../controllers/controladorRescatistas.js';
 import { crearControladorEntregaIncidente } from '../controllers/controladorEntregaIncidente.js';
 import { crearControladorEstadisticasRescate } from '../controllers/controladorEstadisticasRescate.js';
+import { crearControladorExportacionIncidentes } from '../controllers/controladorExportacionIncidentes.js';
 import {
   crearModuloRescate,
   type ModuloRescate,
@@ -55,6 +56,7 @@ export function crearRutasRescate(
 
   router.use(middlewareAutenticacion, requerirRol('rescatista'));
   router.get('/estadisticas', asyncHandler(crearControladorEstadisticasRescate(modulo.consultarEstadisticasRescate)));
+  router.get('/estadisticas.csv', asyncHandler(crearControladorExportacionIncidentes(modulo.exportarReporteIncidentes)));
   router.get('/expediciones', asyncHandler(listarExpediciones));
   router.get('/historial', asyncHandler(listarHistorial));
   router.get('/alertas', asyncHandler(listarAlertas));

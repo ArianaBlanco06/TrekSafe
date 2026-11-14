@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { BarChart3, CheckCircle2, Clock3, RefreshCw } from 'lucide-react';
 import { useEstadisticasRescate } from '@/hooks/useEstadisticasRescate';
+import { DescargaCsvReporte } from '@/components/rescate/DescargaCsvReporte';
 import { ETIQUETAS_RESULTADO_RESCATE, RESULTADOS_RESCATE } from '@/lib/cierreIncidente';
 import { filtrosEstadisticasIniciales, presentarDiaReporte, validarFechasEstadisticas } from '@/lib/estadisticasRescate';
 import type { ResultadoRescate } from '@/services/cierreIncidente';
@@ -101,6 +102,7 @@ export function PaginaEstadisticasRescate() {
         </dl>
         {reporte.resumen.atendidos === 0 && <p role="status" className="text-sm rounded-xl border border-border p-4">No hay incidentes que coincidan con estos filtros.</p>}
         <p className="text-xs text-muted-foreground">Cada incidente se cuenta una sola vez. Atendidos incluye abiertos y cerrados. Los localizados pendientes de cierre se cuentan como abiertos.</p>
+        <DescargaCsvReporte reporte={reporte} bloqueada={cargando || Boolean(error)} />
       </section>}
     </div>
   );
