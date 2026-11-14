@@ -109,6 +109,6 @@ export function crearRutasRescate(
   router.get(
     '/incidentes/:incidenteId/ficha-medica',
     asyncHandler(ficha.consultar),
-  ); // HU-50
+  );
   return router;
 }
