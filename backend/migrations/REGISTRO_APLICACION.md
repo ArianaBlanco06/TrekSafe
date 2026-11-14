@@ -35,6 +35,8 @@ Solo se anotan aplicaciones reales sobre un entorno (DEV, producción u otro). L
 | `026_hu45_intentos_reservas.sql` | 026 | 2026-11-13 22:55 UTC | DEV | feca4ea | Ariana | OK |
 | `027_hu44_retorno_atomico.sql` | 027 | 2026-11-13 23:01 UTC | DEV | 9f0282d | Ariana | OK |
 | `028_hu46_reintento_persistido.sql` | 028 | 2026-11-13 23:06 UTC | DEV | 739d822 | Ariana | OK |
+| `029_hu47_estadisticas_incidentes.sql` | 029 | 2026-11-14 00:14 UTC | DEV | da21db7 | Ariana | OK |
+| `030_hu50_ficha_medica_responsable.sql` | 030 | 2026-11-14 00:38 UTC | DEV | 34ea91c | Ariana | OK |
 
 HU-32: la estructura final está aplicada y verificada en Supabase DEV.
 El asiento administrativo 010 fue registrado correctamente en public.treksafe_migraciones el 2026-11-06 a las 05:23 UTC.

@@ -11,6 +11,7 @@ import { crearControladorCierreIncidente } from '../controllers/controladorCierr
 import { crearControladorRelevo } from '../controllers/controladorRelevo.js';
 import { crearControladorRescatistas } from '../controllers/controladorRescatistas.js';
 import { crearControladorEntregaIncidente } from '../controllers/controladorEntregaIncidente.js';
+import { crearControladorFichaMedicaIncidente } from '../controllers/controladorFichaMedicaIncidente.js';
 import { crearControladorEstadisticasRescate } from '../controllers/controladorEstadisticasRescate.js';
 import { crearControladorExportacionIncidentes } from '../controllers/controladorExportacionIncidentes.js';
 import {
@@ -53,6 +54,7 @@ export function crearRutasRescate(
     consultar: modulo.consultarCierreIncidente,
   });
   const entrega = crearControladorEntregaIncidente(modulo.entregaAvisos);
+  const ficha = crearControladorFichaMedicaIncidente(modulo.fichaMedica);
 
   router.use(middlewareAutenticacion, requerirRol('rescatista'));
   router.get('/estadisticas', asyncHandler(crearControladorEstadisticasRescate(modulo.consultarEstadisticasRescate)));
@@ -106,6 +108,11 @@ export function crearRutasRescate(
   router.get(
     '/alertas/:expedicionId/cierre',
     asyncHandler(cierre.consultarPorExpedicion),
+  );
+  // HU-50: ficha médica bajo demanda, solo para el responsable vigente de un incidente abierto.
+  router.get(
+    '/incidentes/:incidenteId/ficha-medica',
+    asyncHandler(ficha.consultar),
   );
   return router;
 }
