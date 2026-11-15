@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useConsultaPeriodica } from '@/hooks/useConsultaPeriodica';
 import { useCuentaRegresiva } from '@/hooks/useCuentaRegresiva';
 import { dismissReminder, isReminderDismissed } from '@/lib/recordatorioRetorno';
 import { obtenerExpedicionActiva, type ExpedicionActiva } from '@/services/expedicion';
@@ -10,21 +11,13 @@ export function AnfitrionRecordatorioSenderista() {
 
   const cuentaRegresiva = useCuentaRegresiva(expedicion?.fechaLimite, expedicion?.horaInicio);
 
-  useEffect(() => {
-    const cargar = () => {
-      obtenerExpedicionActiva()
-        .then((r) => {
-          setExpedicion(r.expedicion);
-          if (r.expedicion) {
-            setDescartado(isReminderDismissed(r.expedicion.id));
-          }
-        })
-        .catch(() => setExpedicion(null));
-    };
-    cargar();
-    const intervalo = setInterval(cargar, 30_000);
-    return () => clearInterval(intervalo);
-  }, []);
+  useConsultaPeriodica('expedicion-activa', obtenerExpedicionActiva, {
+    datos: (r) => {
+      setExpedicion(r.expedicion);
+      setDescartado(r.expedicion ? isReminderDismissed(r.expedicion.id) : false);
+    },
+    error: () => setExpedicion(null),
+  });
 
   const debeMostrar =
     expedicion &&

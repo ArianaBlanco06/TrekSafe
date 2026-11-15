@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
+import { useConsultaPeriodica } from './useConsultaPeriodica';
 import {
   obtenerExpedicionesRescate,
   type CriterioPrioridadRescate,
@@ -13,40 +14,18 @@ export function useConsolaRescate(zona: string, criterio: CriterioPrioridadResca
   });
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
-  const solicitudActual = useRef(0);
-  const cargaPendiente = useRef(false);
-
-  const cargarExpediciones = useCallback(async () => {
-    const solicitud = ++solicitudActual.current;
-    cargaPendiente.current = true;
-    setCargando(true);
-    setError('');
-    try {
-      const respuesta = await obtenerExpedicionesRescate(zona || undefined, criterio);
-      if (solicitud !== solicitudActual.current) return;
+  const cargarExpediciones = useConsultaPeriodica(
+    `expediciones-rescate:${JSON.stringify([zona, criterio])}`,
+    (signal) => obtenerExpedicionesRescate(zona || undefined, criterio, signal),
+    {
+      datos: (respuesta) => {
       setResultado({ expediciones: respuesta.expediciones, criterioAplicado: criterio, zonaAplicada: zona });
-    } catch (causa) {
-      if (solicitud !== solicitudActual.current) return;
-      setError(causa instanceof Error ? causa.message : 'Error al cargar expediciones');
-    } finally {
-      if (solicitud === solicitudActual.current) {
-        cargaPendiente.current = false;
-        setCargando(false);
-      }
-    }
-  }, [zona, criterio]);
-
-  useEffect(() => {
-    void cargarExpediciones();
-    const intervalo = setInterval(() => {
-      if (!cargaPendiente.current) void cargarExpediciones();
-    }, 30_000);
-    return () => {
-      clearInterval(intervalo);
-      solicitudActual.current += 1;
-      cargaPendiente.current = false;
-    };
-  }, [cargarExpediciones]);
+        setError('');
+      },
+      error: (causa) => setError(causa instanceof Error ? causa.message : 'Error al cargar expediciones'),
+      cargando: (valor) => { setCargando(valor); if (valor) setError(''); },
+    },
+  );
 
   return { ...resultado, cargando, error, cargarExpediciones };
 }

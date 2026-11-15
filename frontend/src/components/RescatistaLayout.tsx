@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useConsultaPeriodica } from '@/hooks/useConsultaPeriodica';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { AlertTriangle, BarChart3, History, LogOut, Navigation, Shield } from 'lucide-react';
 import { useAutenticacion } from '@/context/ContextoAutenticacion';
@@ -17,16 +18,9 @@ export function RescatistaLayout() {
   const navigate = useNavigate();
   const [pendientes, setPendientes] = useState(0);
 
-  useEffect(() => {
-    const cargar = () => {
-      obtenerAlertasRescate()
-        .then((r) => setPendientes(r.alertas.filter((a) => !a.confirmadoPorMi).length))
-        .catch(() => undefined);
-    };
-    cargar();
-    const poll = setInterval(cargar, 30_000);
-    return () => clearInterval(poll);
-  }, []);
+  useConsultaPeriodica('alertas-rescate', obtenerAlertasRescate, {
+    datos: (r) => setPendientes(r.alertas.filter((a) => !a.confirmadoPorMi).length),
+  });
 
   const handleLogout = () => {
     logout();
