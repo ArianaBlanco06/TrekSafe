@@ -1,4 +1,4 @@
-import { api } from './clienteApi';
+import { api, peticionApi } from './clienteApi';
 
 export type NivelRiesgoRescate = 'verde' | 'amarillo' | 'rojo';
 export type CriterioPrioridadRescate = 'tiempo_excedido' | 'tamano_grupo';
@@ -71,19 +71,20 @@ export type AlertaRescate = {
   coordinacion: Coordinacion | null;
 };
 
-export function obtenerExpedicionesRescate(zona?: string, criterio?: CriterioPrioridadRescate) {
+export function obtenerExpedicionesRescate(zona?: string, criterio?: CriterioPrioridadRescate, signal?: AbortSignal) {
   const params = new URLSearchParams();
   if (zona?.trim()) params.set('zona', zona.trim());
   if (criterio) params.set('criterio', criterio);
   const consulta = params.toString();
-  return api.get<{ expediciones: ExpedicionRescate[] }>(
+  return peticionApi<{ expediciones: ExpedicionRescate[] }>(
     `/rescate/expediciones${consulta ? `?${consulta}` : ''}`,
+    { method: 'GET', signal },
     true,
   );
 }
 
-export function obtenerAlertasRescate() {
-  return api.get<{ alertas: AlertaRescate[] }>('/rescate/alertas', true);
+export function obtenerAlertasRescate(signal?: AbortSignal) {
+  return peticionApi<{ alertas: AlertaRescate[] }>('/rescate/alertas', { method: 'GET', signal }, true);
 }
 
 export type ItemHistorialRescatista = {

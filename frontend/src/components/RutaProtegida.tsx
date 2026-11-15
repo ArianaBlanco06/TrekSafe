@@ -8,11 +8,11 @@ type Props = {
 };
 
 export function RutaProtegida({ children, rol }: Props) {
-  const { estaAutenticado, usuario } = useAutenticacion();
+  const { estaAutenticado, usuario, salidaExplicita } = useAutenticacion();
   const location = useLocation();
 
   if (!estaAutenticado || !usuario) {
-    return <Navigate to="/iniciar-sesion" state={{ from: location }} replace />;
+    return <Navigate to="/iniciar-sesion" state={salidaExplicita ? null : { from: location }} replace />;
   }
 
   if (rol && usuario.rol !== rol) {

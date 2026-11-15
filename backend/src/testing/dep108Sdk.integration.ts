@@ -29,6 +29,24 @@ const db = new pg.Client({ connectionString: databaseUrl });
 await db.connect();
 const actor = randomUUID(), other = randomUUID(), contact = randomUUID(), foreignContact = randomUUID();
 try {
+    const { EstadoWorkerSupabase } = await import('../infrastructure/repositories/EstadoWorkerSupabase.js');
+    const estadoWorker = new EstadoWorkerSupabase(sdk);
+    const instanciaWorker = `sdk-${randomUUID()}`;
+    const umbrales = { maxAntiguedadHeartbeatMs: 60000, maxAntiguedadPendientesMs: 60000 };
+    assert.equal(await estadoWorker.consultarDisponibilidad(umbrales), false);
+    await estadoWorker.registrarInicio(instanciaWorker);
+    await estadoWorker.registrarCiclo({ instanciaId: instanciaWorker, ciclo: 'plazos', resultado: 'ok' });
+    await estadoWorker.registrarCiclo({ instanciaId: instanciaWorker, ciclo: 'outbox', resultado: 'ok' });
+    assert.equal(await estadoWorker.consultarDisponibilidad(umbrales), true);
+    await estadoWorker.registrarCiclo({ instanciaId: instanciaWorker, ciclo: 'outbox', resultado: 'error', codigoError: 'texto con correo@example.invalid' });
+    assert.equal(await estadoWorker.consultarDisponibilidad(umbrales), false);
+    assert.equal((await db.query('SELECT outbox_error FROM public.estado_worker WHERE instancia_id=$1', [instanciaWorker])).rows[0].outbox_error, 'ERROR_CICLO');
+    await estadoWorker.registrarCiclo({ instanciaId: instanciaWorker, ciclo: 'outbox', resultado: 'ok' });
+    await estadoWorker.registrarParada(instanciaWorker);
+    assert.equal(await estadoWorker.consultarDisponibilidad(umbrales), false);
+    await assert.rejects(() => estadoWorker.registrarCiclo({ instanciaId: instanciaWorker, ciclo: 'outbox', resultado: 'ok' }), /ESTADO_WORKER_NO_REGISTRADO/);
+    await db.query('DELETE FROM public.estado_worker WHERE instancia_id=$1', [instanciaWorker]);
+    console.log('OK SDK: heartbeat duradero, disponibilidad, código saneado y parada sobre PostgREST real');
     for (const id of [actor, other]) {
         await db.query("INSERT INTO public.usuarios(id,correo_electronico,hash_contrasena,rol) VALUES($1,$2,'hash-ficticio','senderista')", [id, `${id}@example.invalid`]);
         await db.query("INSERT INTO public.perfiles_senderista VALUES($1,'Persona de prueba','999999999',$2)", [id, id.slice(0, 20)]);

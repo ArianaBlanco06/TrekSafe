@@ -16,6 +16,7 @@ import { DialogoConfirmarRetorno } from '@/components/DialogoConfirmarRetorno';
 import { PanelAvancesExpedicion } from '@/components/expedicion/PanelAvancesExpedicion';
 import { useCuentaRegresiva } from '@/hooks/useCuentaRegresiva';
 import { useEstadoEnLinea } from '@/hooks/useEstadoEnLinea';
+import { useConsultaPeriodica } from '@/hooks/useConsultaPeriodica';
 import { clearReminderDismissal } from '@/lib/recordatorioRetorno';
 import {
   obtenerExpedicionActiva,
@@ -52,28 +53,11 @@ export function PaginaExpedicionActiva() {
     }
   }, [searchParams]);
 
-  const cargarActiva = () => {
-    obtenerExpedicionActiva()
-      .then((r) => setExpedicion(r.expedicion))
-      .catch((e) => setError(e instanceof Error ? e.message : 'Error al cargar'))
-      .finally(() => setCargando(false));
-  };
-
-  useEffect(() => {
-    cargarActiva();
-    const poll = setInterval(() => {
-      obtenerExpedicionActiva()
-        .then((r) => setExpedicion(r.expedicion))
-        .catch(() => undefined);
-    }, 30_000);
-    return () => clearInterval(poll);
-  }, []);
-
-  const recargarActiva = () => {
-    obtenerExpedicionActiva()
-      .then((r) => setExpedicion(r.expedicion))
-      .catch(() => undefined);
-  };
+  const recargarActiva = useConsultaPeriodica('expedicion-activa', obtenerExpedicionActiva, {
+    datos: (r) => { setExpedicion(r.expedicion); setError(''); },
+    error: (e) => setError(e instanceof Error ? e.message : 'Error al cargar'),
+    cargando: (valor) => { if (!valor) setCargando(false); },
+  });
 
   /** HU-35: aplica la respuesta sin recargar; el contador se recalcula con la nueva fechaLimite. */
   const handleRetornoAmpliado = (resultado: ResultadoAmpliacionRetorno) => {

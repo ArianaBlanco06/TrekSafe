@@ -1,0 +1,24 @@
+services:
+  worker:
+    image: ${TREKSAFE_IMAGE:?Completar digest privado en deployment.env}
+    command: ["node", "dist/worker.js"]
+    env_file:
+      - path: /etc/treksafe/worker.env
+        format: raw
+    environment:
+      NODE_OPTIONS: --max-old-space-size=320
+    # Sin ports, expose, HTTP público ni build en la VM.
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs: ["/tmp:size=16m,noexec,nosuid"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 512m
+    memswap_limit: 512m
+    pids_limit: 128
+    # Un lote de 1 puede incluir RPC acotadas y transporte de 30 s.
+    stop_grace_period: 150s
+    logging:
+      driver: json-file
+      options: {max-size: "5m", max-file: "3"}

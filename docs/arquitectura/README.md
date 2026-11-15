@@ -1,5 +1,7 @@
 # Arquitectura de despliegue — TrekSafe R2
 
+> **Guía operativa vigente:** [Oracle Always Free, roadmap del PO](../../deployment/oci/README.md). La decisión posterior D7 reemplaza Fly por dos VM gratuitas; esta carpeta conserva la entrega histórica #106 de diseño, con su fecha y alcance. Las URLs nuevas y la aceptación publicada siguen pendientes de ejecución.
+
 Entrega de diseño de [DEP-01 / issue #106](https://github.com/ArianaBlanco06/TrekSafe/issues/106). Responsable: **Marko Antonio Lopez Bernuy, PO (@marKoGit13)**. Fecha de corte: **2026-11-10, America/Lima (UTC−05:00)**.
 
 La arquitectura objetivo conserva Vercel, Fly.io, Supabase y Brevo/SMTP, con **API y procesador en máquinas separadas y monitoreo continuo**. Esta entrega modifica documentación. No crea máquinas, aplica SQL, cambia contratos públicos ni acredita un despliegue R2 completo.

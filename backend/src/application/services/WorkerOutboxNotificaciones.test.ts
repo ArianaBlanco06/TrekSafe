@@ -330,3 +330,46 @@ it('dev-log se contabiliza como registrado y nunca como envío real',async()=>{
   const resultado=await new WorkerOutboxNotificaciones(repo,transporte).procesarLote('a');
   assert.equal(resultado.exitosos,0); assert.equal(resultado.registrados,1);
 });
+
+it('un transporte bloqueado agota timeout antes de reserva, queda incierto y no se reintenta ciegamente', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const repo = new RepositorioOutboxMemoria();
+  await repo.guardar({ claveEvento: 'timeout-operativo', tipoEvento: 'prueba',
+    destinatario: 'ficticio@example.invalid', asunto: 'Prueba', cuerpo: 'Prueba' });
+  let envios = 0;
+  let respuestaTardia!: (respuesta: ResultadoEnvioTransporte) => void;
+  const transporte: ITransporteCorreo = {
+    obtenerModo: () => 'brevo-api',
+    enviar: async () => { envios++; return new Promise((resolve) => { respuestaTardia = resolve; }); },
+  };
+  const worker = new WorkerOutboxNotificaciones(repo, transporte);
+  const pendiente = worker.procesarLote('timeout');
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  t.mock.timers.tick(30000);
+  const resumen = await pendiente;
+  assert.equal(resumen.inciertos, 1); assert.equal(resumen.exitosos, 0);
+  assert.equal(repo.items[0].estado, 'incierto');
+  respuestaTardia({ estado: 'enviado', modo: 'brevo-api' });
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(repo.items[0].estado, 'incierto');
+  await worker.procesarLote('reinicio');
+  assert.equal(envios, 1);
+});
+
+it('rechaza una reserva que pueda vencer antes del timeout y su margen operativo', () => {
+  const transporte: ITransporteCorreo = { obtenerModo: () => 'dev-log', enviar: async () => ({ estado: 'enviado', modo: 'dev-log' }) };
+  assert.throws(() => new WorkerOutboxNotificaciones(new RepositorioOutboxMemoria(), transporte,
+    { duracionLeaseMs: 35000, timeoutTransporteMs: 30000 }), /RESERVA_DEBE_SUPERAR/);
+});
+
+it('no envía si pierde la reserva antes de confirmar el inicio de intento', async () => {
+  const repo = new RepositorioOutboxMemoria();
+  await repo.guardar({ claveEvento: 'perdida', tipoEvento: 'prueba',
+    destinatario: 'ficticio@example.invalid', asunto: 'Prueba', cuerpo: 'Prueba' });
+  repo.iniciarIntento = async () => null;
+  const transporte: ITransporteCorreo = { obtenerModo: () => 'dev-log', enviar: async () => {
+    throw new Error('No debe comenzar transporte');
+  } };
+  const resumen = await new WorkerOutboxNotificaciones(repo, transporte).procesarLote('perdida');
+  assert.equal(resumen.procesados, 0);
+});

@@ -40,7 +40,7 @@ const baseMigrations = [
     '010_hu32_puntos_ruta', '011_hu29_endurecer_permisos', '012_hu36_eventos_plan_solo_anexado', '013_hu37_avisos', '014_hu38_minutos_recordatorio',
     '016_hu34_avances_expedicion', '017_hu39_asumir_coordinacion', '018_hu27_cancelar_salida_futura', '019_hu41_bitacora_incidente', '021_hu40_transferir_coordinacion'
 ];
-const newMigrations = ['015_hu45_outbox', '022_dep108_crear_expedicion_atomica', '023_dep108_avisos_transaccionales', '024_dep108_vencimientos_outbox', '020_hu49_creacion_plan_idempotente', '025_hu42_cerrar_incidente', '026_hu45_intentos_reservas', '027_hu44_retorno_atomico', '028_hu46_reintento_persistido'];
+const newMigrations = ['015_hu45_outbox', '022_dep108_crear_expedicion_atomica', '023_dep108_avisos_transaccionales', '024_dep108_vencimientos_outbox', '020_hu49_creacion_plan_idempotente', '025_hu42_cerrar_incidente', '026_hu45_intentos_reservas', '027_hu44_retorno_atomico', '028_hu46_reintento_persistido', '029_hu47_estadisticas_incidentes', '030_hu50_ficha_medica_responsable', '031_hu48_exportacion_incidentes', '032_dep110_estado_worker'];
 const apply = async (client, names) => { for (const name of names)
     await client.query(await readFile(path.join(root, 'backend/migrations', `${name}.sql`), 'utf8')); };
 const roles = `CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN; CREATE ROLE service_role NOLOGIN BYPASSRLS;
@@ -112,10 +112,29 @@ try {
     await test('actualización conserva datos y asientos históricos', async () => { await apply(pool, newMigrations); assert.equal((await pool.query('SELECT count(*)::int n FROM public.usuarios')).rows[0].n, originalUsers); assert.equal((await pool.query("SELECT count(*)::int n FROM public.treksafe_migraciones WHERE version IN ('015','022','023','024')")).rows[0].n, 4); });
     await test('instalación nueva aplica el orden completo', async () => { const a = new pg.Client({ ...config, database: 'postgres' }); await a.connect(); await a.query('CREATE DATABASE treksafe_dep108_nueva_desechable'); await a.end(); const fresh = new pg.Client({ ...config, database: 'treksafe_dep108_nueva_desechable' }); await fresh.connect(); try {
         await fresh.query('ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon, authenticated, service_role;');
-        await fresh.query(await readFile(path.join(root, 'init_schema.sql'), 'utf8'));
+        const bootstrap = await readFile(path.join(root, 'backend/migrations/academico/bootstrap_vacio.sql'), 'utf8');
+        await fresh.query(bootstrap);
+        assert.equal((await fresh.query('SELECT count(*)::int n FROM public.usuarios')).rows[0].n, 0);
+        assert.equal((await fresh.query('SELECT count(*)::int n FROM public.registros_institucionales_rescatista')).rows[0].n, 0);
+        const initialOid = (await fresh.query("SELECT 'public.usuarios'::regclass::oid::text oid")).rows[0].oid;
+        await assert.rejects(() => fresh.query(bootstrap), /public no está vacío/);
+        await fresh.query('ROLLBACK');
+        assert.equal((await fresh.query("SELECT 'public.usuarios'::regclass::oid::text oid")).rows[0].oid, initialOid);
         await apply(fresh, baseMigrations);
         await apply(fresh, newMigrations);
         assert.ok((await fresh.query("SELECT to_regprocedure('public.treksafe_crear_expedicion(uuid,jsonb)') IS NOT NULL r")).rows[0].r);
+        assert.equal((await fresh.query("SELECT count(*)::int n FROM public.treksafe_migraciones WHERE version IN ('029','030','031','032')")).rows[0].n, 4);
+        assert.equal((await fresh.query('SELECT count(*)::int n FROM public.usuarios')).rows[0].n, 0);
+        const functions = (await fresh.query(`SELECT p.proname,p.oid::regprocedure::text AS firma,
+          md5(replace(pg_get_functiondef(p.oid),chr(13),'')) AS fuente_md5,
+          p.prosecdef,p.proconfig,
+          has_function_privilege('anon',p.oid,'EXECUTE') AS anon_execute,
+          has_function_privilege('authenticated',p.oid,'EXECUTE') AS authenticated_execute
+          FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+          WHERE n.nspname='public' AND p.proname LIKE 'treksafe_%' ORDER BY firma`)).rows;
+        const fingerprints = path.join(workspace, 'schema-instalacion-nueva.json');
+        await writeFile(fingerprints, JSON.stringify({ consultado_utc: new Date().toISOString(), funciones: functions }, null, 2));
+        console.log(`Huellas SQL de instalación nueva: ${fingerprints}`);
     }
     finally {
         await fresh.end();
@@ -287,6 +306,14 @@ try {
     await test('HU-46 SQL real: responsable, pertenencia, idempotencia y un intento manual',async()=>{
       const c=await client('hu46'); try { await c.query(await readFile(path.join(root,'backend/migrations/tests/hu46_reintentos.test.sql'),'utf8')); }
       finally { await c.query('ROLLBACK');await c.end(); }
+    });
+    for (const [name, file] of [
+      ['HU-50 SQL real sobre actualización completa', 'hu50_ficha_medica_responsable.test.sql'],
+      ['Heartbeat privado: ciclos, permisos y degradación', 'dep110_estado_worker.test.sql'],
+    ]) await test(name, async () => {
+      const c = await client('cierre-r2');
+      try { await c.query(await readFile(path.join(root, 'backend/migrations/tests', file), 'utf8')); }
+      finally { await c.query('ROLLBACK'); await c.end(); }
     });
     const key = randomBytes(40).toString('hex');
     const conf = path.join(workspace, 'postgrest.conf');

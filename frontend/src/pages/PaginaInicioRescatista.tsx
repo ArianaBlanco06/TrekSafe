@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useConsultaPeriodica } from '@/hooks/useConsultaPeriodica';
 import { Link } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -32,19 +33,11 @@ export function PaginaInicioRescatista() {
   const [error, setError] = useState('');
   const [confirmandoId, setConfirmandoId] = useState<string | null>(null);
 
-  const cargarAlertas = useCallback(() => {
-    setError('');
-    obtenerAlertasRescate()
-      .then((r) => setAlertas(r.alertas))
-      .catch((e) => setError(e instanceof Error ? e.message : 'Error al cargar alertas'))
-      .finally(() => setCargando(false));
-  }, []);
-
-  useEffect(() => {
-    cargarAlertas();
-    const poll = setInterval(cargarAlertas, 30_000);
-    return () => clearInterval(poll);
-  }, [cargarAlertas]);
+  const cargarAlertas = useConsultaPeriodica('alertas-rescate', obtenerAlertasRescate, {
+    datos: (r) => { setAlertas(r.alertas); setError(''); },
+    error: (e) => setError(e instanceof Error ? e.message : 'Error al cargar alertas'),
+    cargando: (valor) => { if (!valor) setCargando(false); },
+  });
 
   const handleConfirmar = async (expedicionId: string) => {
     setConfirmandoId(expedicionId);

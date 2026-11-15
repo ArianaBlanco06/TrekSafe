@@ -1,0 +1,19 @@
+{
+  "estado": "pendiente",
+  "fechaUtc": "",
+  "responsablePO": "",
+  "commitBackend": "",
+  "imagenBackendDigest": "",
+  "imagenBackendRevisionLabel": "",
+  "imagenCaddyDigest": "",
+  "vercelDeploymentId": "",
+  "vercelCommit": "",
+  "supabaseProyectoAcademico": "",
+  "supabaseEsquemaAsientosVerificados": [],
+  "apiUrl": "",
+  "frontendUrl": "",
+  "pruebasPublicadas": "pendiente",
+  "recepcionCorreoControlado": "pendiente",
+  "costosYCuotasObservados": "pendiente",
+  "aceptacionPO": "pendiente"
+}

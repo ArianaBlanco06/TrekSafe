@@ -1,17 +1,20 @@
 import { useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Mountain, Shield } from 'lucide-react';
 import { iniciarSesion } from '@/services/autenticacion';
 import { useAutenticacion } from '@/context/ContextoAutenticacion';
 import { FieldLabel, LogoHeader, MobileShell } from '@/components/Layout';
 import { AyudaInstalacionPwa } from '@/components/AyudaInstalacionPwa';
+import { destinoTrasLogin } from '@/lib/destinoTrasLogin';
 
 type TabLogin = 'senderista' | 'rescatista';
 
 export function PaginaIniciarSesion() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { loginSession, estaAutenticado, usuario } = useAutenticacion();
-  const [tab, setTab] = useState<TabLogin>('senderista');
+  const [tab, setTab] = useState<TabLogin>(() =>
+    destinoTrasLogin('rescatista', location.state).startsWith('/rescatista/') ? 'rescatista' : 'senderista');
   const [correo, setCorreo] = useState('');
   const [contrasena, setContrasena] = useState('');
   const [error, setError] = useState('');
@@ -19,7 +22,7 @@ export function PaginaIniciarSesion() {
 
   if (estaAutenticado && usuario) {
     return (
-      <Navigate to={usuario.rol === 'rescatista' ? '/rescatista' : '/senderista'} replace />
+      <Navigate to={destinoTrasLogin(usuario.rol, location.state)} replace />
     );
   }
 
@@ -38,7 +41,7 @@ export function PaginaIniciarSesion() {
         return;
       }
       await loginSession(res.token, res.usuario);
-      navigate(res.usuario.rol === 'rescatista' ? '/rescatista' : '/senderista');
+      navigate(destinoTrasLogin(res.usuario.rol, location.state), { replace: true });
     } catch (err) {
       const mensaje = err instanceof Error ? err.message : 'Error al iniciar sesión';
       setError(mensaje);
@@ -55,7 +58,7 @@ export function PaginaIniciarSesion() {
     try {
       const res = await iniciarSesion({ correoElectronico: demoCorreo, contrasena: demoContrasena });
       await loginSession(res.token, res.usuario);
-      navigate(res.usuario.rol === 'rescatista' ? '/rescatista' : '/senderista');
+      navigate(destinoTrasLogin(res.usuario.rol, location.state), { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error en acceso demo');
     } finally {

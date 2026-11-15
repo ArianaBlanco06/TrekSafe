@@ -4,7 +4,7 @@ Sistema Automatizado de Monitoreo y Gestión de Seguridad para Turismo de Aventu
 
 El senderista registra su plan de expedición y confirma el retorno seguro. Si no lo hace a tiempo, TrekSafe escala alertas automáticas a contactos de emergencia y equipos de rescate, con ubicación y ficha médica.
 
-[Arquitectura y estado R2](docs/arquitectura/README.md) · [`.env.example`](.env.example)
+[Arquitectura y estado R2](docs/arquitectura/README.md) · [Roadmap del PO: Oracle Always Free](deployment/oci/README.md) · [Cierre y aceptación R2](docs/cierre-r2/README.md) · [`.env.example`](.env.example)
 
 URLs históricas: [PWA](https://treksafe-app.vercel.app) · [API /salud](https://treksafe-api.fly.dev/api/salud). Consulta del 2026-11-10: PWA respondió 404 y el host de API no se resolvió desde el entorno de comprobación. La versión publicada y la configuración de las cuentas no están verificadas. [Evidencia y límites](docs/arquitectura/estado-actual.md).
 
@@ -14,7 +14,7 @@ URLs históricas: [PWA](https://treksafe-app.vercel.app) · [API /salud](https:/
 ![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)
 ![Express](https://img.shields.io/badge/Express-4-000000?logo=express&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3FCF8E?logo=supabase&logoColor=white)
-![Fly.io](https://img.shields.io/badge/API-Fly.io-24175B?logo=flydotio&logoColor=white)
+![Oracle Cloud](https://img.shields.io/badge/API%20y%20worker-Oracle%20Always%20Free-F80000?logo=oracle&logoColor=white)
 ![Vercel](https://img.shields.io/badge/PWA-Vercel-000000?logo=vercel&logoColor=white)
 
 > Proyecto académico — **Universidad de Lima** · Continuidad de Ingeniería de Software 1 a Ingeniería de Software 2 · 2026.
@@ -64,9 +64,9 @@ URLs históricas: [PWA](https://treksafe-app.vercel.app) · [API /salud](https:/
 
 ## Arquitectura
 
-Monorepo con PWA estática en Vercel y backend Node/Express para Fly.io. El código incorpora entradas independientes [api.ts](backend/src/api.ts) y [worker.ts](backend/src/worker.ts), con composición e inyección de dependencias. [main.ts](backend/src/main.ts) conserva temporalmente el arranque histórico de API y cron juntos. Esta implementación no acredita el inventario publicado. La fotografía anterior en `8508bb4` se conserva en [estado actual al corte de #106](docs/arquitectura/estado-actual.md).
+Monorepo con PWA estática en Vercel y backend Node/Express. El objetivo vigente aloja API y worker en dos VM Oracle Always Free. Las entradas independientes [api.ts](backend/src/api.ts) y [worker.ts](backend/src/worker.ts) usan composición e inyección de dependencias; [main.ts](backend/src/main.ts) conserva el arranque histórico y se rechaza en producción. La fotografía anterior en `8508bb4` se conserva en [estado al corte de #106](docs/arquitectura/estado-actual.md).
 
-**Objetivo de despliegue R2:** una imagen Docker compartida y dos grupos Fly, `api` y `worker`, con una máquina activa por grupo en `iad`; únicamente API expone HTTP. Ambos acceden a PostgreSQL mediante la Data API/RPC de Supabase. Las entradas separadas ya existen; la configuración publicada de dos grupos corresponde a #110 y la integración del procesador con outbox a #109. El worker actual conserva los flujos históricos. [Alcance y pruebas de #107](docs/dep-107/README.md).
+**Objetivo de despliegue R2:** una imagen Docker privada por digest, dos AMD E2.1.Micro de 1 GB y 50 GB boot cada una; únicamente API expone HTTPS mediante Caddy/DuckDNS. Ambos procesos usan Data API/RPC de Supabase; el worker produce cambios/pedidos de forma transaccional y consume la outbox duradera. Vercel Hobby, Supabase Free académico separado y Brevo Free completan el entorno. El [roadmap manual del PO](deployment/oci/README.md) documenta capacidad gratuita, configuración, monitoreo y recuperación. No hay publicación nueva acreditada todavía.
 
 El navegador usa REST y JWT propios. `service_role` permanece en servidor y evita RLS; API/RPC deben aplicar autorización de actor y propietario. El correo es un adaptador dentro del backend, sin un servicio TCP interno adicional.
 
@@ -131,7 +131,7 @@ npm run dev:frontend   # http://localhost:5173
 | `MEDICAL_ENCRYPTION_KEY` | 32 bytes AES-256 |
 | `BREVO_API_KEY` o `SMTP_*` | Alertas por correo |
 | `CORS_ORIGIN` | Origen del frontend |
-| `MAIL_DEV_FALLBACK` | `true` en dev · `false` en prod |
+| `MAIL_DEV_FALLBACK` | `false` por defecto; simulación solo opt-in de desarrollo, rechazada en producción |
 | `CRON_ENABLED` | Fijar `false` en DEV compartido. `api.ts` no inicia cron; `worker.ts` respeta el interruptor |
 | `VITE_API_URL` | URL del API (build-time en Vercel) |
 
@@ -168,28 +168,11 @@ La siguiente tabla recoge **destinos históricos declarados**, no disponibilidad
 | DB | Supabase | `service_role` |
 | Email | Brevo (desde Fly) | API y/o SMTP |
 
-**Secuencia R2 objetivo:** esquema compatible → API/procesador → frontend → comprobaciones y recuperación. Ver [procedimiento y condiciones](docs/arquitectura/transicion-y-validacion.md).
+**Roadmap vigente:** [cuenta Oracle y capacidad gratuita → CI e imagen → Supabase académico → dos VM → API HTTPS/PWA → worker/monitoreo → aceptación PO](deployment/oci/README.md). El PO aún no tiene cuenta Oracle; no hay nuevas URLs ni consumo observado. La decisión [D7](docs/arquitectura/decisiones.md) sustituye el diseño Fly por recursos Always Free, sin fallback de pago.
 
-Las entradas independientes están implementadas en #107; la configuración y publicación de dos máquinas se realiza en #110 y su integración con outbox en #109. El costo base de cómputo y sus exclusiones están en [decisiones](docs/arquitectura/decisiones.md); el costo total de las cuentas no está verificado.
+Artefactos: [`deployment/oci`](deployment/oci/README.md) · [`backend/Dockerfile`](backend/Dockerfile) · [`frontend/vercel.json`](frontend/vercel.json). `fly.toml` y `set-fly-secrets.ps1` se conservan como antecedentes y no son el procedimiento de publicación R2. No importar el `.env` DEV para desplegar.
 
-**Referencia histórica de una sola API:** los comandos siguientes no despliegan la arquitectura R2 objetivo. `set-fly-secrets.ps1` utiliza una app fija e importa valores del `.env`; revisar destino y configuración por entorno antes de cualquier uso. La guía operativa final pertenece a #110.
-
-```bash
-cd backend
-fly apps create treksafe-api --org personal   # si no existe
-powershell -File scripts/set-fly-secrets.ps1
-fly deploy
-```
-
-Vercel: Root Directory `frontend` · Build `npm run build` · Output `dist` · Env `VITE_API_URL=https://treksafe-api.fly.dev/api`.
-
-```bash
-fly secrets set CORS_ORIGIN=https://treksafe-app.vercel.app -a treksafe-api
-```
-
-Artefactos: [`backend/fly.toml`](backend/fly.toml) · [`backend/Dockerfile`](backend/Dockerfile) · [`frontend/vercel.json`](frontend/vercel.json).
-
-> El diseño envía correo desde el procesador de Fly. La API de Brevo o SMTP deben configurarse y probarse con destinatarios controlados. No asignar IP de egreso fija por defecto; evaluarla solo si el proveedor lo requiere. Configurado, encolado, aceptado y recibido son estados distintos.
+Vercel: Root Directory `frontend` · Build `npm run build` · Output `dist` · `VITE_API_URL=https://<API_HOST_DUCKDNS>/api`. El correo sale del worker y requiere recepción controlada verificada. Configurado, encolado, aceptado y recibido son estados distintos.
 
 <details>
 <summary>Base de datos</summary>

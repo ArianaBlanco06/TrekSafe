@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const puerto = Number(process.env.TREKSAFE_TEST_PWA_PORT ?? 4174);
+if (!Number.isInteger(puerto) || puerto < 1024 || puerto > 65535) throw new Error('TREKSAFE_TEST_PWA_PORT inválido.');
 const dist = path.join(root, 'dist');
 await readFile(path.join(dist, 'sw.js')); // Exige un build PWA previo.
 const bundle = await build({
@@ -55,7 +57,7 @@ const readJson = async req => {
 };
 const server = createServer(async (req, res) => {
   try {
-    const url = new URL(req.url, 'http://127.0.0.1:4174');
+    const url = new URL(req.url, `http://127.0.0.1:${puerto}`);
     if (url.pathname === '/__tests__/listo') return json(res, 200, { listo: true });
     if (url.pathname === '/__tests__/vacio') {
       res.writeHead(200, { 'Content-Type': 'text/html' });
@@ -221,4 +223,4 @@ const server = createServer(async (req, res) => {
     json(res, 500, { mensaje: error.message });
   }
 });
-server.listen(4174, '127.0.0.1');
+server.listen(puerto, '127.0.0.1');

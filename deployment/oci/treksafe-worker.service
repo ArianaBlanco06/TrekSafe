@@ -1,0 +1,18 @@
+[Unit]
+Description=TrekSafe R2 worker único, sin puertos públicos
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/treksafe/deployment/oci
+ExecStartPre=/bin/bash /opt/treksafe/deployment/oci/preflight.sh worker
+ExecStart=/usr/bin/docker compose --project-name treksafe-worker --env-file /etc/treksafe/deployment.env -f /opt/treksafe/deployment/oci/compose.worker.yml up -d --no-build --pull never
+ExecStop=/usr/bin/docker compose --project-name treksafe-worker --env-file /etc/treksafe/deployment.env -f /opt/treksafe/deployment/oci/compose.worker.yml stop --timeout 150
+TimeoutStartSec=120
+TimeoutStopSec=180
+
+[Install]
+WantedBy=multi-user.target

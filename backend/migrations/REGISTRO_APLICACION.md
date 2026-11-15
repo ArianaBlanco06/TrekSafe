@@ -37,6 +37,9 @@ Solo se anotan aplicaciones reales sobre un entorno (DEV, producción u otro). L
 | `028_hu46_reintento_persistido.sql` | 028 | 2026-11-13 23:06 UTC | DEV | 739d822 | Ariana | OK |
 | `029_hu47_estadisticas_incidentes.sql` | 029 | 2026-11-14 00:14 UTC | DEV | da21db7 | Ariana | OK |
 | `030_hu50_ficha_medica_responsable.sql` | 030 | 2026-11-14 00:38 UTC | DEV | 34ea91c | Ariana | OK |
+| `031_hu48_exportacion_incidentes.sql` | 031 | 2026-11-14 05:57:08 UTC (hora del asiento) · observado 2026-11-15 02:34 UTC | DEV | archivo fuente Git `8f96d15`; igualdad integral no acreditada por el asiento | rol `postgres`; persona no identificada por el inventario | Asiento y RPC observados mediante consulta de solo lectura; sin reaplicar DDL. Evidencia: `docs/cierre-r2/dev-inventario.json` |
+
+`032_dep110_estado_worker.sql` está preparada y probada únicamente en bases locales desechables. **No se registra una aplicación DEV o publicada que no ocurrió.** La aplicación coordinada y su posterior verificación permanecen pendientes de Ariana.
 
 HU-32: la estructura final está aplicada y verificada en Supabase DEV.
 El asiento administrativo 010 fue registrado correctamente en public.treksafe_migraciones el 2026-11-06 a las 05:23 UTC.

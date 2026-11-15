@@ -35,8 +35,8 @@ export function obtenerExpediciones() {
   return api.get<{ expediciones: Expedicion[] }>('/expediciones', true);
 }
 
-export function obtenerExpedicionActiva() {
-  return api.get<{ expedicion: ExpedicionActiva | null }>('/expediciones/activa', true);
+export function obtenerExpedicionActiva(signal?: AbortSignal) {
+  return peticionApi<{ expedicion: ExpedicionActiva | null }>('/expediciones/activa', { method: 'GET', signal }, true);
 }
 
 export type DatosCrearExpedicion = {

@@ -13,7 +13,11 @@
     "typecheck:tests": "tsc --noEmit -p tsconfig.tests.json",
     "test:equipo": "tsx --tsconfig tsconfig.json --test \"src/**/*.test.ts\" \"src/**/*.test.tsx\"",
     "test:pwa:privacidad": "playwright test --config playwright.privacy.config.ts",
-    "test:hu28:dev": "playwright test --config playwright.hu28-dev.config.ts"
+    "test:hu28:dev": "playwright test --config playwright.hu28-dev.config.ts",
+    "test:medicion:polling": "tsx --tsconfig tsconfig.json --test tests/medicion/polling.test.tsx",
+    "test:publicado:config": "tsx --tsconfig tsconfig.json --test tests/publicado/configuracion.test.ts tests/publicado/privacidad.test.ts",
+    "test:publicado": "node scripts/probar-publicado.mjs aceptacion",
+    "test:publicado:lectura": "node scripts/probar-publicado.mjs lectura"
   },
   "dependencies": {
     "leaflet": "^1.9.4",

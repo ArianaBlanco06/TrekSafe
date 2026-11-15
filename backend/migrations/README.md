@@ -1,5 +1,7 @@
 # Migraciones SQL de TrekSafe
 
+**Cierre R2:** para un proyecto académico nuevo usar el [bootstrap sin cuentas conocidas y el orden completo](academico/README.md). El catálogo ejecutable probado llega hasta `031` (HU-48) y añade `032` (estado del worker), aún pendiente de aplicación remota. El inventario DEV del 14/11 se distingue de las notas históricas de esta página en [acreditacion-107-108.md](../../docs/cierre-r2/acreditacion-107-108.md). No interpretar un «pendiente» histórico como autorización para repetir DDL.
+
 HU-34: `016_hu34_avances_expedicion.sql` está aplicada y registrada en Supabase DEV (2026-11-09 03:05 UTC). No es re-ejecutable: no volver a ejecutarla. Detalles en [dossier HU-34](../../docs/hu-34/README.md).
 
 Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos
@@ -53,6 +55,8 @@ Los cambios de esquema de Release 2 viven en esta carpeta. Los archivos
 | `024_dep108_vencimientos_outbox.sql` | RPC nueva de vencimientos con estado y pendientes atómicos; no sustituye el cron legado | `000`, `015`, `022` |
 | `025_hu42_cerrar_incidente.sql` | Tabla `informes_cierre_incidente` (un informe por incidente, solo anexado, hora del servidor), `UPDATE (estado, cerrado_en, version)` sobre `incidentes` para `service_role` (solo aditivo, sin `REVOKE`), RPC `treksafe_cerrar_incidente`, `treksafe_marcar_incidente_localizado` y `treksafe_leer_ultimo_cierre_incidente`. No modifica `expediciones`. Aplicar una sola vez, **después de `021` si existe** | `017`, `019` |
 | `030_hu50_ficha_medica_responsable.sql` | Tabla `accesos_ficha_medica` (auditoría de accesos permitidos y denegados a la ficha médica, solo anexado, hora del servidor, sin datos de salud), `UPDATE (version)` sobre `incidentes` para `service_role` (aditivo, para el bloqueo `FOR SHARE`), RPC `treksafe_contexto_ficha_medica`, `treksafe_leer_ficha_cifrada_responsable` y `treksafe_registrar_acceso_ficha_medica`, y la RPC ARCO `treksafe_anonimizar_notas_avance` (`SECURITY DEFINER`). Aplicar una sola vez, **después de `021` y `025`** | `016`, `017` |
+| `031_hu48_exportacion_incidentes.sql` | RPC paginada de exportación CSV; integrada y con asiento DEV observado, sin reaplicación | `029` |
+| `032_dep110_estado_worker.sql` | Tabla privada y RPC de señales duraderas/disponibilidad. Probada localmente; no aplicada a DEV ni publicada. Paquete para Ariana en `docs/cierre-r2/paquete-032` | `015`, esquema base; se despliega después del catálogo integrado hasta `031` |
 
 `015` es el esquema canónico de HU-45 preparado en DEP-04 (#108). El PR #90 contiene una propuesta llamada `012_hu45_outbox.sql`: **no aplicarla encima de esta tabla ni repetir su registro**. #109 debe conservar la identidad lógica obligatoria y adaptar el encolado/procesador al contrato canónico. Para nuevas migraciones, comprobar el siguiente número libre contra todas las ramas pendientes al momento del merge. John confirmó que 029 está libre para HU-47; su aplicación en DEV sigue pendiente de coordinación con Sebastian y Ariana.
 
