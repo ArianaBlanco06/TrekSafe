@@ -75,6 +75,13 @@ BEGIN
     WHERE o.estado IN ('fallido','incierto') OR
       (o.estado='pendiente' AND
        o.proximo_intento_en < t - p_max_pendientes_ms * interval '1 millisecond')
+  ) AND NOT EXISTS (
+    -- También detecta el resultado duradero sinDestinatarios de 024 y el legado
+    -- aún sin conciliar; un ciclo posterior vacío no debe esconder esa condición.
+    SELECT 1 FROM public.expediciones e WHERE e.estado='alerta' AND NOT EXISTS (
+      SELECT 1 FROM public.outbox_notificaciones o
+      WHERE o.clave_evento IN ('ALERTA_CONTACTO:' || e.id, 'ALERTA_RESCATE:' || e.id)
+    )
   );
 END $$;
 REVOKE ALL ON FUNCTION public.treksafe_registrar_estado_worker(text,text,text,text)
