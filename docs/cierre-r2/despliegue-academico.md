@@ -8,4 +8,6 @@ Los límites configurados son API512MB/worker512MB, heap320MB, Caddy128MB, logs3
 
 La verificación local de este paquete comprende diez tests del preflight, compilación sintáctica Python, sintaxis Bash y revisión de aislamiento/secretos. No hay Docker en el host de preparación: la construcción real de imagen y la importación de API/worker dentro de ella quedan a cargo del check CI del PR, y deberá citarse su resultado antes de darlas por probadas. Tampoco hay Oracle/Supabase académico/URLs nuevas, costo observado, correo real o aceptación integral realizados por este paquete.
 
+La validación de YAML/Compose mediante Docker también queda pendiente del check CI; la revisión local del texto y las pruebas Python no la sustituyen.
+
 Para acreditar #110 faltan: capacidad Always Free y planes reales, imagen construida/privada/digest de CI, esquema aplicado y verificado en destino, URLs con SHA/digest/ledger contrastados, pruebas de monitoreo/reinicio/recuperación, métricas observadas y los resultados publicados. El manifiesto por sí solo es declarativo. #108 conserva 032DEV pendiente de Ariana; los cierres #109/#111/#112 requieren sus propias evidencias. No se cierra ninguna issue desde este agente.

@@ -66,8 +66,8 @@ const refPO = {
   107: ['docs/cierre-r2/acreditacion-107-108.md', 'backend/src/application/services/desacoplamiento.test.ts'],
   108: ['docs/cierre-r2/acreditacion-107-108.md', 'backend/scripts/test-dep108-postgres.mjs', 'docs/cierre-r2/paquete-032/manifest.json'],
   109: ['docs/cierre-r2/integracion-operativa.md', 'backend/src/infrastructure/jobs/tareasOperativas.test.ts'],
-  110: ['docs/cierre-r2/integracion-operativa.md', 'backend/migrations/032_dep110_estado_worker.sql'],
-  111: ['frontend/src/services/clienteApi.test.ts', 'backend/src/presentation/http/cachePrivada.test.ts'],
+  110: ['docs/cierre-r2/despliegue-academico.md', 'deployment/oci/README.md', 'deployment/oci/test_preflight.py', 'backend/migrations/032_dep110_estado_worker.sql'],
+  111: ['docs/cierre-r2/pwa-validacion.md', 'frontend/src/lib/consultasPeriodicas.test.ts', 'frontend/tests/publicado/configuracion.test.ts', 'frontend/tests/publicado/privacidad.test.ts', 'frontend/src/services/clienteApi.test.ts', 'backend/src/presentation/http/cachePrivada.test.ts'],
   112: ['docs/cierre-r2/protocolo-aceptacion.md', 'docs/cierre-r2/acta-aceptacion.md'],
 };
 const pendientesPO = {
@@ -99,7 +99,7 @@ const tareas = fuentesPO.tareas.map(t => ({
   id: `TECH-${t.issue}`, issue: t.issue, titulo: t.titulo, fuente: t.url,
   criterios_originales: t.criterios, estado_github_capturado: t.estado,
   evidencia_disponible: refPO[t.issue],
-  local: [107,108,109].includes(t.issue) ? 'Evidencia local aportada por agentes; requiere resultado integrado y CI.' : 'Preparación en curso; no acredita ejecución publicada.',
+  local: [107,108,109,111].includes(t.issue) ? 'Evidencia local integrada y revisada; consultar resumen por candidato y CI final. No acredita aceptación publicada.' : 'Paquete de preparación y protocolo revisados; ejecución cloud y aceptación publicadas pendientes.',
   dev: '032 pendiente de aplicación por Ariana; inventario hasta 031 disponible.',
   publicado: 'PENDIENTE', resultado_aceptacion: 'PENDIENTE', pendiente: pendientesPO[t.issue],
 }));

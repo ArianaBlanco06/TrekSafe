@@ -1368,7 +1368,7 @@
         "docs/cierre-r2/acreditacion-107-108.md",
         "backend/src/application/services/desacoplamiento.test.ts"
       ],
-      "local": "Evidencia local aportada por agentes; requiere resultado integrado y CI.",
+      "local": "Evidencia local integrada y revisada; consultar resumen por candidato y CI final. No acredita aceptación publicada.",
       "dev": "032 pendiente de aplicación por Ariana; inventario hasta 031 disponible.",
       "publicado": "PENDIENTE",
       "resultado_aceptacion": "PENDIENTE",
@@ -1386,7 +1386,7 @@
         "backend/scripts/test-dep108-postgres.mjs",
         "docs/cierre-r2/paquete-032/manifest.json"
       ],
-      "local": "Evidencia local aportada por agentes; requiere resultado integrado y CI.",
+      "local": "Evidencia local integrada y revisada; consultar resumen por candidato y CI final. No acredita aceptación publicada.",
       "dev": "032 pendiente de aplicación por Ariana; inventario hasta 031 disponible.",
       "publicado": "PENDIENTE",
       "resultado_aceptacion": "PENDIENTE",
@@ -1403,7 +1403,7 @@
         "docs/cierre-r2/integracion-operativa.md",
         "backend/src/infrastructure/jobs/tareasOperativas.test.ts"
       ],
-      "local": "Evidencia local aportada por agentes; requiere resultado integrado y CI.",
+      "local": "Evidencia local integrada y revisada; consultar resumen por candidato y CI final. No acredita aceptación publicada.",
       "dev": "032 pendiente de aplicación por Ariana; inventario hasta 031 disponible.",
       "publicado": "PENDIENTE",
       "resultado_aceptacion": "PENDIENTE",
@@ -1417,10 +1417,12 @@
       "criterios_originales": "- [ ] La configuración de cada entorno es reproducible y se validan variables obligatorias sin revelar sus valores.\n- [ ] La publicación exige que pasen las verificaciones pertinentes y deja trazabilidad de código, esquema y servicios publicados.\n- [ ] Se puede reconocer si falla la API, la base, el procesador o el envío, y detectar pendientes que exceden el umbral documentado.\n- [ ] Se comprueba persistencia de pendientes y recuperación ante reinicio durante una publicación.\n- [ ] Existe un procedimiento de recuperación probado o ensayado en entorno controlado, con límites de compatibilidad explícitos.\n- [ ] Quedan documentados recursos, consumo observado, umbrales, URLs de cada entorno y guía de diagnóstico.",
       "estado_github_capturado": "open",
       "evidencia_disponible": [
-        "docs/cierre-r2/integracion-operativa.md",
+        "docs/cierre-r2/despliegue-academico.md",
+        "deployment/oci/README.md",
+        "deployment/oci/test_preflight.py",
         "backend/migrations/032_dep110_estado_worker.sql"
       ],
-      "local": "Preparación en curso; no acredita ejecución publicada.",
+      "local": "Paquete de preparación y protocolo revisados; ejecución cloud y aceptación publicadas pendientes.",
       "dev": "032 pendiente de aplicación por Ariana; inventario hasta 031 disponible.",
       "publicado": "PENDIENTE",
       "resultado_aceptacion": "PENDIENTE",
@@ -1434,10 +1436,14 @@
       "criterios_originales": "- [ ] Se compara una medición antes/después de solicitudes periódicas y carga inicial, con escenarios y resultados registrados.\n- [ ] No se muestran respuestas tardías de otra sesión ni se duplican operaciones tras reconectar o reintentar.\n- [ ] La sincronización conserva identidad de operación y detecta versión obsoleta, mostrando un resultado comprensible al usuario.\n- [ ] Pasan regresiones PWA con Service Worker activo para logout, cambio de cuenta, datos privados, reconexión y actualización.\n- [ ] El mapa y las pantallas esenciales funcionan en el dominio publicado; las limitaciones offline quedan visibles y documentadas.\n- [ ] Se verifica rechazo del acceso médico no autorizado y ausencia de contenido médico en los correos generados por los flujos afectados.",
       "estado_github_capturado": "open",
       "evidencia_disponible": [
+        "docs/cierre-r2/pwa-validacion.md",
+        "frontend/src/lib/consultasPeriodicas.test.ts",
+        "frontend/tests/publicado/configuracion.test.ts",
+        "frontend/tests/publicado/privacidad.test.ts",
         "frontend/src/services/clienteApi.test.ts",
         "backend/src/presentation/http/cachePrivada.test.ts"
       ],
-      "local": "Preparación en curso; no acredita ejecución publicada.",
+      "local": "Evidencia local integrada y revisada; consultar resumen por candidato y CI final. No acredita aceptación publicada.",
       "dev": "032 pendiente de aplicación por Ariana; inventario hasta 031 disponible.",
       "publicado": "PENDIENTE",
       "resultado_aceptacion": "PENDIENTE",
@@ -1454,7 +1460,7 @@
         "docs/cierre-r2/protocolo-aceptacion.md",
         "docs/cierre-r2/acta-aceptacion.md"
       ],
-      "local": "Preparación en curso; no acredita ejecución publicada.",
+      "local": "Paquete de preparación y protocolo revisados; ejecución cloud y aceptación publicadas pendientes.",
       "dev": "032 pendiente de aplicación por Ariana; inventario hasta 031 disponible.",
       "publicado": "PENDIENTE",
       "resultado_aceptacion": "PENDIENTE",
