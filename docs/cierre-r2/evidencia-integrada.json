@@ -1,5 +1,5 @@
 {
-  "registrado_utc": "2026-11-15T17:49:21Z",
+  "registrado_utc": "2026-11-15T18:00:32Z",
   "responsable": "coordinador, con revision independiente por subagentes",
   "entorno": "local_controlado",
   "publicado_validado": false,
@@ -42,6 +42,21 @@
       "medicion_controlada_aprobadas": 1,
       "navegador": "Microsoft Edge local",
       "logs_locales_no_versionados": ["frontend-integrado.log", "ui-integrada.log", "pwa-integrada.log", "config-publicado-integrado.log", "medicion-integrada.log"]
+    },
+    {
+      "componente": "configuracion_y_privacidad_runner_publicado",
+      "commit": "6095415",
+      "tipos_pruebas": "aprobado",
+      "pruebas_aprobadas": 8,
+      "nota": "Repeticion dirigida tras omitir datos de login en errores y reportes; incluye los seis casos previos. No se conecto a un despliegue."
+    },
+    {
+      "componente": "preflight_despliegue",
+      "commit": "6b7f93d",
+      "pruebas_aprobadas": 10,
+      "python": "3.13.14",
+      "docker_local": "no_disponible; construccion y Compose pendientes de CI",
+      "nota": "Valida configuracion ficticia local; no acredita costos, secretos, esquema remoto ni provisionamiento."
     }
   ],
   "interpretacion": "Los grupos se superponen y no se suman como pruebas unicas. Las pruebas de navegador usan fixtures locales; el validador publicado no conecto a URLs remotas. No acreditan las 75 CA publicadas ni recepcion real de correo. Los logs estan en esta carpeta del worktree de integracion y excluidos de Git; el PR conserva el enlace a CI del candidato final.",
