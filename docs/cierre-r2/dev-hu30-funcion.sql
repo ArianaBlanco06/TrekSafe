@@ -51,4 +51,3 @@ BEGIN
     RETURN public.treksafe_obtener_lista_equipo(p_senderista_id, p_lista_id);
 END;
 $function$
-

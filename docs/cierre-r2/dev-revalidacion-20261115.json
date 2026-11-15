@@ -1,0 +1,11 @@
+{
+  "entorno": "treksafe-dev-r2",
+  "proyecto": "ibnwggvqgjpeqcretjak",
+  "consultado_utc": "2026-11-15T17:45:50.962049Z",
+  "metodo": "consulta SQL de solo lectura al registro y al catalogo",
+  "asientos": 34,
+  "ultima_migracion_numerada": "031",
+  "asientos_032": 0,
+  "tabla_estado_worker": null,
+  "limite": "No se repitio el inventario integral ni se aplicaron migraciones. 032 sigue pendiente en DEV."
+}
