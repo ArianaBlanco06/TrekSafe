@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { leerConfiguracionPublicada, type CuentaPublicada } from './configuracion';
+import { rellenarAcceso } from './rellenarAcceso';
 
 const destino = leerConfiguracionPublicada();
 const cuentas = destino.cuentas!;
@@ -9,8 +10,7 @@ async function login(page: Page, cuenta: CuentaPublicada, rol: 'senderista' | 'r
   const ayuda = page.getByRole('dialog', { name: 'TrekSafe en tu pantalla de inicio', exact: true });
   if (await ayuda.isVisible()) await ayuda.getByRole('button', { name: 'Entendido', exact: true }).click();
   if (rol === 'rescatista') await page.getByRole('button', { name: 'Rescatista', exact: true }).click();
-  await page.getByLabel('Correo electrónico', { exact: true }).fill(cuenta.correo);
-  await page.getByLabel('Contraseña', { exact: true }).fill(cuenta.clave);
+  await rellenarAcceso(page, cuenta);
   const peticion = page.waitForRequest((r) => r.method() === 'POST' && r.url().endsWith('/auth/iniciar-sesion'));
   await page.getByRole('button', { name: 'Iniciar sesión', exact: true }).click();
   expect((await peticion).url()).toBe(`${destino.apiUrl}/auth/iniciar-sesion`);

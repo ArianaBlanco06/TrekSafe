@@ -3,10 +3,13 @@ import { leerConfiguracionPublicada } from './tests/publicado/configuracion';
 
 // Falla al arrancar si faltan destino/versión. No utiliza el servidor ficticio local.
 const destino = leerConfiguracionPublicada();
+// Playwright 1.64 captura el árbol de la página al fallar, incluso con screenshot=off.
+process.env.PLAYWRIGHT_NO_COPY_PROMPT = '1';
 export default defineConfig({
   testDir: './tests/publicado', workers: 1, retries: 0, timeout: 60_000,
   outputDir: './test-results/publicado',
-  reporter: [['list'], ['json', { outputFile: './test-results/publicado/resultados.json' }]],
+  preserveOutput: 'never',
+  reporter: [['./tests/publicado/reporteroSeguro.ts', { outputFile: './test-results/publicado/resultados.json' }]],
   metadata: {
     entorno: destino.entorno, frontendUrl: destino.frontendUrl, apiUrl: destino.apiUrl,
     commitDeclarado: destino.commit, esquemaDeclarado: destino.esquema,
