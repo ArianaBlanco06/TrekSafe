@@ -131,8 +131,8 @@ jobs:
           export TREKSAFE_IMAGE="ghcr.io/ficticio/treksafe-r2@sha256:$(printf 'a%.0s' {1..64})"
           export CADDY_IMAGE="caddy@sha256:$(printf 'b%.0s' {1..64})"
           export API_HOST=prueba.duckdns.org ACME_EMAIL=ficticio@example.invalid
-          docker compose -f deployment/oci/compose.api.yml config --quiet
-          docker compose -f deployment/oci/compose.worker.yml config --quiet
+          sudo --preserve-env=TREKSAFE_IMAGE,CADDY_IMAGE,API_HOST,ACME_EMAIL docker compose -f deployment/oci/compose.api.yml config --quiet
+          sudo --preserve-env=TREKSAFE_IMAGE,CADDY_IMAGE,API_HOST,ACME_EMAIL docker compose -f deployment/oci/compose.worker.yml config --quiet
       - name: Construir imagen amd64 sin iniciar servicios ni usar secretos
         run: |
           docker build --platform linux/amd64 --build-arg VCS_REF="$GITHUB_SHA" -t treksafe-validacion:local backend
