@@ -1,0 +1,232 @@
+{
+  "base": "8f9c4fed0b8a798e04f7e909f1c19d82e8222d92",
+  "consultado_utc": "2026-11-15T02:33:36.3741490Z",
+  "fuente": "GitHub REST issues milestone Release 2",
+  "historias": [
+    {
+      "hu": 26,
+      "issue": 26,
+      "titulo": "[HU] Editar una expedición programada",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/26",
+      "estado_github": "closed",
+      "criterios": "- [x] **CA-01 — Permisos y estado:** Solo el propietario puede editar una expedición programada con salida futura.\n- [x] **CA-02 — Validaciones y control de versión:** Valida fechas, coordenadas y contactos. Una versión desactualizada devuelve conflicto sin sobrescribir cambios.\n- [x] **CA-03 — Persistencia atómica:** Guarda los cambios y su evento en una operación atómica.",
+      "actualizado": "2026-11-10T13:17:52Z"
+    },
+    {
+      "hu": 27,
+      "issue": 27,
+      "titulo": "[HU] Cancelar una expedición programada",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/27",
+      "estado_github": "closed",
+      "criterios": "- [x] **CA-01 — Permisos y estado:** Solo el propietario cancela un plan programado y futuro.\n- [x] **CA-02 — Cancelación y monitoreo:** El plan queda cancelado y el cron no lo activa ni genera alertas por su vencimiento.\n- [x] **CA-03 — Cancelación idempotente:** Una segunda cancelación devuelve el mismo resultado sin repetir efectos.",
+      "actualizado": "2026-11-10T20:46:21Z"
+    },
+    {
+      "hu": 28,
+      "issue": 28,
+      "titulo": "[HU] Repetir una expedición del historial",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/28",
+      "estado_github": "closed",
+      "criterios": "- [x] **CA-01 — Propiedad de la expedición:** Solo se reutiliza una expedición del propietario.\n- [x] **CA-02 — Reutilización de datos:** Copia ruta y puntos disponibles, pero pide nuevas fechas y revisión de los contactos.\n- [x] **CA-03 — Independencia del nuevo plan:** El nuevo plan tiene otro id. No copia alertas, confirmaciones ni datos médicos.",
+      "actualizado": "2026-11-10T22:44:59Z"
+    },
+    {
+      "hu": 29,
+      "issue": 29,
+      "titulo": "[HU] Gestionar plantillas personales entre dispositivos",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/29",
+      "estado_github": "closed",
+      "criterios": "- [x] **CA-01 — Gestión de plantillas personales:** El propietario guarda, renombra y elimina una plantilla en su cuenta.\n- [x] **CA-02 — Disponibilidad entre dispositivos:** Una segunda sesión del mismo usuario obtiene la plantilla guardada.\n- [x] **CA-03 — Reutilización y conservación de expediciones:** Crear desde plantilla pide fechas nuevas y valida contactos vigentes. Borrar la plantilla no borra expediciones.",
+      "actualizado": "2026-11-10T13:18:06Z"
+    },
+    {
+      "hu": 30,
+      "issue": 30,
+      "titulo": "[HU] Crear listas personales de equipo",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/30",
+      "estado_github": "closed",
+      "criterios": "- [x] **CA-01 — Gestión de listas:** El propietario crea, edita y elimina listas con nombre e ítems.\n- [x] **CA-02 — Validación y clasificación:** Rechaza nombres vacíos y guarda cuáles ítems son obligatorios.\n- [x] **CA-03 — Privacidad y autorización:** Cada usuario solo consulta y modifica sus propias listas.",
+      "actualizado": "2026-11-10T13:18:12Z"
+    },
+    {
+      "hu": 31,
+      "issue": 31,
+      "titulo": "[HU] Revisar el equipo de una expedición",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/31",
+      "estado_github": "closed",
+      "criterios": "- [x] **CA-01 — Asociación de listas:** Al asociar una lista, crea una copia de sus ítems para esa expedición.\n- [x] **CA-02 — Seguimiento de preparación:** Las marcas persisten y se muestra el número de ítems obligatorios pendientes.\n- [x] **CA-03 — Independencia y seguridad:** Cambiar la lista base no cambia la copia ya asociada. El aviso no bloquea el retorno seguro.",
+      "actualizado": "2026-11-10T13:18:17Z"
+    },
+    {
+      "hu": 32,
+      "issue": 32,
+      "titulo": "[HU] Registrar puntos intermedios de la ruta",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/32",
+      "estado_github": "closed",
+      "criterios": "- [x] **CA-01 — Gestión de puntos intermedios:** El propietario agrega, edita, elimina y reordena hasta 20 puntos en un plan programado.\n- [x] **CA-02 — Validaciones y conservación de extremos:** Valida nombre, latitud, longitud y orden único. Conserva los extremos de la ruta.\n- [x] **CA-03 — Persistencia atómica:** Guarda los puntos completos o rechaza la operación sin dejar una colección parcial.",
+      "actualizado": "2026-11-10T13:18:22Z"
+    },
+    {
+      "hu": 33,
+      "issue": 33,
+      "titulo": "[HU] Visualizar el recorrido con puntos intermedios",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/33",
+      "estado_github": "closed",
+      "criterios": "- [x] **CA-01 — Visualización ordenada:** Muestra inicio, puntos numerados y destino con el mismo orden del plan.\n- [x] **CA-02 — Representación de segmentos:** Identifica los segmentos como referencias entre puntos, sin calcular navegación real.\n- [x] **CA-03 — Alternativa ante fallos del mapa:** Si el mapa no carga, ofrece la lista y las coordenadas del recorrido.",
+      "actualizado": "2026-11-10T13:18:27Z"
+    },
+    {
+      "hu": 34,
+      "issue": 35,
+      "titulo": "[HU] Registrar un avance manual de la expedición",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/35",
+      "estado_github": "closed",
+      "criterios": "- [x] **CA-01 — Autorización y estado:** Solo el propietario registra avances online en una expedición en progreso.\n- [x] **CA-02 — Registro e idempotencia:** Registra punto, hora del servidor y nota. Repetir el mismo id de solicitud no duplica el avance.\n- [x] **CA-03 — Independencia del monitoreo:** Un avance no completa la expedición, no cambia el plazo y no evita una alerta por falta de retorno.",
+      "actualizado": "2026-11-10T13:18:32Z"
+    },
+    {
+      "hu": 35,
+      "issue": 36,
+      "titulo": "[HU] Ampliar el retorno antes del vencimiento",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/36",
+      "estado_github": "closed",
+      "criterios": "- [x] **CA-01 — Límites y autorización:** Permite una ampliación online de 1 a 120 minutos, antes del límite y solo al propietario.\n- [x] **CA-02 — Control de concurrencia:** Una transacción verifica estado y versión. Si el cron ya declaró la alerta, rechaza la ampliación.\n- [x] **CA-03 — Registro y actualización del monitoreo:** Registra hora anterior, nueva hora y motivo. Actualiza el contador y el próximo control del cron.",
+      "actualizado": "2026-11-10T13:18:37Z"
+    },
+    {
+      "hu": 36,
+      "issue": 37,
+      "titulo": "[HU] Consultar el historial de cambios del plan",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/37",
+      "estado_github": "closed",
+      "criterios": "- [x] **CA-01 — Acceso autorizado:** Solo el propietario consulta los cambios de su plan.\n- [x] **CA-02 — Información del historial:** Muestra edición, cancelación y ampliación con fecha, autor y valores relevantes antes y después.\n- [x] **CA-03 — Registro seguro y ordenado:** Los eventos se registran con la operación y se ordenan de forma estable. Excluye contraseñas y datos médicos.",
+      "actualizado": "2026-11-10T13:18:42Z"
+    },
+    {
+      "hu": 37,
+      "issue": 38,
+      "titulo": "[HU] Consultar avisos dentro de la aplicación",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/38",
+      "estado_github": "closed",
+      "criterios": "- [x] **CA-01 — Consulta de avisos:** Muestra avisos de edición, cancelación, ampliación y recordatorio al usuario correspondiente.\n- [x] **CA-02 — Persistencia de lectura:** Marcar un aviso como leído persiste el estado entre sesiones.\n- [x] **CA-03 — Unicidad y autorización:** El mismo evento genera un solo aviso por usuario. Cada aviso enlaza al plan autorizado.",
+      "actualizado": "2026-11-10T19:08:12Z"
+    },
+    {
+      "hu": 38,
+      "issue": 39,
+      "titulo": "[HU] Configurar la anticipación del recordatorio",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/39",
+      "estado_github": "closed",
+      "criterios": "- [x] **CA-01 — Configuración del recordatorio:** Permite elegir 15, 30 o 60 minutos y conserva 30 como valor inicial.\n- [x] **CA-02 — Generación del aviso:** Genera un aviso por expedición y umbral elegido mientras la expedición esté en progreso.\n- [x] **CA-03 — Independencia de alertas críticas:** Modificar el recordatorio no cambia el límite ni desactiva las alertas críticas a contactos o rescate.",
+      "actualizado": "2026-11-10T19:08:16Z"
+    },
+    {
+      "hu": 39,
+      "issue": 40,
+      "titulo": "[HU] Asumir la coordinación única de una alerta",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/40",
+      "estado_github": "closed",
+      "criterios": "- [ ] **CA-01 — Asunción de la alerta:** Un rescatista validado asume una alerta abierta que no tenga responsable.\n- [ ] **CA-02 — Un solo responsable:** Dos solicitudes concurrentes dejan un solo responsable. La otra recibe un conflicto que indica el responsable vigente.\n- [ ] **CA-03 — Visibilidad sin datos médicos:** La consola muestra la asignación a todos los rescatistas autorizados sin exponer datos médicos.",
+      "actualizado": "2026-11-14T04:13:01Z"
+    },
+    {
+      "hu": 40,
+      "issue": 41,
+      "titulo": "[HU] Transferir la coordinación de una alerta",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/41",
+      "estado_github": "closed",
+      "criterios": "- [ ] **CA-01 — Propuesta autorizada:** Solo el responsable actual propone a un nuevo responsable validado.\n- [ ] **CA-02 — Aceptación explícita:** El relevo se aplica cuando el destinatario lo acepta. Mientras esté pendiente, el responsable anterior conserva el caso.\n- [ ] **CA-03 — Registro y bloqueo:** Guarda ambos responsables, el motivo y la hora. Impide relevos simultáneos y relevos en casos cerrados.",
+      "actualizado": "2026-11-14T04:13:06Z"
+    },
+    {
+      "hu": 41,
+      "issue": 42,
+      "titulo": "[HU] Consultar una bitácora cronológica del incidente",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/42",
+      "estado_github": "closed",
+      "criterios": "- [ ] **CA-01 — Escritura autorizada:** El responsable vigente agrega entradas a un incidente abierto.\n- [ ] **CA-02 — Bitácora de solo anexado:** Las entradas se añaden sin sobrescribir las anteriores y guardan el autor y la hora del servidor.\n- [ ] **CA-03 — Consulta ordenada:** Los rescatistas autorizados consultan la secuencia con orden estable. Una corrección se registra como otra entrada.",
+      "actualizado": "2026-11-14T04:13:23Z"
+    },
+    {
+      "hu": 42,
+      "issue": 43,
+      "titulo": "[HU] Cerrar un incidente con un informe de resultado",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/43",
+      "estado_github": "closed",
+      "criterios": "- [ ] **CA-01 — Cierre autorizado:** Solo el responsable cierra un incidente localizado y abierto, con resultado y resumen no vacíos.\n- [ ] **CA-02 — Cierre completo:** El cierre se aplica a todo el incidente y conserva su bitácora.\n- [ ] **CA-03 — Estados separados:** Distingue el cierre operativo del rescate del retorno confirmado por el senderista. No confirma su retorno automáticamente.",
+      "actualizado": "2026-11-14T04:13:29Z"
+    },
+    {
+      "hu": 43,
+      "issue": 44,
+      "titulo": "[HU] Priorizar alertas con criterios operativos",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/44",
+      "estado_github": "closed",
+      "criterios": "- [ ] **CA-01 — Criterios disponibles:** Permite elegir entre tiempo excedido y número declarado de participantes.\n- [ ] **CA-02 — Orden estable:** Mantiene visibles las alertas abiertas y desempata por fecha e id de forma estable.\n- [ ] **CA-03 — Criterio transparente:** Explica el criterio activo. Cambiarlo no altera estados ni plazos, ni diagnostica riesgo médico.",
+      "actualizado": "2026-11-14T04:13:34Z"
+    },
+    {
+      "hu": 44,
+      "issue": 46,
+      "titulo": "[HU] Notificar el retorno seguro confirmado",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/46",
+      "estado_github": "closed",
+      "criterios": "- [ ] **CA-01 — Evento atómico:** El retorno confirmado genera un evento de salida en la misma transacción que completa la expedición.\n- [ ] **CA-02 — Destinatarios:** Notifica a los contactos vinculados y, si hubo una alerta atendida, al responsable y a los rescatistas que la recibieron.\n- [ ] **CA-03 — Contenido mínimo y sin duplicados:** El mensaje incluye la ruta y la hora del retorno confirmado, sin datos médicos. Un evento repetido no crea otro despacho lógico.",
+      "actualizado": "2026-11-14T04:13:40Z"
+    },
+    {
+      "hu": 45,
+      "issue": 47,
+      "titulo": "[HU] Reintentar avisos fallidos sin perder su seguimiento",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/47",
+      "estado_github": "closed",
+      "criterios": "- [ ] **CA-01 — Outbox persistente:** Una outbox persistente guarda el evento junto con el cambio de estado y sobrevive a un reinicio del proceso.\n- [ ] **CA-02 — Reintentos controlados:** Si el proveedor confirma que no aceptó el envío, admite hasta tres intentos totales con espera creciente y un solo trabajador por registro.\n- [ ] **CA-03 — Resultados diferenciados:** Una respuesta ambigua queda como incierta para revisión. Registra pendiente, enviado, fallido o incierto y diferencia el dev-log del envío real.",
+      "actualizado": "2026-11-14T04:13:45Z"
+    },
+    {
+      "hu": 46,
+      "issue": 48,
+      "titulo": "[HU] Revisar la entrega de avisos de un incidente",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/48",
+      "estado_github": "closed",
+      "criterios": "- [ ] **CA-01 — Consulta de despachos:** El responsable consulta fecha, canal, intento y estado de cada despacho de su incidente.\n- [ ] **CA-02 — Reintento manual idempotente:** Puede solicitar un intento manual solo para un fallo definitivo. Repetir la solicitud no crea dos comandos.\n- [ ] **CA-03 — Protección de estados:** Un aviso enviado no se reenvía. Un incierto exige revisión antes de habilitar otro intento y no se cuenta como entregado.",
+      "actualizado": "2026-11-14T04:13:50Z"
+    },
+    {
+      "hu": 47,
+      "issue": 49,
+      "titulo": "[HU] Consultar estadísticas operativas de rescate",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/49",
+      "estado_github": "closed",
+      "criterios": "- [ ] **CA-01 — Filtros autorizados:** Filtra por rango de fechas, zona y resultado de cierre dentro del alcance autorizado.\n- [ ] **CA-02 — Conteo de incidentes únicos:** Cuenta cada incidente una sola vez, aunque tenga varias entradas o cambios de responsable.\n- [ ] **CA-03 — Resumen claro:** Muestra incidentes atendidos, abiertos y cerrados, con el criterio de fechas visible y sin datos médicos.",
+      "actualizado": "2026-11-14T04:24:12Z"
+    },
+    {
+      "hu": 48,
+      "issue": 50,
+      "titulo": "[HU] Exportar un reporte operativo en CSV",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/50",
+      "estado_github": "closed",
+      "criterios": "- [ ] **CA-01 — Mismo filtro, datos mínimos:** Exporta el mismo filtro de HU-47 con id, zona, fechas, estado y resultado, sin ficha médica ni contactos.\n- [ ] **CA-02 — Recorrido paginado:** Recorre los resultados por páginas con orden e id estables, sin repetir incidentes.\n- [ ] **CA-03 — Archivo seguro y fiel:** Con 1000 incidentes conserva encabezados, comillas y acentos, y neutraliza valores que Excel pueda tratar como fórmulas.",
+      "actualizado": "2026-11-14T06:00:09Z"
+    },
+    {
+      "hu": 49,
+      "issue": 51,
+      "titulo": "[HU] Gestionar la sincronización de borradores offline",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/51",
+      "estado_github": "closed",
+      "criterios": "- [ ] **CA-01 — Cola visible:** Lista los borradores pendientes, con error y sincronizados, y permite editar o descartar un pendiente.\n- [ ] **CA-02 — Revisión al reconectar:** Al reconectar, el usuario revisa fechas y contactos antes de enviar. Un borrador con fecha vencida requiere corrección.\n- [ ] **CA-03 — Sin duplicados y aislada:** Reenviar el mismo id local retorna el plan ya creado. La cola se aísla por usuario y conserva los pendientes tras cerrar y abrir la PWA.",
+      "actualizado": "2026-11-14T04:14:12Z"
+    },
+    {
+      "hu": 50,
+      "issue": 52,
+      "titulo": "[HU] Restringir la ficha médica al responsable vigente",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/52",
+      "estado_github": "closed",
+      "criterios": "- [ ] **CA-01 — Autorización antes de descifrar:** El backend autoriza antes de descifrar, con consentimiento vigente, incidente abierto y responsable actual.\n- [ ] **CA-02 — Transferencia con el relevo:** Un relevo aceptado transfiere el acceso. Los demás rescatistas reciben un rechazo, sin ficha médica.\n- [ ] **CA-03 — Auditoría y correos sin salud:** Audita los accesos permitidos y denegados con actor, incidente, hora y motivo. Los correos de alerta ya no incluyen datos médicos en texto.",
+      "actualizado": "2026-11-14T04:24:29Z"
+    }
+  ]
+}
