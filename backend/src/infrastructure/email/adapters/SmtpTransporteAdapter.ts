@@ -22,6 +22,9 @@ export class SmtpTransporteAdapter implements ITransporteCorreo {
         host: smtpHost,
         port: smtpPort,
         secure: smtpSecure,
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 30000,
         requireTLS: !smtpSecure && smtpPort === 587,
         auth: { user: smtpUser, pass: smtpPass },
         tls: {
@@ -35,15 +38,28 @@ export class SmtpTransporteAdapter implements ITransporteCorreo {
 
   async enviar(datos: DatosEnvioCorreo): Promise<ResultadoEnvioTransporte> {
     const { smtpFrom } = loadEnv();
+    let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       const remitente = parseSenderAddress(smtpFrom);
-      const res = await this.obtenerTransporter().sendMail({
+      const transportador = this.obtenerTransporter();
+      const envio = transportador.sendMail({
         from: { name: remitente.name, address: remitente.email },
         to: datos.destinatario,
         subject: datos.asunto,
         html: datos.cuerpoHtml,
         text: datos.cuerpoTexto,
       });
+      const res = await Promise.race([
+        envio,
+        new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(() => {
+            // Un plazo absoluto cierra el socket incluso si el servidor sigue enviando bytes.
+            transportador.close();
+            this.transporter = null;
+            reject(new Error('SMTP_TIMEOUT_INCIERTO'));
+          }, 30000);
+        }),
+      ]);
 
       return {
         estado: 'enviado',
@@ -54,6 +70,8 @@ export class SmtpTransporteAdapter implements ITransporteCorreo {
       const codigo=typeof err==='object'&&err!==null&&'responseCode' in err?Number(err.responseCode):0;
       const rechazo=codigo>=400&&codigo<600;
       return {estado:rechazo?'fallido':'incierto',modo:'smtp',error:rechazo?'RECHAZO_CONFIRMADO':'RESULTADO_INCIERTO'};
+    } finally {
+      if (timer) clearTimeout(timer);
     }
   }
 }

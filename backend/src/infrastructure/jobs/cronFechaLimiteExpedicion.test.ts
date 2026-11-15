@@ -39,8 +39,8 @@ function dependencias(promover: () => Promise<number>): DependenciasPlazos {
   };
 }
 
-it('acepta false explícito, conserva true por omisión y rechaza valores ambiguos', () => {
-  assert.equal(envSchema.parse(entornoFicticio).CRON_ENABLED, true);
+it('acepta activación explícita, queda desactivado por omisión y rechaza valores ambiguos', () => {
+  assert.equal(envSchema.parse(entornoFicticio).CRON_ENABLED, false);
   assert.equal(
     envSchema.parse({ ...entornoFicticio, CRON_ENABLED: 'false' }).CRON_ENABLED,
     false,

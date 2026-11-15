@@ -8,7 +8,7 @@ export type DependenciasArranqueWorker = {
   habilitado: boolean;
   verificarBase(): Promise<void>;
   verificarCorreo(): Promise<void>;
-  iniciarTareas(): () => Promise<void>;
+  iniciarTareas(): (() => Promise<void>) | Promise<() => Promise<void>>;
   cerrarRecursos(): Promise<void>;
 };
 
@@ -21,7 +21,7 @@ export async function iniciarWorker(
     try {
       await dependencias.verificarBase();
       await dependencias.verificarCorreo();
-      detenerTareas = dependencias.iniciarTareas();
+      detenerTareas = await dependencias.iniciarTareas();
     } catch (error) {
       await dependencias.cerrarRecursos();
       throw error;

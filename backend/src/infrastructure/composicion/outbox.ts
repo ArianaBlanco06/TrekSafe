@@ -9,5 +9,6 @@ export function crearWorkerOutbox(){
   const env=loadEnv();
   if(env.nodeEnv==='production'&&!env.brevoApiKey&&!(env.smtpHost&&env.smtpUser&&env.smtpPass)) throw new Error('Transporte real requerido');
   const transporte=env.brevoApiKey?new BrevoApiTransporteAdapter():env.smtpHost&&env.smtpUser&&env.smtpPass?new SmtpTransporteAdapter():new DevLogTransporteAdapter();
-  return new WorkerOutboxNotificaciones(new RepositorioOutboxSupabase(),new DecoradorRegistroTransporte(transporte));
+  return new WorkerOutboxNotificaciones(new RepositorioOutboxSupabase(),new DecoradorRegistroTransporte(transporte),
+    {urlPublicaAplicacion:env.publicAppUrl??env.corsOrigin});
 }

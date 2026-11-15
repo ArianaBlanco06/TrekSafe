@@ -37,9 +37,15 @@ import { crearRutasBorradores } from '../../presentation/http/routes/rutasBorrad
 import { CreadorPlanSupabase } from '../repositories/CreadorPlanSupabase.js';
 import type { Router } from 'express';
 import type { DependenciasHttp } from '../../presentation/http/app.js';
+import { ConsultarDisponibilidad } from '../../application/services/ConsultarDisponibilidad.js';
+import { EstadoWorkerSupabase } from '../repositories/EstadoWorkerSupabase.js';
 
 export function ensamblarHttp(): DependenciasHttp {
   const env = loadEnv();
+  const disponibilidad = new ConsultarDisponibilidad(new EstadoWorkerSupabase(), {
+    maxAntiguedadHeartbeatMs: env.workerHeartbeatMaxAgeMs,
+    maxAntiguedadPendientesMs: env.outboxPendingMaxAgeMs,
+  });
   const rutas: DependenciasHttp['rutas'] = [];
   const registrar = (prefijo: string, router: Router) =>
     rutas.push({ prefijo, router });
@@ -99,6 +105,7 @@ export function ensamblarHttp(): DependenciasHttp {
 
   return {
     config: { apiPrefix: env.apiPrefix, corsOrigin: env.corsOrigin },
+    disponibilidad: () => disponibilidad.ejecutar(),
     rutas,
     salud: () => {
       const correo = new ServicioCorreo();

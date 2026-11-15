@@ -1,7 +1,7 @@
 import { crearWorkerOutbox } from '../composicion/outbox.js';
 import { loadEnv,type Env } from '../config/env.js';
 import type { WorkerOutboxNotificaciones } from '../../application/services/WorkerOutboxNotificaciones.js';
-/** Entrada explícita: no se activa al importar ni se incorpora todavía al arranque de #109. */
+/** Herramienta legada explícita; el worker desplegado usa tareasOperativas con ambos ciclos. */
 export function iniciarWorkerOutbox(config:Pick<Env,'cronEnabled'|'cronIntervalMs'>=loadEnv(),worker?:WorkerOutboxNotificaciones):()=>Promise<void> {
   if(!config.cronEnabled) return async()=>{};
   const trabajo=worker??crearWorkerOutbox();

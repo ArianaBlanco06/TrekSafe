@@ -12,6 +12,7 @@ export async function sendViaBrevoApi(input: SendMailInput): Promise<void> {
 
   const res = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
+    signal: AbortSignal.timeout(30000),
     headers: {
       'api-key': brevoApiKey,
       'content-type': 'application/json',

@@ -19,6 +19,17 @@ export function getSupabaseAdmin(): SupabaseClient {
     const { supabaseUrl, supabaseServiceRoleKey } = loadEnv();
     client = createClient(supabaseUrl, supabaseServiceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
+      global: {
+        fetch: (entrada, opciones) => {
+          const cancelacion = opciones?.signal ?? (entrada instanceof Request ? entrada.signal : undefined);
+          return fetch(entrada, {
+            ...opciones,
+            signal: cancelacion
+              ? AbortSignal.any([cancelacion, AbortSignal.timeout(10000)])
+              : AbortSignal.timeout(10000),
+          });
+        },
+      },
     });
   }
   return client;

@@ -22,6 +22,7 @@ export type DependenciasCompatibilidad = {
 function crearDependenciasCompatibilidad(): DependenciasCompatibilidad {
   inicializarEntorno();
   const env = loadEnv();
+  if (env.nodeEnv === 'production') throw new Error('USAR_ENTRADAS_API_Y_WORKER_INDEPENDIENTES');
   return {
     verificarBase: verificarConexionBaseDatos,
     verificarCorreo: verificarCorreoConfigurado,

@@ -12,11 +12,12 @@ export type DependenciasHttp = {
   config: { apiPrefix: string; corsOrigin: string };
   rutas: { prefijo: string; router: Router }[];
   salud: () => unknown;
+  disponibilidad?: () => Promise<boolean>;
 };
 
 /** La composición inyectada evita inicializar entorno, Supabase o correo en pruebas. */
 export function createApp(dependencias?: DependenciasHttp) {
-  const { config, rutas, salud } = dependencias ?? ensamblarHttp();
+  const { config, rutas, salud, disponibilidad } = dependencias ?? ensamblarHttp();
   const app = express();
   app.use(helmet());
   app.use(cors({ origin: config.corsOrigin, credentials: true }));
@@ -26,6 +27,11 @@ export function createApp(dependencias?: DependenciasHttp) {
   });
   app.use(express.json({ limit: '100kb' }));
   app.get(`${config.apiPrefix}/salud`, (_req, res) => res.json(salud()));
+  app.get(`${config.apiPrefix}/disponibilidad`, async (_req, res) => {
+    let disponible = false;
+    try { disponible = await disponibilidad?.() ?? false; } catch { /* Respuesta mínima. */ }
+    res.status(disponible ? 200 : 503).json({ estado: disponible ? 'operativo' : 'degradado' });
+  });
   const limiteTasaAuth = createRateLimiter(20, 15 * 60_000);
   for (const { prefijo, router } of rutas) {
     if (prefijo === '/auth')
