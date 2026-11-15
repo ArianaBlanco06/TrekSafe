@@ -43,6 +43,9 @@ export class ServicioCorreo {
         port: smtpPort,
         secure: smtpSecure,
         requireTLS: !smtpSecure && smtpPort === 587,
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 30000,
         auth: { user: smtpUser, pass: smtpPass },
         tls: {
           minVersion: 'TLSv1.2',
@@ -85,10 +88,25 @@ export class ServicioCorreo {
     }
 
     try {
-      await this.obtenerTransportadorSmtp().verify();
+      const transportador = this.obtenerTransportadorSmtp();
+      let plazo: ReturnType<typeof setTimeout> | undefined;
+      try {
+        await Promise.race([
+          transportador.verify(),
+          new Promise<never>((_resolve, reject) => {
+            plazo = setTimeout(() => reject(new Error('SMTP_VERIFICACION_TIMEOUT')), 30000);
+          }),
+        ]);
+      } finally {
+        if (plazo) clearTimeout(plazo);
+        // Cerrar también el socket real: Promise.race por sí sola no cancela SMTP.
+        if (this.transporter === transportador) this.transporter = null;
+        transportador.close();
+      }
       console.log('[Correo] conexión SMTP verificada');
     } catch (err) {
-      const ipSaliente = await fetchOutboundIp();
+      // El diagnóstico externo no debe prolongar el arranque publicado.
+      const ipSaliente = loadEnv().nodeEnv === 'production' ? null : await fetchOutboundIp();
       const pista = brevoIpAuthHint(ipSaliente, err);
       console.warn(`[Correo] verificación SMTP falló: ${formatearErrorCorreo(err)}`);
       console.warn(`[Correo] ${pista}`);
