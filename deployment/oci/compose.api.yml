@@ -1,0 +1,56 @@
+services:
+  api:
+    image: ${TREKSAFE_IMAGE:?Completar digest privado en deployment.env}
+    command: ["node", "dist/api.js"]
+    env_file:
+      - path: /etc/treksafe/api.env
+        format: raw
+    environment:
+      NODE_OPTIONS: --max-old-space-size=320
+    ports:
+      - "127.0.0.1:3000:3000"
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs: ["/tmp:size=16m,noexec,nosuid"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 512m
+    memswap_limit: 512m
+    pids_limit: 128
+    stop_grace_period: 45s
+    logging:
+      driver: json-file
+      options: {max-size: "5m", max-file: "3"}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/salud',{signal:AbortSignal.timeout(4000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+  caddy:
+    image: ${CADDY_IMAGE:?Completar digest oficial de Caddy}
+    environment:
+      API_HOST: ${API_HOST:?Completar dominio DuckDNS}
+      ACME_EMAIL: ${ACME_EMAIL:?Completar correo para ACME}
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    read_only: true
+    tmpfs: ["/tmp:size=16m,noexec,nosuid"]
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 128m
+    memswap_limit: 128m
+    pids_limit: 64
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options: {max-size: "5m", max-file: "3"}
+volumes:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,5 @@
+deployment/oci/*.sh text eol=lf
+deployment/oci/*.py text eol=lf
+deployment/oci/*.yml text eol=lf
+deployment/oci/*.service text eol=lf
+deployment/oci/*.timer text eol=lf

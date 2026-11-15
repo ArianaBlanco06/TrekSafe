@@ -1,4 +1,4 @@
-# TrekSafe API — imagen de producción para Fly.io
+# TrekSafe R2 — imagen compartida API/worker, construida fuera de las Micro OCI.
 FROM node:22-bookworm-slim AS build
 
 RUN apt-get update \
@@ -17,6 +17,11 @@ RUN npm run build \
 
 FROM node:22-bookworm-slim AS runtime
 
+ARG VCS_REF
+LABEL org.opencontainers.image.source="https://github.com/ArianaBlanco06/TrekSafe" \
+      org.opencontainers.image.revision=$VCS_REF
+RUN echo "$VCS_REF" | grep -Eq '^[0-9a-f]{40}$'
+
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates \
   && rm -rf /var/lib/apt/lists/*
@@ -34,4 +39,4 @@ EXPOSE 3000
 
 USER node
 
-CMD ["node", "dist/main.js"]
+CMD ["node", "dist/api.js"]

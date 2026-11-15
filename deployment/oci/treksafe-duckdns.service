@@ -1,0 +1,13 @@
+[Unit]
+Description=Actualizar DNS público de la API sin exponer el token
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/treksafe/deployment/oci/actualizar-duckdns.py
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+

@@ -1,5 +1,17 @@
 # Decisiones de arquitectura y costos
 
+> **Actualización de implementación R2 (15/11/2026):** por decisión posterior del PO de usar únicamente recursos gratuitos, D7 sustituye el alojamiento Fly de D1–D3/D5. La evidencia de #106 y sus costos se conserva como antecedente; el [roadmap vigente](../../deployment/oci/README.md) usa Oracle Always Free y no autoriza aprovisionamiento pagado.
+
+## D7 — Dos VM Oracle Always Free y publicación manual del PO
+
+Conservar Vercel Hobby, Supabase Free académico nuevo y Brevo Free; alojar API y worker en **dos AMD VM.Standard.E2.1.Micro**, 1 GB RAM y boot de 50 GB cada una, Ubuntu LTS x86. Una imagen GHCR privada amd64 por digest, construida por CI, se ejecuta con entradas diferentes. API expone HTTPS mediante Caddy/DuckDNS; worker no tiene puertos de aplicación. Cada VM conserva configuración por rol, reinicio Docker/systemd, límites de memoria/logs y apagado ordenado. La separación no constituye alta disponibilidad de la base, proveedor o cuenta.
+
+El PO aún no tiene cuenta Oracle; capacidad gratuita y consumo no se han observado. Dos VM y 100 GB de boot caben en los límites publicados, pero disponibilidad de capacidad y aprobación de cuenta son gates reales. No se sustituyen por recursos de pago si fallan. La reclamación de instancias inactivas, pausa Supabase, cuotas de correo y monitoreo de cinco minutos limitan la continuidad. Costo objetivo **US$0 de recursos contratados**, sujeto a comprobar plan/cupo/tarifa antes y después; no es una factura observada ni un SLA.
+
+La CI valida la imagen en PR y publica en GHCR solo tras pruebas en ramas confiables; no despliega. PO aplica esquema nuevo con bootstrap vacío, registra ledger/digest/SHA/deployment Vercel y ejecuta aceptación en URLs reales antes del cierre. La actualización DEV 032 sigue separada, bajo responsabilidad de Ariana. [Oracle Always Free](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm), [GHCR](https://docs.github.com/en/billing/concepts/product-billing/github-packages), [recursos y operación](../../deployment/oci/README.md).
+
+## Antecedente D1–D6 de #106
+
 Fecha: **2026-11-10**. Las decisiones D1–D6 son la arquitectura objetivo acordada por el PO. Implementación y dimensionamiento efectivo: #107–#111; evidencia operativa: #112.
 
 ## D1 — Mantener plataformas y monolito modular

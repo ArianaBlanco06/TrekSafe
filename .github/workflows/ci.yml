@@ -77,6 +77,11 @@ jobs:
       - name: Ejecutar pruebas de equipo (HU-30)
         run: npm run test:equipo --prefix frontend
 
+      - name: Validar destinos publicados y medición local de consultas
+        run: |
+          npm run test:publicado:config --prefix frontend
+          npm run test:medicion:polling --prefix frontend
+
       - name: Compilar frontend
         run: npm run build --prefix frontend
         env:
@@ -99,6 +104,82 @@ jobs:
           name: evidencia-privacidad-pwa
           path: frontend/test-results/
           if-no-files-found: ignore
+
+  imagen_pr:
+    name: Imagen - construir sin publicar
+    if: github.event_name == 'pull_request'
+    needs: [backend, frontend, persistencia]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verificar preflight sin credenciales reales
+        run: python3 -m unittest discover -s deployment/oci -p test_preflight.py
+      - name: Validar scripts de despliegue
+        run: |
+          bash -n deployment/oci/preflight.sh
+          python3 -m py_compile deployment/oci/preflight.py deployment/oci/actualizar-duckdns.py deployment/oci/ghcr-private.py
+      - name: Validar Compose con ejemplos sin secretos
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo install -d /etc/treksafe
+          sudo install -m 600 deployment/oci/api.env.example /etc/treksafe/api.env
+          sudo install -m 600 deployment/oci/worker.env.example /etc/treksafe/worker.env
+          export TREKSAFE_IMAGE="ghcr.io/ficticio/treksafe-r2@sha256:$(printf 'a%.0s' {1..64})"
+          export CADDY_IMAGE="caddy@sha256:$(printf 'b%.0s' {1..64})"
+          export API_HOST=prueba.duckdns.org ACME_EMAIL=ficticio@example.invalid
+          docker compose -f deployment/oci/compose.api.yml config --quiet
+          docker compose -f deployment/oci/compose.worker.yml config --quiet
+      - name: Construir imagen amd64 sin iniciar servicios ni usar secretos
+        run: |
+          docker build --platform linux/amd64 --build-arg VCS_REF="$GITHUB_SHA" -t treksafe-validacion:local backend
+          docker run --rm treksafe-validacion:local node --check dist/api.js
+          docker run --rm treksafe-validacion:local node --check dist/worker.js
+          docker run --rm treksafe-validacion:local node --input-type=module -e "await import('./dist/api.js'); await import('./dist/worker.js')"
+
+  imagen_publicada:
+    name: Imagen - GHCR privado
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
+    needs: [backend, frontend, persistencia]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      OWNER_TYPE: ${{ github.event.repository.owner.type }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validar configuración de despliegue
+        run: python3 -m unittest discover -s deployment/oci -p test_preflight.py
+      - name: Bloquear reutilización de un paquete público
+        run: python3 deployment/oci/ghcr-private.py
+      - name: Construir, publicar y registrar digest
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/treksafe-r2"
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          trap 'docker logout ghcr.io >/dev/null' EXIT
+          docker build --platform linux/amd64 --build-arg VCS_REF="$GITHUB_SHA" -t "$image:$GITHUB_SHA" backend
+          docker push "$image:$GITHUB_SHA"
+          docker pull "$image:$GITHUB_SHA"
+          digest="$(docker image inspect "$image:$GITHUB_SHA" --format '{{index .RepoDigests 0}}')"
+          [[ "$digest" =~ @sha256:[0-9a-f]{64}$ ]]
+          mkdir -p "$RUNNER_TEMP/treksafe-imagen"
+          printf '%s\n' "commit=$GITHUB_SHA" "imagen=$digest" "plataforma=linux/amd64" > "$RUNNER_TEMP/treksafe-imagen/imagen.txt"
+      - name: Confirmar paquete privado después de publicar
+        run: python3 deployment/oci/ghcr-private.py --after-push
+      - name: Conservar identidad de imagen; no desplegar máquinas
+        uses: actions/upload-artifact@v4
+        with:
+          name: imagen-academica-${{ github.sha }}
+          path: ${{ runner.temp }}/treksafe-imagen/imagen.txt
+          retention-days: 7
 
   persistencia:
     name: Persistencia - PostgreSQL 17 y PostgREST
