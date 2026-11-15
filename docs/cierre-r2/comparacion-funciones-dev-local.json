@@ -1,0 +1,22 @@
+{
+  "dev_consultado_utc": "2026-11-15T02:34:14.314707+00:00",
+  "local_consultado_utc": "2026-11-15T02:45:59.428Z",
+  "normalizacion": "md5(replace(pg_get_functiondef(oid),chr(13),''))",
+  "coincidentes": 67,
+  "diferentes": [
+    {
+      "nombre": "treksafe_actualizar_lista_equipo",
+      "local_md5": "8e3fb762ff0118db84bba7de0aaf2d1b",
+      "dev_md5": "0bb815f180d8d5a8280e5c3dec6e9240",
+      "coincide": false,
+      "clasificacion": "solo_comentario_sin_diferencia_ejecutable_detectada",
+      "explicacion": "Al retirar de la fuente DEV el comentario interno de bloqueo de la lista, su MD5 coincide exactamente con local. Confirmado por diff histórico 6dbd632..8f9c4fe.",
+      "fuente_dev": "dev-hu30-funcion.sql, captura de solo lectura del coordinador"
+    }
+  ],
+  "nuevas_locales": [
+    "treksafe_consultar_disponibilidad_worker",
+    "treksafe_registrar_estado_worker"
+  ],
+  "alcance": "Comparación fechada de funciones, no de todos los objetos ni datos. No prueba funcionamiento del entorno publicado."
+}

@@ -1,0 +1,20 @@
+{
+  "estado": "preparado_no_aplicado_remotamente",
+  "base": "8f9c4fed0b8a798e04f7e909f1c19d82e8222d92",
+  "migracion": "032",
+  "normalizacion": "UTF-8; CRLF a LF antes de SHA256",
+  "archivos": [
+    {
+      "ruta": "backend/migrations/032_dep110_estado_worker.sql",
+      "sha256": "a78e8df7c1cbed133ac389feeae932310ca7642dfc7b8b1c8a92cd7bec7dc8e1"
+    },
+    {
+      "ruta": "docs/cierre-r2/paquete-032/verificar-032.sql",
+      "sha256": "dc5fd2c546d09f967254d996ee414e03cec9b6ec144ef6876f09c6d2db9e245a"
+    },
+    {
+      "ruta": "backend/migrations/academico/bootstrap_vacio.sql",
+      "sha256": "a99a666de5874f080d9904e6552da49aa3c70cf4f9c40e4c01aeaa82d16f068e"
+    }
+  ]
+}

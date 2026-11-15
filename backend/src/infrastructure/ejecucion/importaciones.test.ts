@@ -26,6 +26,7 @@ it('importar entradas, composición y aplicación no carga .env, abre conexiones
     'presentation/http/app.ts',
     'infrastructure/composicion/http.ts',
     'infrastructure/composicion/servicios.ts',
+    'infrastructure/repositories/EstadoWorkerSupabase.ts',
   ].map((file) => pathToFileURL(path.join(src, file)).href);
   const script = `
     import fs from 'node:fs';
