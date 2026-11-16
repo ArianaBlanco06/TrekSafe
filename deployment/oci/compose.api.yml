@@ -1,6 +1,6 @@
 services:
   api:
-    image: ${TREKSAFE_IMAGE:?Completar digest privado en deployment.env}
+    image: ${TREKSAFE_IMAGE:?Completar digest verificado en deployment.env}
     command: ["node", "dist/api.js"]
     env_file:
       - path: /etc/treksafe/api.env

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gate CI de visibilidad; el token solo se lee del entorno, nunca se imprime."""
+"""Exige el paquete público autorizado; nunca imprime el token de publicación."""
 import json
 import os
 import sys
@@ -18,17 +18,14 @@ for intento in range(5 if posterior else 1):
                             'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'})
         with urlopen(peticion, timeout=20) as respuesta:
             datos = json.load(respuesta)
-        if datos.get('visibility') != 'private':
-            sys.exit('GHCR: el paquete existente no es privado; publicación bloqueada.')
-        print('GHCR: visibilidad privada confirmada')
+        if datos.get('visibility') != 'public':
+            sys.exit('GHCR: el paquete no acredita visibilidad pública; publicación bloqueada.')
+        print('GHCR: visibilidad pública confirmada')
         break
     except HTTPError as error:
-        if error.code == 404 and not posterior:
-            print('GHCR: paquete aún no visible; primer push crea paquete privado por defecto. Se verificará después.')
-            break
-        if error.code == 404 and intento < 4:
+        if error.code == 404 and posterior and intento < 4:
             time.sleep(3)
             continue
-        sys.exit('GHCR: no fue posible acreditar visibilidad privada; publicación no acreditada.')
+        sys.exit('GHCR: no fue posible acreditar visibilidad pública; publicación no acreditada.')
     except Exception:
         sys.exit('GHCR: consulta de visibilidad fallida; no continuar sin verificar.')

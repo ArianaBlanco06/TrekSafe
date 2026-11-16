@@ -116,11 +116,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Verificar preflight sin credenciales reales
-        run: python3 -m unittest discover -s deployment/oci -p test_preflight.py
+        run: python3 -m unittest discover -s deployment/oci -p 'test_*.py'
       - name: Validar scripts de despliegue
         run: |
           bash -n deployment/oci/preflight.sh
-          python3 -m py_compile deployment/oci/preflight.py deployment/oci/actualizar-duckdns.py deployment/oci/ghcr-private.py
+          python3 -m py_compile deployment/oci/preflight.py deployment/oci/actualizar-duckdns.py deployment/oci/ghcr-public.py
       - name: Validar Compose con ejemplos sin secretos
         shell: bash
         run: |
@@ -141,7 +141,7 @@ jobs:
           docker run --rm treksafe-validacion:local node --input-type=module -e "await import('./dist/api.js'); await import('./dist/worker.js')"
 
   imagen_publicada:
-    name: Imagen - GHCR privado
+    name: Imagen - GHCR público
     if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
     needs: [backend, frontend, persistencia]
     runs-on: ubuntu-24.04
@@ -155,9 +155,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Validar configuración de despliegue
-        run: python3 -m unittest discover -s deployment/oci -p test_preflight.py
-      - name: Bloquear reutilización de un paquete público
-        run: python3 deployment/oci/ghcr-private.py
+        run: python3 -m unittest discover -s deployment/oci -p 'test_*.py'
+      - name: Confirmar paquete público autorizado
+        run: python3 deployment/oci/ghcr-public.py
       - name: Construir, publicar y registrar digest
         shell: bash
         run: |
@@ -171,9 +171,9 @@ jobs:
           digest="$(docker image inspect "$image:$GITHUB_SHA" --format '{{index .RepoDigests 0}}')"
           [[ "$digest" =~ @sha256:[0-9a-f]{64}$ ]]
           mkdir -p "$RUNNER_TEMP/treksafe-imagen"
-          printf '%s\n' "commit=$GITHUB_SHA" "imagen=$digest" "plataforma=linux/amd64" > "$RUNNER_TEMP/treksafe-imagen/imagen.txt"
-      - name: Confirmar paquete privado después de publicar
-        run: python3 deployment/oci/ghcr-private.py --after-push
+          printf '%s\n' "commit=$GITHUB_SHA" "imagen=$digest" "plataforma=linux/amd64" "visibilidad=public" > "$RUNNER_TEMP/treksafe-imagen/imagen.txt"
+      - name: Confirmar paquete público después de publicar
+        run: python3 deployment/oci/ghcr-public.py --after-push
       - name: Conservar identidad de imagen; no desplegar máquinas
         uses: actions/upload-artifact@v4
         with:
