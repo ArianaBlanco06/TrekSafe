@@ -9,7 +9,7 @@ class PreflightTest(unittest.TestCase):
         carpeta = Path(__file__).parent
         self.app = leer_env(carpeta / 'worker.env.example', proteger=False)
         self.deploy = leer_env(carpeta / 'deployment.env.example', proteger=False)
-        self.deploy.update(TREKSAFE_IMAGE='ghcr.io/prueba/treksafe-r2@sha256:' + 'a' * 64,
+        self.deploy.update(TREKSAFE_IMAGE='ghcr.io/prueba/treksafe-r2-academico@sha256:' + 'a' * 64,
                            CADDY_IMAGE='caddy@sha256:' + 'b' * 64,
                            DEPLOYMENT_COMMIT='c' * 40, API_HOST='prueba.duckdns.org',
                            ACME_EMAIL='ficticio@example.invalid', OCI_ALWAYS_FREE_CONFIRMED='true')
@@ -39,7 +39,12 @@ class PreflightTest(unittest.TestCase):
             validar('worker', self.deploy, self.app)
 
     def test_tag_mutable_rechazado(self):
-        self.deploy['TREKSAFE_IMAGE'] = 'ghcr.io/prueba/treksafe-r2:latest'
+        self.deploy['TREKSAFE_IMAGE'] = 'ghcr.io/prueba/treksafe-r2-academico:latest'
+        with self.assertRaisesRegex(ValueError, 'digest'):
+            validar('worker', self.deploy, self.app)
+
+    def test_paquete_publico_anterior_rechazado(self):
+        self.deploy['TREKSAFE_IMAGE'] = 'ghcr.io/prueba/treksafe-r2@sha256:' + 'a' * 64
         with self.assertRaisesRegex(ValueError, 'digest'):
             validar('worker', self.deploy, self.app)
 

@@ -128,7 +128,7 @@ jobs:
           sudo install -d /etc/treksafe
           sudo install -m 600 deployment/oci/api.env.example /etc/treksafe/api.env
           sudo install -m 600 deployment/oci/worker.env.example /etc/treksafe/worker.env
-          export TREKSAFE_IMAGE="ghcr.io/ficticio/treksafe-r2@sha256:$(printf 'a%.0s' {1..64})"
+          export TREKSAFE_IMAGE="ghcr.io/ficticio/treksafe-r2-academico@sha256:$(printf 'a%.0s' {1..64})"
           export CADDY_IMAGE="caddy@sha256:$(printf 'b%.0s' {1..64})"
           export API_HOST=prueba.duckdns.org ACME_EMAIL=ficticio@example.invalid
           sudo --preserve-env=TREKSAFE_IMAGE,CADDY_IMAGE,API_HOST,ACME_EMAIL docker compose -f deployment/oci/compose.api.yml config --quiet
@@ -162,7 +162,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/treksafe-r2"
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/treksafe-r2-academico"
           printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           trap 'docker logout ghcr.io >/dev/null' EXIT
           docker build --platform linux/amd64 --build-arg VCS_REF="$GITHUB_SHA" -t "$image:$GITHUB_SHA" backend
