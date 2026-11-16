@@ -9,6 +9,9 @@ import { destinoTrasLogin } from '@/lib/destinoTrasLogin';
 
 type TabLogin = 'senderista' | 'rescatista';
 
+// Las cuentas demo solo existen en DEV/local; en el entorno publicado se entregan por canal privado.
+const mostrarAccesoDemo = import.meta.env?.DEV === true || import.meta.env?.VITE_ACCESO_DEMO === 'true';
+
 export function PaginaIniciarSesion() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -154,6 +157,7 @@ export function PaginaIniciarSesion() {
           </Link>
         </p>
 
+        {mostrarAccesoDemo && (
         <div>
           <div className="flex items-center gap-3 mb-4">
             <div className="flex-1 h-px bg-border" />
@@ -201,6 +205,7 @@ export function PaginaIniciarSesion() {
             </div>
           </div>
         </div>
+        )}
       </div>
     </MobileShell>
   );
