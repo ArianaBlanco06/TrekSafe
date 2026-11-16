@@ -16,7 +16,7 @@ flowchart LR
 | Paso | Acción del PO | Condición para avanzar / evidencia |
 |---|---|---|
 | 0 | Crear cuenta Oracle, seleccionar región principal y comprobar capacidad | Cuenta activa; **dos** AMD `VM.Standard.E2.1.Micro` marcadas Always Free, sin cambio a cuenta de pago ni shapes sustitutos |
-| 1 | Revisar PR, solicitar la revisión independiente exigida y esperar CI | Commit integrado exacto, checks verdes, imagen GHCR privada y digest registrados |
+| 1 | Revisar PR, solicitar la revisión independiente exigida y esperar CI | Commit integrado exacto, checks verdes, imagen GHCR pública autorizada y digest registrados |
 | 2 | Crear Supabase Free académico separado y aplicar esquema | Sin datos/usuarios DEV; inventario inicial vacío, orden completo, ledger hasta 032 y permisos comprobados |
 | 3 | Crear y configurar las dos VM, sin arrancar worker | 2 × 1 GB RAM, Ubuntu 24.04 LTS x86, 2 × 50 GB boot; configuración por rol y secretos separados |
 | 4 | Publicar API HTTPS y PWA | DuckDNS/Caddy, CORS exacto, Vercel deployment/commit registrado; `/salud` responde y `/disponibilidad` aún puede estar degradado |
@@ -36,13 +36,13 @@ Oracle puede reclamar instancias gratuitas inactivas según su ventana de siete 
 
 ## 1. Código e imagen que se van a publicar
 
-La rama debe pasar backend, frontend y PostgreSQL/PostgREST. El PR también construye la imagen amd64 sin acceder a secretos ni publicarla. Solo un push a `develop` o `main`, después de esas tres validaciones, puede publicar en GHCR. El workflow no crea ni actualiza VM. Hace una comprobación de visibilidad privada antes y después de publicar; si no puede acreditarla, **no usar el resultado como imagen autorizada para despliegue**.
+La rama debe pasar backend, frontend y PostgreSQL/PostgREST. El PR también construye la imagen amd64 sin acceder a secretos ni publicarla. Solo un push a `develop` o `main`, después de esas tres validaciones, puede publicar en GHCR. El workflow no crea ni actualiza VM. El perfil académico usa una imagen **pública**, por decisión del PO. Comprueba esa visibilidad antes y después de publicar; si no puede acreditarla, **no usar el resultado como imagen autorizada para despliegue**.
 
 La revisión obligatoria del repositorio requiere otro integrante; no se sustituye por la autorrevisión del PO. Obtener el SHA completo integrado y el artefacto CI `imagen-academica-<SHA>/imagen.txt`. Usar `ghcr.io/<propietario-en-minusculas>/treksafe-r2-academico@sha256:<digest>`, nunca `latest`. La etiqueta OCI `org.opencontainers.image.revision` debe coincidir con ese SHA. GHCR indica almacenamiento y transferencia de contenedores gratuitos actualmente; revisar esa condición antes de publicar. Los minutos/artefactos Actions tienen límites propios, y el artefacto de identidad se conserva siete días: guardar su copia en el expediente. [Facturación GHCR](https://docs.github.com/en/billing/concepts/product-billing/github-packages).
 
-El paquete académico usa el nombre nuevo `treksafe-r2-academico`: el paquete anterior `treksafe-r2` es público y bloqueó la publicación integrada. GitHub no permite volver privado un paquete público. El workflow verifica la visibilidad del paquete nuevo antes y después de publicar; si aún no existe, el primer push lo crea privado por defecto y la comprobación posterior debe confirmarlo antes de guardar el artefacto de identidad. El preflight de las VM rechaza el nombre anterior incluso con un digest válido. [Visibilidad de paquetes](https://docs.github.com/en/packages/learn-github-packages/configuring-a-packages-access-control-and-visibility).
+El paquete autorizado es `treksafe-r2-academico`, ya existente y público. `ghcr-public.py` exige que exista con visibilidad pública antes del push y vuelve a comprobarla después; no cambia permisos ni crea paquetes con una visibilidad supuesta. El preflight de las VM rechaza el nombre anterior `treksafe-r2` incluso con un digest válido. El artefacto de identidad registra `visibilidad=public` junto con digest, revisión y plataforma. [Visibilidad de paquetes](https://docs.github.com/en/packages/learn-github-packages/configuring-a-packages-access-control-and-visibility).
 
-Para descargar un paquete privado en cada VM, usar una cuenta GitHub autorizada y un token clásico limitado a `read:packages`; introducirlo por `docker login ghcr.io --username <usuario>` en el prompt, no en comandos, documentos ni logs. Guardar la configuración Docker root con permisos restringidos y revocar el token al terminar si deja de necesitarse. Las VM no compilan Node ni clonan `.env` de DEV.
+En cada VM descargar la imagen pública por digest con `sudo docker pull ghcr.io/arianablanco06/treksafe-r2-academico@sha256:<digest-verificado>`; no requiere iniciar sesión en GHCR ni guardar un token GitHub en las VM. La autenticación de publicación permanece limitada al `GITHUB_TOKEN` del workflow. Las credenciales de la aplicación se configuran únicamente al ejecutar API/worker mediante sus archivos protegidos en `/etc/treksafe`, fuera de Git, la imagen y los artefactos CI. El Dockerfile copia los manifiestos, dependencias y código compilado; `.dockerignore` excluye `.env` y evidencias. Las VM no compilan Node ni clonan `.env` de DEV.
 
 ## 2. Proyecto Supabase académico y esquema
 
@@ -98,7 +98,7 @@ Preparar `/etc/treksafe` con propietario root, modo 700. Copiar `deployment.env.
 
 | Campo | Valor que completa el PO |
 |---|---|
-| `TREKSAFE_IMAGE` | Digest privado verificado del CI; igual en ambas VM |
+| `TREKSAFE_IMAGE` | Digest de la imagen pública verificado del CI; igual en ambas VM |
 | `DEPLOYMENT_COMMIT` | SHA completo que coincide con la etiqueta de imagen |
 | `CADDY_IMAGE` | `caddy@sha256:…` de imagen oficial descargada y registrada; solo API |
 | `API_HOST` / `ACME_EMAIL` | Subdominio DuckDNS elegido y correo operativo ACME |
@@ -152,7 +152,7 @@ Crear monitores **UptimeRobot Free** cada **5 minutos** sobre `/api/salud`, `/ap
 
 ## 6. Validación publicada y recuperación
 
-Completar `publicado.manifest.example.json` fuera de Git con las URLs **reales**, commit de 40 caracteres y esquema verificado; el runner rechaza valores vacíos, localhost o HTTP. Conservar también `registro-publicacion.example.json`: contrastar deployment Vercel/SHA, imagen descargada/digest/etiqueta y ledger Supabase. Un manifiesto rellenado por el PO **no demuestra por sí solo** qué código o esquema ejecuta una URL.
+Completar `publicado.manifest.example.json` fuera de Git con las URLs **reales**, commit de 40 caracteres y esquema verificado; el runner rechaza valores vacíos, localhost o HTTP. Conservar también `registro-publicacion.example.json`: contrastar deployment Vercel/SHA, imagen descargada/digest/etiqueta, visibilidad pública y ledger Supabase. Registrar `imagenBackendVisibilidad=public` solo tras verificar el paquete y su publicación. Un manifiesto rellenado por el PO **no demuestra por sí solo** qué código o esquema ejecuta una URL.
 
 Seguir [protocolo integral](../../docs/cierre-r2/protocolo-aceptacion.md), [PWA y runner](../../docs/cierre-r2/pwa-validacion.md) y matriz. Las rutas desde la raíz son `docs/cierre-r2/…`; la aceptación debe cubrir los 75 criterios, las seis tareas TECH y regresiones R1 pertinentes, no solo los dos smokes de lectura. Usar 10 senderistas y 2 rescatistas ficticios durante 15 min, observación 30 min y máximo 20 correos controlados, ajustando los datos necesarios a cada caso. No ejecutar carga contra DEV compartido.
 

@@ -4,6 +4,7 @@
   "responsablePO": "",
   "commitBackend": "",
   "imagenBackendDigest": "",
+  "imagenBackendVisibilidad": "",
   "imagenBackendRevisionLabel": "",
   "imagenCaddyDigest": "",
   "vercelDeploymentId": "",
