@@ -10,7 +10,7 @@ from urllib.request import Request, urlopen
 owner = os.environ['GITHUB_REPOSITORY_OWNER']
 tipo = os.environ.get('OWNER_TYPE', 'User')
 segmento = 'orgs' if tipo == 'Organization' else 'users'
-url = f'https://api.github.com/{segmento}/{owner}/packages/container/treksafe-r2'
+url = f'https://api.github.com/{segmento}/{owner}/packages/container/treksafe-r2-academico'
 posterior = '--after-push' in sys.argv
 for intento in range(5 if posterior else 1):
     try:

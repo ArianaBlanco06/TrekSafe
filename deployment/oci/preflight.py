@@ -47,7 +47,7 @@ def validar(role, deploy, app):
     exigir(role in ('api', 'worker'), 'Rol api o worker requerido')
     exigir(deploy.get('OCI_ALWAYS_FREE_CONFIRMED') == 'true',
            'Falta comprobación manual Always Free y costo cero en OCI')
-    exigir(re.fullmatch(r'ghcr\.io/[a-z0-9._-]+/treksafe-r2@sha256:[0-9a-f]{64}',
+    exigir(re.fullmatch(r'ghcr\.io/[a-z0-9._-]+/treksafe-r2-academico@sha256:[0-9a-f]{64}',
                         deploy.get('TREKSAFE_IMAGE', '')), 'Falta digest inmutable GHCR')
     exigir(re.fullmatch(r'[0-9a-f]{40}', deploy.get('DEPLOYMENT_COMMIT', '')),
            'Falta commit completo de publicación')
