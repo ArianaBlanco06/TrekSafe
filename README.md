@@ -6,7 +6,7 @@ El senderista registra su plan de expedición y confirma el retorno seguro. Si n
 
 [Arquitectura y estado R2](docs/arquitectura/README.md) · [Roadmap del PO: Oracle Always Free](deployment/oci/README.md) · [Cierre y aceptación R2](docs/cierre-r2/README.md) · [`.env.example`](.env.example)
 
-URLs históricas: [PWA](https://treksafe-app.vercel.app) · [API /salud](https://treksafe-api.fly.dev/api/salud). Consulta del 2026-11-10: PWA respondió 404 y el host de API no se resolvió desde el entorno de comprobación. La versión publicada y la configuración de las cuentas no están verificadas. [Evidencia y límites](docs/arquitectura/estado-actual.md).
+**Versión actual: [v2.0.0](https://github.com/ArianaBlanco06/TrekSafe/releases/tag/v2.0.0)** (Release 2, 16/11/2026) · [PWA](https://treksafe-r2.vercel.app) · [API /salud](https://treksafe-v2.duckdns.org/api/salud) · [Worker /disponibilidad](https://treksafe-v2.duckdns.org/api/disponibilidad)
 
 ![Node](https://img.shields.io/badge/Node.js-22-339933?logo=nodedotjs&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
@@ -18,11 +18,11 @@ URLs históricas: [PWA](https://treksafe-app.vercel.app) · [API /salud](https:/
 ![Vercel](https://img.shields.io/badge/PWA-Vercel-000000?logo=vercel&logoColor=white)
 
 > Proyecto académico — **Universidad de Lima** · Continuidad de Ingeniería de Software 1 a Ingeniería de Software 2 · 2026.
-> **Release 2 (ISW2):** arquitectura objetivo con API y tareas en máquinas separadas y monitoreo continuo. El diseño de [#106](https://github.com/ArianaBlanco06/TrekSafe/issues/106) guía las tareas de implementación y despliegue; la validación integral corresponde a [#112](https://github.com/ArianaBlanco06/TrekSafe/issues/112). No se declara aquí un cierre funcional de las 25 HU R2.
+> **Release 2 (ISW2):** arquitectura objetivo con API y tareas en máquinas separadas y monitoreo continuo. El diseño de [#106](https://github.com/ArianaBlanco06/TrekSafe/issues/106) guía las tareas de implementación y despliegue; la validación integral corresponde a [#112](https://github.com/ArianaBlanco06/TrekSafe/issues/112). Las 25 HU del Release 2 y las tareas DEP-01 a DEP-07 fueron aceptadas por el PO el 16/11/2026 ([acta](docs/cierre-r2/acta-aceptacion.md)).
 
 > **Continuidad ISW2 — HU-32:** gestión de puntos intermedios implementada y validada localmente. [Dossier, demostración y evidencia](docs/hu-32/README.md). Su migración `010_hu32_puntos_ruta.sql` está aplicada y registrada en Supabase DEV.
 
-> **Continuidad ISW2 — HU-40:** transferir la coordinación de una alerta: proponer, aceptar, rechazar y cancelar el relevo entre rescatistas validados, con historial de quién resolvió y cuándo. [Diseño y estado](docs/hu-40/diseno.md) · [prueba manual](docs/hu-40/evidencias/prueba-manual.md). Su migración `021_hu40_transferir_coordinacion.sql` (antes `019`, que ocupó HU-41; corregida en sitio para ampliar el relevo) no está aplicada en ningún entorno compartido y queda pendiente de que Ariana confirme que no está en Supabase DEV. La prueba manual de la API contra Supabase real (proyecto personal) se ejecutó con la versión corregida y dio todo PASS; queda pendiente la del navegador. El relevo pendiente de un caso cerrado queda inerte (sin trigger; el riesgo de reabrir casos está en el diseño). Sin notificación adicional al destinatario.
+> **Continuidad ISW2 — HU-40:** transferir la coordinación de una alerta: proponer, aceptar, rechazar y cancelar el relevo entre rescatistas validados, con historial de quién resolvió y cuándo. [Diseño y estado](docs/hu-40/diseno.md) · [prueba manual](docs/hu-40/evidencias/prueba-manual.md). Su migración `021_hu40_transferir_coordinacion.sql` (antes `019`, que ocupó HU-41) está aplicada y registrada en Supabase DEV. El relevo pendiente de un caso cerrado queda inerte (sin trigger; el riesgo de reabrir casos está en el diseño). Sin notificación adicional al destinatario.
 
 ## Contenido
 
@@ -66,7 +66,7 @@ URLs históricas: [PWA](https://treksafe-app.vercel.app) · [API /salud](https:/
 
 Monorepo con PWA estática en Vercel y backend Node/Express. El objetivo vigente aloja API y worker en dos VM Oracle Always Free. Las entradas independientes [api.ts](backend/src/api.ts) y [worker.ts](backend/src/worker.ts) usan composición e inyección de dependencias; [main.ts](backend/src/main.ts) conserva el arranque histórico y se rechaza en producción. La fotografía anterior en `8508bb4` se conserva en [estado al corte de #106](docs/arquitectura/estado-actual.md).
 
-**Objetivo de despliegue R2:** una imagen Docker privada por digest, dos AMD E2.1.Micro de 1 GB y 50 GB boot cada una; únicamente API expone HTTPS mediante Caddy/DuckDNS. Ambos procesos usan Data API/RPC de Supabase; el worker produce cambios/pedidos de forma transaccional y consume la outbox duradera. Vercel Hobby, Supabase Free académico separado y Brevo Free completan el entorno. El [roadmap manual del PO](deployment/oci/README.md) documenta capacidad gratuita, configuración, monitoreo y recuperación. No hay publicación nueva acreditada todavía.
+**Despliegue R2:** una imagen Docker publicada en GHCR e identificada por digest, dos AMD E2.1.Micro de 1 GB y 50 GB boot cada una; únicamente API expone HTTPS mediante Caddy/DuckDNS. Ambos procesos usan Data API/RPC de Supabase; el worker produce cambios/pedidos de forma transaccional y consume la outbox duradera. Vercel Hobby, Supabase Free académico separado y Brevo Free completan el entorno. El [roadmap manual del PO](deployment/oci/README.md) documenta capacidad gratuita, configuración, monitoreo y recuperación. Publicado como [v2.0.0](https://github.com/ArianaBlanco06/TrekSafe/releases/tag/v2.0.0).
 
 El navegador usa REST y JWT propios. `service_role` permanece en servidor y evita RLS; API/RPC deben aplicar autorización de actor y propietario. El correo es un adaptador dentro del backend, sin un servicio TCP interno adicional.
 
@@ -95,7 +95,7 @@ TrekSafe/
 │   └── fly.toml        # Configuración histórica de un grupo app
 ├── frontend/           # PWA React / Vite, salida dist
 ├── docs/arquitectura/  # Diseño R2, evidencia, decisiones y transición
-├── .github/workflows/  # CI: validaciones; publicación pendiente en #110
+├── .github/workflows/  # CI: validaciones y publicación de la imagen en GHCR
 ├── init_schema.sql     # Solo base nueva/descartable: borra y recrea tablas
 └── .env.example        # Plantilla sin secretos
 ```
@@ -159,16 +159,19 @@ Referencia completa: [`.env.example`](.env.example).
 
 ## Despliegue
 
-La siguiente tabla recoge **destinos históricos declarados**, no disponibilidad o revisión publicada certificadas:
+Entorno académico publicado en la versión [v2.0.0](https://github.com/ArianaBlanco06/TrekSafe/releases/tag/v2.0.0):
 
 | Capa | Plataforma | URL |
 | --- | --- | --- |
-| PWA | Vercel | https://treksafe-app.vercel.app |
-| API + cron | Fly.io (`iad`) | https://treksafe-api.fly.dev |
-| DB | Supabase | `service_role` |
-| Email | Brevo (desde Fly) | API y/o SMTP |
+| PWA | Vercel | https://treksafe-r2.vercel.app |
+| API | Oracle Cloud (VM con Caddy/DuckDNS) | https://treksafe-v2.duckdns.org/api |
+| Worker (plazos y notificaciones) | Oracle Cloud (VM separada) | Estado en `/api/disponibilidad` |
+| DB | Supabase académico, separado de DEV | Acceso solo desde el servidor (`service_role`) |
+| Email | Brevo (desde el worker) | API |
 
-**Roadmap vigente:** [cuenta Oracle y capacidad gratuita → CI e imagen → Supabase académico → dos VM → API HTTPS/PWA → worker/monitoreo → aceptación PO](deployment/oci/README.md). El PO aún no tiene cuenta Oracle; no hay nuevas URLs ni consumo observado. La decisión [D7](docs/arquitectura/decisiones.md) sustituye el diseño Fly por recursos Always Free, sin fallback de pago.
+Las cuentas de prueba del entorno académico se entregan por canal privado.
+
+**Procedimiento:** [cuenta Oracle y capacidad gratuita → CI e imagen → Supabase académico → dos VM → API HTTPS/PWA → worker/monitoreo → aceptación PO](deployment/oci/README.md). La decisión [D7](docs/arquitectura/decisiones.md) sustituye el diseño Fly por recursos Always Free, sin fallback de pago.
 
 Artefactos: [`deployment/oci`](deployment/oci/README.md) · [`backend/Dockerfile`](backend/Dockerfile) · [`frontend/vercel.json`](frontend/vercel.json). `fly.toml` y `set-fly-secrets.ps1` se conservan como antecedentes y no son el procedimiento de publicación R2. No importar el `.env` DEV para desplegar.
 
@@ -215,9 +218,25 @@ La PWA conserva assets públicos y borradores/plantillas propios de la sesión; 
 
 ## Equipo
 
+**Release 2 — Ingeniería de Software 2 (2026)**
+
 | Integrante | Rol |
 | --- | --- |
-| Marko Antonio Lopez Bernuy | Product Owner |
+| Marko Antonio López Bernuy | Product Owner |
+| Ariana Belen Blanco Quintana | Scrum Master |
+| Sebastián Ricardo Chapman López | Developer |
+| Favio Antonio Chavarry Minaya | Developer |
+| Andriy Hitoshi Enciso Rojas | Developer |
+| Fernando Jesús Quispe Gámez | Developer |
+| Jhon Raúl Romero Berto | Developer |
+
+**Docente:** Hernán Alejandro Quintana Cruz · Universidad de Lima · Ingeniería de Sistemas
+
+**Release 1 — Ingeniería de Software 1**
+
+| Integrante | Rol |
+| --- | --- |
+| Marko Antonio López Bernuy | Product Owner |
 | Ariana Belen Blanco Quintana | Scrum Master |
 | Manuel Rodrigo Llaury Murga | Developer |
 | Pedro Leonardo Ormeño Moquillaza | Developer |
