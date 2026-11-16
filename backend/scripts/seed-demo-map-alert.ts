@@ -1,10 +1,11 @@
-import { loadEnv } from '../src/infrastructure/config/env.js';
+import { inicializarEntorno, loadEnv } from '../src/infrastructure/config/env.js';
 import { getSupabaseAdmin } from '../src/infrastructure/database/supabase.js';
 
 const DEMO_EXPEDICION_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa99';
 const SENDERISTA_ID = '11111111-1111-4111-8111-111111111111';
 const CONTACTO_ID = '9dbe61f5-d60b-407f-a95b-8a6ca66d4274';
 
+inicializarEntorno();
 loadEnv();
 
 const supabase = getSupabaseAdmin();

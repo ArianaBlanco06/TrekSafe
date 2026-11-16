@@ -1,7 +1,8 @@
-import { buildCorreoAlertaContacto } from '../../infrastructure/email/templates/contactAlertEmail.js';
-import { ServicioCorreo } from '../../infrastructure/email/ServicioCorreo.js';
-import { RepositorioAlerta } from '../../infrastructure/repositories/RepositorioAlerta.js';
-import { RepositorioDespachoCorreo } from '../../infrastructure/repositories/RepositorioDespachoCorreo.js';
+import { buildCorreoAlertaContacto } from '../mensajes/contactAlertEmail.js';
+import type { ICorreo } from '../ports/correo.js';
+import type { IRepositorioAlerta } from '../ports/RepositorioAlerta.js';
+import type { IRepositorioDespachoCorreo } from '../ports/RepositorioDespachoCorreo.js';
+import type { IRepositorioOutbox } from '../../domain/repositories/IRepositorioOutbox.js';
 
 export type ResultadoAlertaContacto = {
   expedicionId: string;
@@ -13,9 +14,10 @@ export type ResultadoAlertaContacto = {
 
 export class ServicioNotificacionAlerta {
   constructor(
-    private readonly repoAlerta = new RepositorioAlerta(),
-    private readonly correo = new ServicioCorreo(),
-    private readonly repoDespacho = new RepositorioDespachoCorreo(),
+    private readonly repoAlerta: IRepositorioAlerta,
+    private readonly correo: ICorreo,
+    private readonly repoDespacho: IRepositorioDespachoCorreo,
+    private readonly repoOutbox?: IRepositorioOutbox,
   ) {}
 
   async notificarContactosEmergencia(expedicionId: string): Promise<ResultadoAlertaContacto> {
@@ -53,21 +55,40 @@ export class ServicioNotificacionAlerta {
         fechaLimite: contexto.fechaLimite,
       });
 
-      try {
-        const resultado = await this.correo.enviar({ to: contacto.correoElectronico, subject, html, text });
-        if (resultado === 'enviado') {
-          enviados++;
-          await this.repoDespacho.registrarEnvio(expedicionId, 'alerta_contacto', contacto.correoElectronico);
-        } else {
+      if (this.repoOutbox) {
+        try {
+          await this.repoOutbox.guardar({
+            claveEvento: `ALERTA_CONTACTO:${expedicionId}`,
+            canal: 'correo',
+            tipoEvento: 'ALERTA_CONTACTO',
+            destinatario: contacto.correoElectronico,
+            asunto: subject,
+            cuerpo: text,
+            cuerpoHtml: html,
+            metadata: { expedicionId, tipoDespacho: 'alerta_contacto' },
+          });
           registrados++;
+        } catch (err) {
+          fallidos++;
+          console.error('[Notificaciones] Operación fallida; revisar persistencia o transporte');
         }
-      } catch (err) {
-        fallidos++;
-        console.error(`[Alerta] fallo envío a ${contacto.correoElectronico}:`, err);
+      } else {
+        try {
+          const resultado = await this.correo.enviar({ to: contacto.correoElectronico, subject, html, text });
+          if (resultado === 'enviado') {
+            enviados++;
+            await this.repoDespacho.registrarEnvio(expedicionId, 'alerta_contacto', contacto.correoElectronico);
+          } else {
+            registrados++;
+          }
+        } catch (err) {
+          fallidos++;
+          console.error('[Notificaciones] Operación fallida; revisar persistencia o transporte');
+        }
       }
     }
 
-    const modo = this.correo.getModoTransporte();
+    const modo = this.correo?.getModoTransporte ? this.correo.getModoTransporte() : 'outbox';
     console.log(
       `[Alerta] expedición ${expedicionId}: contactos enviados=${enviados} registrados=${registrados} fallidos=${fallidos} omitidos=${omitidos} modo=${modo}`,
     );

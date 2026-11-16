@@ -1,0 +1,28 @@
+{
+  "fecha": "2026-11-11T20:08:54.108Z",
+  "postgresql": "18.1",
+  "casosAprobados": [
+    "API y PostgreSQL conservan el conjunto y desempatan por fecha e id",
+    "el SDK y SQL cuentan participantes reales e incluyen al senderista individual",
+    "HTTP conserva permisos y rechaza criterios inválidos",
+    "consola y API muestran el orden por tiempo con coordinación vigente",
+    "consola y API cambian al tamaño del grupo conservando las cuatro expediciones",
+    "la zona y el criterio se combinan y la vista cabe a 320 píxeles",
+    "las consultas y la consola conservan estados, plazos, acompañantes y coordinación persistidos"
+  ],
+  "expedicionesSembradas": 6,
+  "alertasAbiertas": 3,
+  "expedicionesMonitor": 4,
+  "transporte": "SDK Supabase con puente fetch a SQL local, ejecutado como service_role en transacciones de lectura",
+  "esquema": [
+    "init_schema.sql",
+    "000",
+    "002",
+    "017"
+  ],
+  "capturas": [
+    "01-tiempo-excedido.png",
+    "02-participantes.png",
+    "03-zona-y-criterio.png"
+  ]
+}

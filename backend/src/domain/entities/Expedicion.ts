@@ -10,6 +10,7 @@ export type Expedicion = {
   horaInicio: string;
   horaRetornoEstimada: string;
   minutosTolerancia: number;
+  minutosRecordatorio?: number;
   estado: EstadoExpedicion;
   creadoEn?: string;
   actualizadoEn?: string;

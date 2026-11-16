@@ -1,0 +1,63 @@
+{
+  "fecha": "2026-11-11T20:00:43.281Z",
+  "proyecto": "ibnwggvqgjpeqcretjak",
+  "autenticacion": "JWT técnico temporal emitido localmente para un perfil validado existente; prueba de endpoints de lectura",
+  "migraciones": [
+    {
+      "version": "015",
+      "nombre": "hu45_outbox",
+      "aplicada_en": "2026-11-11T12:57:25.84988+00:00"
+    },
+    {
+      "version": "022",
+      "nombre": "dep108_crear_expedicion_atomica",
+      "aplicada_en": "2026-11-11T12:57:41.218784+00:00"
+    },
+    {
+      "version": "023",
+      "nombre": "dep108_avisos_transaccionales",
+      "aplicada_en": "2026-11-11T12:57:45.709019+00:00"
+    },
+    {
+      "version": "024",
+      "nombre": "dep108_vencimientos_outbox",
+      "aplicada_en": "2026-11-11T12:57:50.433671+00:00"
+    }
+  ],
+  "lecturas": [
+    {
+      "endpoint": "alertas",
+      "criterio": "tiempo_excedido",
+      "estado": 200,
+      "cantidad": 0,
+      "cache": "no-store"
+    },
+    {
+      "endpoint": "alertas",
+      "criterio": "tamano_grupo",
+      "estado": 200,
+      "cantidad": 0,
+      "cache": "no-store"
+    },
+    {
+      "endpoint": "expediciones",
+      "criterio": "tiempo_excedido",
+      "estado": 200,
+      "cantidad": 0,
+      "cache": "no-store"
+    },
+    {
+      "endpoint": "expediciones",
+      "criterio": "tamano_grupo",
+      "estado": 200,
+      "cantidad": 0,
+      "cache": "no-store"
+    }
+  ],
+  "permisos": {
+    "sinToken": 401,
+    "rolSenderista": 403,
+    "criterioInvalido": 400
+  },
+  "alcance": "Lecturas reales de Supabase DEV con conjuntos vacíos. Los casos de ordenación con datos se verificaron en PostgreSQL local desechable."
+}

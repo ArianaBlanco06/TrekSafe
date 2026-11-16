@@ -1,7 +1,10 @@
 import { readOfflineJson, writeOfflineJson } from '@/lib/offlineStorage';
+import { getSessionScope } from '@/lib/sesion';
+import { ColaLocalCache } from '@/infrastructure/ColaLocalCache';
+import type { BorradorExpedicion, DatosBorrador } from '@/application/ports/IColaLocal';
+export type { BorradorExpedicion } from '@/application/ports/IColaLocal';
 
 const CLAVE_PLANTILLAS = 'route-templates';
-const CLAVE_BORRADORES = 'expedition-drafts';
 
 export type PlantillaRuta = {
   id: string;
@@ -14,24 +17,9 @@ export type PlantillaRuta = {
   actualizadoEn: string;
 };
 
-export type BorradorExpedicion = {
-  id: string;
-  lugarInicio: string;
-  lugarFin: string;
-  coordenadasInicio: string;
-  coordenadasFin: string;
-  horaInicio: string;
-  horaRetornoEstimada: string;
-  minutosTolerancia: number;
-  idsContactos: string[];
-  nombresAcompanantes: string[];
-  guardadoEn: string;
-};
 
-export async function listarPlantillasRuta(): Promise<PlantillaRuta[]> {
-  const plantillas = await readOfflineJson<PlantillaRuta[]>(CLAVE_PLANTILLAS, [], [
-    'treksafe-route-templates',
-  ]);
+export async function listarPlantillasRuta(scope = getSessionScope()): Promise<PlantillaRuta[]> {
+  const plantillas = await readOfflineJson<PlantillaRuta[]>(CLAVE_PLANTILLAS, [], scope);
   return plantillas.sort(
     (a, b) => b.vecesUsada - a.vecesUsada || b.actualizadoEn.localeCompare(a.actualizadoEn),
   );
@@ -39,8 +27,9 @@ export async function listarPlantillasRuta(): Promise<PlantillaRuta[]> {
 
 export async function guardarPlantillaRuta(
   input: Omit<PlantillaRuta, 'id' | 'vecesUsada' | 'actualizadoEn'>,
+  scope = getSessionScope(),
 ): Promise<void> {
-  const plantillas = await listarPlantillasRuta();
+  const plantillas = await listarPlantillasRuta(scope);
   const existente = plantillas.find(
     (p) =>
       p.lugarInicio === input.lugarInicio &&
@@ -62,33 +51,20 @@ export async function guardarPlantillaRuta(
     });
   }
 
-  await writeOfflineJson(CLAVE_PLANTILLAS, plantillas.slice(0, 12));
+  await writeOfflineJson(CLAVE_PLANTILLAS, plantillas.slice(0, 12), scope);
 }
 
-export async function listarBorradoresExpedicion(): Promise<BorradorExpedicion[]> {
-  const borradores = await readOfflineJson<BorradorExpedicion[]>(CLAVE_BORRADORES, [], [
-    'treksafe-expedition-drafts',
-  ]);
-  return borradores.sort((a, b) => b.guardadoEn.localeCompare(a.guardadoEn));
+export async function listarBorradoresExpedicion(scope = getSessionScope()): Promise<BorradorExpedicion[]> {
+  return new ColaLocalCache(scope).listar();
 }
 
 export async function guardarBorradorExpedicion(
-  borrador: Omit<BorradorExpedicion, 'id' | 'guardadoEn'>,
+  borrador: DatosBorrador,
+  scope = getSessionScope(),
 ): Promise<BorradorExpedicion> {
-  const borradores = await listarBorradoresExpedicion();
-  const entrada: BorradorExpedicion = {
-    id: crypto.randomUUID(),
-    ...borrador,
-    guardadoEn: new Date().toISOString(),
-  };
-  await writeOfflineJson(CLAVE_BORRADORES, [entrada, ...borradores].slice(0, 5));
-  return entrada;
+  return new ColaLocalCache(scope).insertar(borrador);
 }
 
-export async function eliminarBorradorExpedicion(id: string): Promise<void> {
-  const borradores = await listarBorradoresExpedicion();
-  await writeOfflineJson(
-    CLAVE_BORRADORES,
-    borradores.filter((b) => b.id !== id),
-  );
+export async function eliminarBorradorExpedicion(id: string, scope = getSessionScope()): Promise<void> {
+  await new ColaLocalCache(scope).eliminar(id);
 }

@@ -58,8 +58,11 @@ function resolverUno<T>(raw: T | T[] | null | undefined): T | null {
 export class RepositorioAlerta {
   private readonly supabase = getSupabaseAdmin();
 
-  async buscarContextoAlerta(expedicionId: string): Promise<ContextoAlertaExpedicion | null> {
-    const completo = await this.buscarContextoAlertaRescate(expedicionId);
+  async buscarContextoAlerta(
+    expedicionId: string,
+    permitirCualquierEstado = false,
+  ): Promise<ContextoAlertaExpedicion | null> {
+    const completo = await this.buscarContextoAlertaRescate(expedicionId, permitirCualquierEstado);
     if (!completo) return null;
 
     return {
@@ -76,8 +79,11 @@ export class RepositorioAlerta {
     };
   }
 
-  async buscarContextoAlertaRescate(expedicionId: string): Promise<ContextoAlertaRescate | null> {
-    const { data, error } = await this.supabase
+  async buscarContextoAlertaRescate(
+    expedicionId: string,
+    permitirCualquierEstado = false,
+  ): Promise<ContextoAlertaRescate | null> {
+    let query = this.supabase
       .from('expediciones')
       .select(
         `
@@ -91,9 +97,13 @@ export class RepositorioAlerta {
         )
       `,
       )
-      .eq('id', expedicionId)
-      .eq('estado', 'alerta')
-      .maybeSingle();
+      .eq('id', expedicionId);
+
+    if (!permitirCualquierEstado) {
+      query = query.eq('estado', 'alerta');
+    }
+
+    const { data, error } = await query.maybeSingle();
 
     if (error) throw new ErrorAplicacion(500, error.message);
     if (!data) return null;

@@ -1,0 +1,47 @@
+{
+  "consultado_utc": "2026-11-15T02:37:01.0529218Z",
+  "tareas": [
+    {
+      "issue": 107,
+      "titulo": "[TECH][DEP-03] Refactorizar los módulos del backend para API y tareas independientes",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/107",
+      "estado": "open",
+      "criterios": "- [ ] Los casos de uso refactorizados dependen de contratos y no importan adaptadores concretos de infraestructura.\n- [ ] API y tareas pueden construirse de forma independiente y reutilizan reglas de negocio sin duplicarlas.\n- [ ] Las pruebas pueden sustituir reloj, repositorios y correo sin usar Supabase compartido ni enviar correos reales.\n- [ ] Pasan las verificaciones existentes pertinentes y las regresiones de los contratos afectados, incluidos roles y propiedad de recursos.\n- [ ] Se documentan módulos cambiados, decisiones, deuda restante y comandos reproducibles."
+    },
+    {
+      "issue": 108,
+      "titulo": "[TECH][DEP-04] Consolidar transacciones, concurrencia y migraciones por entorno",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/108",
+      "estado": "open",
+      "criterios": "- [ ] Una instalación desechable reproduce el esquema requerido aplicando las migraciones en orden, y la actualización se prueba sobre una base representativa con datos ficticios.\n- [ ] Un fallo intermedio no deja expediciones incompletas ni cambios de negocio sin su evento/notificación requerida.\n- [ ] Se verifican conflictos de versión, reintentos y concurrencia de las operaciones afectadas.\n- [ ] Los permisos impiden el acceso directo de clientes a objetos privados y las RPC verifican propiedad/actor según su contrato.\n- [ ] Cada entorno usado tiene evidencia de versión de esquema y aplicaciones reales; no se reejecuta init_schema.sql sobre bases compartidas ni DDL no reejecutable ya aplicado.\n- [ ] Se documenta el procedimiento de recuperación y cualquier limitación de reversión sin prometer rollback destructivo automático."
+    },
+    {
+      "issue": 109,
+      "titulo": "[TECH][DEP-02] Integrar motor de tareas y outbox con recuperación ante fallos",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/109",
+      "estado": "open",
+      "criterios": "- [ ] Una interrupción después del cambio de estado conserva el pendiente y este puede procesarse al reiniciar.\n- [ ] La concurrencia de procesadores respeta las reservas y la clave única de notificación lógica, con pruebas de reserva vencida y reintento.\n- [ ] Se prueban fallo temporal, agotamiento de intentos, respuesta ambigua y caída entre aceptación del proveedor y registro local; se documentan límites sobre duplicados.\n- [ ] Los ciclos no se solapan sin control y el apagado deja las tareas en un estado recuperable.\n- [ ] La configuración identifica qué instancia ejecuta tareas, y una API de desarrollo no las activa por accidente contra la base compartida.\n- [ ] Existe evidencia del flujo completo con transporte de prueba y una prueba real controlada de correo en la validación final."
+    },
+    {
+      "issue": 110,
+      "titulo": "[TECH][DEP-05] Preparar entornos, publicación y monitoreo del despliegue académico",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/110",
+      "estado": "open",
+      "criterios": "- [ ] La configuración de cada entorno es reproducible y se validan variables obligatorias sin revelar sus valores.\n- [ ] La publicación exige que pasen las verificaciones pertinentes y deja trazabilidad de código, esquema y servicios publicados.\n- [ ] Se puede reconocer si falla la API, la base, el procesador o el envío, y detectar pendientes que exceden el umbral documentado.\n- [ ] Se comprueba persistencia de pendientes y recuperación ante reinicio durante una publicación.\n- [ ] Existe un procedimiento de recuperación probado o ensayado en entorno controlado, con límites de compatibilidad explícitos.\n- [ ] Quedan documentados recursos, consumo observado, umbrales, URLs de cada entorno y guía de diagnóstico."
+    },
+    {
+      "issue": 111,
+      "titulo": "[TECH][DEP-06] Optimizar consultas y validar la PWA/offline contra la arquitectura R2",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/111",
+      "estado": "open",
+      "criterios": "- [ ] Se compara una medición antes/después de solicitudes periódicas y carga inicial, con escenarios y resultados registrados.\n- [ ] No se muestran respuestas tardías de otra sesión ni se duplican operaciones tras reconectar o reintentar.\n- [ ] La sincronización conserva identidad de operación y detecta versión obsoleta, mostrando un resultado comprensible al usuario.\n- [ ] Pasan regresiones PWA con Service Worker activo para logout, cambio de cuenta, datos privados, reconexión y actualización.\n- [ ] El mapa y las pantallas esenciales funcionan en el dominio publicado; las limitaciones offline quedan visibles y documentadas.\n- [ ] Se verifica rechazo del acceso médico no autorizado y ausencia de contenido médico en los correos generados por los flujos afectados."
+    },
+    {
+      "issue": 112,
+      "titulo": "[TECH][DEP-07] Desplegar y validar integralmente TrekSafe R2 para pruebas académicas",
+      "url": "https://github.com/ArianaBlanco06/TrekSafe/issues/112",
+      "estado": "open",
+      "criterios": "- [ ] DEP-01 a DEP-06 están satisfechas con evidencia, y todas las HU requeridas para declarar la entrega R2 están integradas o identificadas como bloqueantes; ninguna omisión se presenta como validada.\n- [ ] Las URLs publicadas ejecutan el commit y esquema registrados, y las comprobaciones se realizan contra ese entorno, no solo contra mocks o DEV.\n- [ ] Los flujos principales por rol y los casos de autorización, concurrencia y privacidad pasan con evidencia reproducible.\n- [ ] Se confirma recepción de correos de prueba y se distingue de aceptación por proveedor o simulación.\n- [ ] Los fallos controlados muestran recuperación sin pérdida de pendientes; se documenta el tratamiento de posibles duplicados y resultados inciertos.\n- [ ] No quedan defectos bloqueantes abiertos para la demostración; los hallazgos restantes tienen issue, impacto y limitación comunicada.\n- [ ] El informe de cierre contiene fecha, commit, esquema, entorno, matriz de resultados, limitaciones y validación realizada por el PO, sin prometer ausencia total de errores."
+    }
+  ]
+}

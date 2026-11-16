@@ -1,6 +1,4 @@
-import { readOfflineJson, writeOfflineJson } from '@/lib/offlineStorage';
-
-const CACHE_KEY = 'contacts-cache';
+import { getSessionScope } from './sesion';
 
 export type ContactoCacheado = {
   id: string;
@@ -10,11 +8,16 @@ export type ContactoCacheado = {
   correoElectronico: string;
 };
 
-export async function cachearContactos(contactos: ContactoCacheado[]): Promise<void> {
-  await writeOfflineJson(CACHE_KEY, contactos);
+let memoria: { scope: string; contactos: ContactoCacheado[] } | null = null;
+
+// Apoyo al formulario abierto al perder red. No escribe Cache/Local Storage.
+export async function cachearContactos(contactos: ContactoCacheado[], scope = getSessionScope()): Promise<void> {
+  if (scope && scope === getSessionScope()) memoria = { scope, contactos: structuredClone(contactos) };
 }
 
 export async function obtenerContactosCacheados(): Promise<ContactoCacheado[]> {
-  const parsed = await readOfflineJson<ContactoCacheado[]>(CACHE_KEY, [], ['treksafe:contacts-cache']);
-  return Array.isArray(parsed) ? parsed : [];
+  if (!memoria || memoria.scope !== getSessionScope()) return [];
+  return structuredClone(memoria.contactos);
 }
+
+export function vaciarContactosEnMemoria(): void { memoria = null; }

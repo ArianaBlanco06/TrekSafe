@@ -1,19 +1,27 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, Plus } from 'lucide-react';
-import { obtenerExpediciones, type Expedicion } from '@/services/expedicion';
+import { Ban, ChevronRight, Pencil, Plus } from 'lucide-react';
+import { DialogoCancelarExpedicion } from '@/components/DialogoCancelarExpedicion';
+import {
+  obtenerExpediciones,
+  type Expedicion,
+  type ResultadoCancelacion,
+} from '@/services/expedicion';
 
 const ETIQUETA_ESTADO: Record<string, string> = {
   programada: 'Programada',
   en_progreso: 'En curso',
   completada: 'Completada',
   alerta: 'Alerta',
+  cancelada: 'Cancelada',
 };
 
 export function PaginaListaExpediciones() {
   const [expediciones, setExpediciones] = useState<Expedicion[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
+  const [aCancelar, setACancelar] = useState<Expedicion | null>(null);
+  const [aviso, setAviso] = useState('');
 
   const cargar = () => {
     setError('');
@@ -28,6 +36,16 @@ export function PaginaListaExpediciones() {
     cargar();
   }, []);
 
+  const alCancelar = (resultado: ResultadoCancelacion) => {
+    setExpediciones((lista) =>
+      lista.map((exp) =>
+        exp.id === resultado.id ? { ...exp, estado: resultado.estado, version: resultado.version } : exp,
+      ),
+    );
+    setAviso(`Expedición a ${aCancelar?.lugarFin ?? 'tu destino'} cancelada.`);
+    setACancelar(null);
+  };
+
   return (
     <div className="px-6 py-6">
       <div className="flex items-center justify-between mb-6">
@@ -40,12 +58,22 @@ export function PaginaListaExpediciones() {
         </Link>
       </div>
 
+      <Link to="/senderista/expedicion/borradores" className="inline-flex min-h-11 items-center text-primary font-semibold mb-4">
+        Borradores offline
+      </Link>
+
       {error && (
         <div className="error-banner mb-4">
           {error}{' '}
           <button type="button" onClick={cargar} className="underline font-semibold ml-1">
             Reintentar
           </button>
+        </div>
+      )}
+
+      {aviso && (
+        <div role="status" className="bg-muted rounded-2xl p-4 text-sm mb-4">
+          {aviso}
         </div>
       )}
 
@@ -63,6 +91,7 @@ export function PaginaListaExpediciones() {
           {expediciones.map((exp) => {
             const estaActiva = exp.estado === 'en_progreso' || exp.estado === 'alerta';
             const esAlerta = exp.estado === 'alerta';
+            const esCancelada = exp.estado === 'cancelada';
             const tarjeta = (
               <div
                 className={`bg-card border rounded-2xl p-4 ${
@@ -70,7 +99,9 @@ export function PaginaListaExpediciones() {
                     ? 'border-destructive/50 bg-destructive/5'
                     : estaActiva
                       ? 'border-primary/30'
-                      : 'border-border'
+                      : esCancelada
+                        ? 'border-border opacity-70'
+                        : 'border-border'
                 }`}
               >
                 <div className="flex justify-between items-start gap-2">
@@ -102,15 +133,46 @@ export function PaginaListaExpediciones() {
                     <ChevronRight size={16} />
                   </p>
                 )}
+                {exp.estado === 'programada' && (
+                  <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+                    <Link
+                      to={`/expediciones/${exp.id}/editar`}
+                      className="text-sm font-semibold inline-flex items-center gap-1 text-primary min-h-12"
+                    >
+                      <Pencil size={14} /> Editar
+                    </Link>
+                    <Link to={`/senderista/expedicion/${exp.id}/puntos`}
+                      className="flex min-h-11 items-center gap-1 text-sm font-semibold text-primary">
+                      Gestionar puntos <ChevronRight size={16} aria-hidden="true" />
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAviso('');
+                        setACancelar(exp);
+                      }}
+                      className="text-sm font-semibold inline-flex items-center gap-1 text-destructive min-h-12"
+                    >
+                      <Ban size={14} /> Cancelar
+                    </button>
+                  </div>
+                )}
               </div>
             );
 
-            return estaActiva ? (
-              <Link key={exp.id} to="/senderista/expedicion/activa" className="block">
-                {tarjeta}
-              </Link>
-            ) : (
-              <div key={exp.id}>{tarjeta}</div>
+            return (
+              <div key={exp.id}>
+                {estaActiva ? <Link to="/senderista/expedicion/activa" className="block">{tarjeta}</Link> : tarjeta}
+                <Link to={`/senderista/expedicion/${encodeURIComponent(exp.id)}/recorrido`}
+                  aria-label={`Ver recorrido de la expedición a ${exp.lugarFin}`}
+                  className="inline-flex items-center min-h-12 text-sm font-semibold text-primary mr-4">Ver recorrido</Link>
+                <Link to={`/senderista/expedicion/${encodeURIComponent(exp.id)}/equipo`}
+                  aria-label={`Revisar equipo de la expedición a ${exp.lugarFin}`}
+                  className="inline-flex items-center min-h-12 text-sm font-semibold text-primary">Revisar equipo</Link>
+                <Link to={`/senderista/expedicion/${encodeURIComponent(exp.id)}/cambios`}
+                  aria-label={`Ver cambios del plan de la expedición a ${exp.lugarFin}`}
+                  className="inline-flex items-center min-h-12 ml-4 text-sm font-semibold text-primary">Ver cambios</Link>
+              </div>
             );
           })}
           {expediciones.length === 0 && (
@@ -122,6 +184,15 @@ export function PaginaListaExpediciones() {
             </div>
           )}
         </div>
+      )}
+
+      {aCancelar && (
+        <DialogoCancelarExpedicion
+          expedicionId={aCancelar.id}
+          destino={aCancelar.lugarFin}
+          onClose={() => setACancelar(null)}
+          onSuccess={alCancelar}
+        />
       )}
     </div>
   );

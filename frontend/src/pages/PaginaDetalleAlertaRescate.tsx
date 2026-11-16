@@ -13,8 +13,16 @@ import {
   Users,
 } from 'lucide-react';
 import { ExpeditionRouteMapLazy } from '@/components/maps/ExpeditionRouteMapLazy';
+import { BitacoraIncidente } from '@/components/rescate/BitacoraIncidente';
+import { BloqueCoordinacion } from '@/components/rescate/BloqueCoordinacion';
+import { CierreIncidente } from '@/components/rescate/CierreIncidente';
+import { FichaMedicaIncidente } from '@/components/rescate/FichaMedicaIncidente';
+import { InformeCierreIncidente } from '@/components/rescate/InformeCierreIncidente';
 import { parseDecimalCoordinates } from '@/lib/coordinates';
+import { TEXTO_FICHA_SIN_COORDINACION } from '@/lib/fichaMedicaIncidente';
 import { buildExternalMapUrl } from '@/lib/mapLinks';
+import { obtenerCierreAlerta, type InformeCierreIncidente as DatosInformeCierre } from '@/services/cierreIncidente';
+import type { BitacoraIncidente as DatosBitacora } from '@/services/bitacoraIncidente';
 import {
   confirmarAlertaRescate,
   obtenerDetalleAlertaRescate,
@@ -50,6 +58,10 @@ export function PaginaDetalleAlertaRescate() {
   const [notas, setNotas] = useState('');
   const [mensajeGuardado, setMensajeGuardado] = useState('');
   const [coordsCopiadas, setCoordsCopiadas] = useState(false);
+  // HU-42: informe del último cierre (la alerta sigue en `alerta` tras cerrar el incidente).
+  const [cierre, setCierre] = useState<DatosInformeCierre | null>(null);
+  const [vistaBitacora, setVistaBitacora] = useState<DatosBitacora | null>(null);
+  const [recargaBitacora, setRecargaBitacora] = useState(0);
 
   const cargarDetalle = useCallback(() => {
     if (!expedicionId) return;
@@ -64,7 +76,16 @@ export function PaginaDetalleAlertaRescate() {
       })
       .catch((e) => setError(e instanceof Error ? e.message : 'Error al cargar ficha'))
       .finally(() => setCargando(false));
+    // HU-42: si falla, la página sigue funcionando sin el informe.
+    obtenerCierreAlerta(expedicionId)
+      .then((r) => setCierre(r.cierre))
+      .catch(() => setCierre(null));
   }, [expedicionId]);
+
+  const trasCambioIncidente = useCallback(() => {
+    setRecargaBitacora((n) => n + 1);
+    cargarDetalle();
+  }, [cargarDetalle]);
 
   useEffect(() => {
     cargarDetalle();
@@ -208,6 +229,46 @@ export function PaginaDetalleAlertaRescate() {
       </div>
 
       {error && <div className="error-banner mb-4">{error}</div>}
+
+      {/* HU-39: coordinación de la alerta, aparte de "Confirmar recepción" (HU-14). */}
+      <BloqueCoordinacion
+        expedicionId={detalle.expedicionId}
+        estado="alerta"
+        coordinacion={detalle.coordinacion}
+        alActualizar={cargarDetalle}
+      />
+
+      {/* HU-41: bitácora compartida del incidente (distinta de la bitácora personal de HU-14). */}
+      {detalle.coordinacion && (
+        <>
+          <BitacoraIncidente
+            key={`${detalle.coordinacion.incidenteId}-${recargaBitacora}`}
+            incidenteId={detalle.coordinacion.incidenteId}
+            alCambiarResponsable={cargarDetalle}
+            alCargar={setVistaBitacora}
+          />
+          {/* HU-42: marcar localizada y cerrar con informe (solo el responsable vigente). */}
+          {vistaBitacora?.incidenteId === detalle.coordinacion.incidenteId && (
+            <CierreIncidente
+              key={detalle.coordinacion.incidenteId}
+              incidenteId={detalle.coordinacion.incidenteId}
+              estado={vistaBitacora.estado}
+              esResponsable={vistaBitacora.esResponsable}
+              nombreResponsable={vistaBitacora.responsable.nombreResponsable}
+              alCambiar={trasCambioIncidente}
+            />
+          )}
+        </>
+      )}
+
+      {/* HU-42: sin coordinación vigente pero con un cierre: informe y bitácora en solo lectura. */}
+      {!detalle.coordinacion && cierre && (
+        <>
+          <InformeCierreIncidente informe={cierre} />
+          <BitacoraIncidente key={`cerrado-${cierre.incidenteId}`} incidenteId={cierre.incidenteId} />
+        </>
+      )}
+
       {mensajeGuardado && (
         <div className="mb-4 p-3 rounded-xl bg-primary/10 text-primary text-sm font-medium">
           {mensajeGuardado}
@@ -263,33 +324,21 @@ export function PaginaDetalleAlertaRescate() {
         </div>
       </section>
 
-      <section className="bg-card border border-border rounded-2xl p-4 mb-4">
-        <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-1">
-          <Heart size={14} /> Ficha médica autorizada
-        </h3>
-        {detalle.fichaMedica ? (
-          <dl className="space-y-2 text-sm">
-            <div>
-              <dt className="text-muted-foreground text-xs">Tipo de sangre</dt>
-              <dd className="font-medium">{detalle.fichaMedica.tipoSangre}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground text-xs">Alergias</dt>
-              <dd>{detalle.fichaMedica.alergias || 'No declaradas'}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground text-xs">Condiciones</dt>
-              <dd>{detalle.fichaMedica.condiciones || 'No declaradas'}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground text-xs">Medicación</dt>
-              <dd>{detalle.fichaMedica.medicamentos || 'No declarada'}</dd>
-            </div>
-          </dl>
-        ) : (
-          <p className="text-sm text-muted-foreground">Sin ficha médica autorizada registrada.</p>
-        )}
-      </section>
+      {/* HU-50: la ficha médica solo la consulta el responsable vigente, bajo demanda y con auditoría. */}
+      {detalle.coordinacion ? (
+        <FichaMedicaIncidente
+          key={`${detalle.coordinacion.incidenteId}-${detalle.coordinacion.responsableId}`}
+          incidenteId={detalle.coordinacion.incidenteId}
+          esResponsable={detalle.coordinacion.esMia}
+        />
+      ) : (
+        <section className="bg-card border border-border rounded-2xl p-4 mb-4">
+          <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-1">
+            <Heart size={14} /> Ficha médica autorizada
+          </h3>
+          <p className="text-sm text-muted-foreground">{TEXTO_FICHA_SIN_COORDINACION}</p>
+        </section>
+      )}
 
       <section className="bg-card border border-border rounded-2xl p-4 mb-4">
         <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-1">

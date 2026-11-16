@@ -1,0 +1,1004 @@
+{
+  "entorno": "treksafe-dev-r2",
+  "proyecto": "ibnwggvqgjpeqcretjak",
+  "consultado_utc": "2026-11-15T02:34:14.314707+00:00",
+  "migraciones": [
+    {
+      "version": "000",
+      "nombre": "registro_migraciones",
+      "hu": "transversal",
+      "aplicada_en": "2026-11-06T01:27:36.201785+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "001",
+      "nombre": "hu29_plantillas_ruta",
+      "hu": "HU-29",
+      "aplicada_en": "2026-11-06T01:27:52.54013+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "002",
+      "nombre": "002_hu26_version_y_eventos_plan · 4860b99 · conciliado TECH-56",
+      "hu": "HU-26",
+      "aplicada_en": "2026-11-10T14:12:30.03375+00:00",
+      "aplicada_por": "Ariana · conciliación TECH-56"
+    },
+    {
+      "version": "003",
+      "nombre": "003_hu26_rpc_editar_expedicion · 525163f · conciliado TECH-56",
+      "hu": "HU-26",
+      "aplicada_en": "2026-11-10T14:12:30.03375+00:00",
+      "aplicada_por": "Ariana · conciliación TECH-56"
+    },
+    {
+      "version": "004",
+      "nombre": "hu27_estado_cancelada",
+      "hu": "HU-27",
+      "aplicada_en": "2026-11-06T03:41:10.073331+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "005",
+      "nombre": "hu27_rpc_cancelar_expedicion",
+      "hu": "HU-27",
+      "aplicada_en": "2026-11-06T03:41:35.374085+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "006",
+      "nombre": "hu27_permiso_anonimizar_eventos",
+      "hu": "HU-27",
+      "aplicada_en": "2026-11-06T03:41:57.885752+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "007",
+      "nombre": "hu35_rpc_ampliar_retorno",
+      "hu": "HU-35",
+      "aplicada_en": "2026-11-06T03:56:54.124579+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "008",
+      "nombre": "hu31_preparacion_expedicion",
+      "hu": "HU-31",
+      "aplicada_en": "2026-11-06T02:05:06.685653+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "009",
+      "nombre": "hu31_operaciones_preparacion",
+      "hu": "HU-31",
+      "aplicada_en": "2026-11-06T02:05:17.187248+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "010",
+      "nombre": "hu32_puntos_ruta",
+      "hu": "HU-32",
+      "aplicada_en": "2026-11-06T05:23:07.209995+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "011",
+      "nombre": "hu29_endurecer_permisos",
+      "hu": "HU-29",
+      "aplicada_en": "2026-11-06T01:56:22.490755+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "012",
+      "nombre": "hu36_eventos_plan_solo_anexado",
+      "hu": "HU-36",
+      "aplicada_en": "2026-11-08T05:21:03.971146+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "013",
+      "nombre": "hu37_avisos",
+      "hu": "HU-37",
+      "aplicada_en": "2026-11-08T05:21:55.012444+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "014",
+      "nombre": "hu38_minutos_recordatorio",
+      "hu": "HU-38",
+      "aplicada_en": "2026-11-08T05:33:25.393687+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "015",
+      "nombre": "hu45_outbox",
+      "hu": "HU-45 / DEP-04",
+      "aplicada_en": "2026-11-11T12:57:25.84988+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "016",
+      "nombre": "hu34_avances_expedicion",
+      "hu": "HU-34",
+      "aplicada_en": "2026-11-09T03:05:45.514842+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "017",
+      "nombre": "hu39_asumir_coordinacion",
+      "hu": "HU-39",
+      "aplicada_en": "2026-11-10T22:51:51.643401+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "018",
+      "nombre": "hu27_cancelar_salida_futura",
+      "hu": "HU-27",
+      "aplicada_en": "2026-11-10T20:43:43.175112+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "019",
+      "nombre": "hu41_bitacora_incidente",
+      "hu": "HU-41",
+      "aplicada_en": "2026-11-11T17:46:24.579311+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "020",
+      "nombre": "hu49_creacion_plan_idempotente",
+      "hu": "HU-49",
+      "aplicada_en": "2026-11-13T22:45:09.495005+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "021",
+      "nombre": "hu40_transferir_coordinacion",
+      "hu": "HU-40",
+      "aplicada_en": "2026-11-12T01:56:59.652129+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "022",
+      "nombre": "dep108_crear_expedicion_atomica",
+      "hu": "DEP-04",
+      "aplicada_en": "2026-11-11T12:57:41.218784+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "023",
+      "nombre": "dep108_avisos_transaccionales",
+      "hu": "DEP-04",
+      "aplicada_en": "2026-11-11T12:57:45.709019+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "024",
+      "nombre": "dep108_vencimientos_outbox",
+      "hu": "DEP-04",
+      "aplicada_en": "2026-11-11T12:57:50.433671+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "025",
+      "nombre": "hu42_cerrar_incidente",
+      "hu": "HU-42",
+      "aplicada_en": "2026-11-13T22:40:21.589705+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "026",
+      "nombre": "hu45_intentos_reservas",
+      "hu": "HU-45",
+      "aplicada_en": "2026-11-13T22:55:35.187565+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "027",
+      "nombre": "hu44_retorno_atomico",
+      "hu": "HU-44",
+      "aplicada_en": "2026-11-13T23:01:47.315788+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "028",
+      "nombre": "hu46_reintento_persistido",
+      "hu": "HU-46",
+      "aplicada_en": "2026-11-13T23:06:04.824054+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "029",
+      "nombre": "hu47_estadisticas_incidentes",
+      "hu": "HU-47",
+      "aplicada_en": "2026-11-14T00:14:22.924271+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "030",
+      "nombre": "hu50_ficha_medica_responsable",
+      "hu": "HU-50",
+      "aplicada_en": "2026-11-14T00:38:16.613597+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "031",
+      "nombre": "hu48_exportacion_incidentes",
+      "hu": "HU-48",
+      "aplicada_en": "2026-11-14T05:57:08.589022+00:00",
+      "aplicada_por": "postgres"
+    },
+    {
+      "version": "hu30_listas",
+      "nombre": "20261101_hu30_listas_equipo · 6dbd632 · conciliado TECH-56",
+      "hu": "HU-30",
+      "aplicada_en": "2026-11-10T14:12:30.03375+00:00",
+      "aplicada_por": "Ariana · conciliación TECH-56"
+    },
+    {
+      "version": "hu30_operaciones",
+      "nombre": "20261101_hu30_operaciones_equipo · 6dbd632 · conciliado TECH-56",
+      "hu": "HU-30",
+      "aplicada_en": "2026-11-10T14:12:30.03375+00:00",
+      "aplicada_por": "Ariana · conciliación TECH-56"
+    }
+  ],
+  "tablas": [
+    {
+      "nombre": "accesos_ficha_medica",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "acompanantes_expedicion",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "auditoria_acceso_medico",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "avances_expedicion",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "avisos_usuario",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "bitacoras_rescate",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "contactos_emergencia",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "creaciones_plan_offline",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "despachos_correo",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "entradas_bitacora_incidente",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "eventos_plan",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "expediciones",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "fichas_medicas",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "incidentes",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "informes_cierre_incidente",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "intentos_outbox",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "items_lista_equipo",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "items_preparacion_expedicion",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "listas_equipo",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "outbox_notificaciones",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "perfiles_rescatista",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "perfiles_senderista",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "plantillas_ruta",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "preparaciones_expedicion",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "puntos_ruta",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "registros_institucionales_rescatista",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "relevos_coordinacion",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "retornos_confirmados",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "solicitudes_reintento_outbox",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "transferencias_coordinacion",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "treksafe_migraciones",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "usuarios",
+      "rls": true,
+      "force_rls": false
+    },
+    {
+      "nombre": "vinculos_expedicion_contacto",
+      "rls": true,
+      "force_rls": false
+    }
+  ],
+  "funciones_privadas": [
+    {
+      "nombre": "treksafe_accesos_ficha_antes_de_insertar",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "f2963eb717cb32a52db7cfd423b9810e"
+    },
+    {
+      "nombre": "treksafe_accesos_ficha_solo_anexado",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "70886a81551261eaf9543fe47e9b3cc2"
+    },
+    {
+      "nombre": "treksafe_aceptar_relevo",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "bd55887e073d59e8cf3d733be6fee422"
+    },
+    {
+      "nombre": "treksafe_actualizar_lista_equipo",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "0bb815f180d8d5a8280e5c3dec6e9240"
+    },
+    {
+      "nombre": "treksafe_agregar_entrada_bitacora",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "12eed2ff5c869f1851ed20eac0c860a1"
+    },
+    {
+      "nombre": "treksafe_ampliar_retorno",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "350706e92db44b7ee769132da7e436a4"
+    },
+    {
+      "nombre": "treksafe_anexar_entrada_bitacora_interna",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "3e6a54fd785ee657d3c0f959ffaeb1a9"
+    },
+    {
+      "nombre": "treksafe_anonimizar_notas_avance",
+      "security_definer": true,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "80605f6b6f11595a28941a37475ccf4e"
+    },
+    {
+      "nombre": "treksafe_asociar_lista_expedicion",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "e4e1734b933f361b077884a7f3efe573"
+    },
+    {
+      "nombre": "treksafe_asumir_coordinacion",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "1abdfa593af736fd202f60935a3dee61"
+    },
+    {
+      "nombre": "treksafe_avance_json",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": false,
+      "definicion_md5": "2b835e903edc3a5be00cff7aaebc9da9"
+    },
+    {
+      "nombre": "treksafe_aviso_desde_evento_plan",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "18dd6fa9687cf124802612d957be3262"
+    },
+    {
+      "nombre": "treksafe_cancelar_expedicion",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "64ed0fb174841ea0b7ff3de75c840973"
+    },
+    {
+      "nombre": "treksafe_cancelar_relevo",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "85b56a68a384026001b483223d87a322"
+    },
+    {
+      "nombre": "treksafe_cerrar_incidente",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "358d8db57a8ad82679002ee788a81d8c"
+    },
+    {
+      "nombre": "treksafe_cierre_incidente_repetido",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "3b20e7a5d3a0f38b6c3932b67f501e29"
+    },
+    {
+      "nombre": "treksafe_confirmar_retorno_con_outbox",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "7d7930876bda540bfb774c0fb0fa9343"
+    },
+    {
+      "nombre": "treksafe_consultar_estadisticas_incidentes",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "32dc5aad571b7e17f43455b4b2d1ba1e"
+    },
+    {
+      "nombre": "treksafe_consultar_puntos_ruta",
+      "security_definer": true,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "23b82cf7845af208fd29f55a5f24937d"
+    },
+    {
+      "nombre": "treksafe_consultar_ultimo_avance",
+      "security_definer": true,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "b5763ac7ea4be00e4b867b777e8c2aab"
+    },
+    {
+      "nombre": "treksafe_contexto_ficha_medica",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "9843e8d8546a0594c5a2efa591b87efd"
+    },
+    {
+      "nombre": "treksafe_crear_expedicion",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "3a3c2ecfe608386d67c7175f1bdc3f07"
+    },
+    {
+      "nombre": "treksafe_crear_lista_equipo",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "d9b6251c441e5d9706865f251eba3add"
+    },
+    {
+      "nombre": "treksafe_crear_plan_borrador",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "589a38157df5b505c7d8bdc9c719fa28"
+    },
+    {
+      "nombre": "treksafe_despachos_autorizados",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "c94c4fe02b47098303fe46ce57aa8b83"
+    },
+    {
+      "nombre": "treksafe_editar_expedicion",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "9404f4865c698ac312a21b16af3d1c4c"
+    },
+    {
+      "nombre": "treksafe_eliminar_lista_equipo",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "f9a3177e233379a7f851fcf75bbe94b3"
+    },
+    {
+      "nombre": "treksafe_entrada_bitacora_repetida",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "705b9788cd7624eb553d2ccc45514d16"
+    },
+    {
+      "nombre": "treksafe_entradas_bitacora_antes_de_insertar",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "f326ac9b77396b34aa5436654529e523"
+    },
+    {
+      "nombre": "treksafe_entradas_bitacora_solo_anexado",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "e13c8cfd8775ed54cadb0e80a0dba79a"
+    },
+    {
+      "nombre": "treksafe_establecer_item_preparado",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "741771d491b62f954e23c3ba143c7f5b"
+    },
+    {
+      "nombre": "treksafe_evaluar_vencimientos_con_outbox",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "7da50ed0013f00b780e2c1ffc1687825"
+    },
+    {
+      "nombre": "treksafe_eventos_plan_antes_de_insertar",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "41568144a6917ee1d7923ff82ce94179"
+    },
+    {
+      "nombre": "treksafe_eventos_plan_solo_anexado",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "bd5d9357456fa30996f5864775f2704d"
+    },
+    {
+      "nombre": "treksafe_fecha_limite",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "d72598d8b9a43e37fc1f8aaa8e5dd8ac"
+    },
+    {
+      "nombre": "treksafe_finalizar_intento_outbox",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "e728a92bab90c880cd96a71849e517ba"
+    },
+    {
+      "nombre": "treksafe_guardar_puntos_ruta",
+      "security_definer": true,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "90f08d94b51f4afe8c133b1cba6c3fe0"
+    },
+    {
+      "nombre": "treksafe_informes_cierre_antes_de_insertar",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "220299640504a680a87cd78b9e3a5e53"
+    },
+    {
+      "nombre": "treksafe_informes_cierre_solo_anexado",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "fb5572fbb3076e76d3f516e9353f4acc"
+    },
+    {
+      "nombre": "treksafe_iniciar_intento_outbox",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "d758df875ebfaaed6cd95843a8c574a3"
+    },
+    {
+      "nombre": "treksafe_leer_ficha_cifrada_responsable",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "a1cbedcf64df8465f5f9ebf02096311c"
+    },
+    {
+      "nombre": "treksafe_leer_pagina_incidentes_reporte",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "d718e681bf3da21b90b43c3c84aad892"
+    },
+    {
+      "nombre": "treksafe_leer_ultimo_cierre_incidente",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "b9f4b95d60f0e562fe1ff94f0b8671c6"
+    },
+    {
+      "nombre": "treksafe_listar_listas_equipo",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "bb569360ce78a42f6c2d25aa358eff27"
+    },
+    {
+      "nombre": "treksafe_marcar_expiradas_en_progreso_como_alerta",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "5ddf434f3c019ff76be4923814043e5b"
+    },
+    {
+      "nombre": "treksafe_marcar_incidente_localizado",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "323d6b1838333ae3721ab6c6fe013967"
+    },
+    {
+      "nombre": "treksafe_normalizar_nombre_punto",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": false,
+      "definicion_md5": "5b55199683875412f5aa6aea53b631e6"
+    },
+    {
+      "nombre": "treksafe_normalizar_nota_avance",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": false,
+      "definicion_md5": "e901ec4c74586bfdbd2f1ff6b6146ca6"
+    },
+    {
+      "nombre": "treksafe_obtener_lista_equipo",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "4ee3b923fc8a3d593c95049e5ec3cef4"
+    },
+    {
+      "nombre": "treksafe_obtener_preparacion",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "81547dd9bba703447a5a05eb5cf87d4b"
+    },
+    {
+      "nombre": "treksafe_pendientes_outbox",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "1908ca18447db11f1ea174082e081c70"
+    },
+    {
+      "nombre": "treksafe_plantillas_ruta_antes_de_actualizar",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "596ccce1eb4e31e8387a9329eb8ea92c"
+    },
+    {
+      "nombre": "treksafe_proponer_relevo",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "6175cddc2d4625dca272100072a930b9"
+    },
+    {
+      "nombre": "treksafe_rechazar_relevo",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "4e1fb59e0ec194f1791ba5437d7cd5f5"
+    },
+    {
+      "nombre": "treksafe_registrar_acceso_ficha_medica",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "232649a0cd4cd5cb2a7faa87d5d7cb6a"
+    },
+    {
+      "nombre": "treksafe_registrar_avance",
+      "security_definer": true,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "eae2b5ca67bc621fc81f29b7d9700882"
+    },
+    {
+      "nombre": "treksafe_reintentar_despacho",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "2631017370045310a80d11956dbfeff7"
+    },
+    {
+      "nombre": "treksafe_relevo_publico",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "98e44c33a7b92e7cd59863cf813cd64e"
+    },
+    {
+      "nombre": "treksafe_reservar_outbox",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "67adc3d77d7e6b77e90fc6579dbdd28f"
+    },
+    {
+      "nombre": "treksafe_resolver_relevo",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "c44008a80c5357f3da4f9266872d1029"
+    },
+    {
+      "nombre": "treksafe_resultado_cierre_incidente",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "21a4751e989edbf259013e48e4ef8ddd"
+    },
+    {
+      "nombre": "treksafe_resultado_coordinacion",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "468bc4b3cd10892c708bf2538f821b5b"
+    },
+    {
+      "nombre": "treksafe_resultado_entrada_bitacora",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "a55b2b6a31533f3d1b127e79ba9fe810"
+    },
+    {
+      "nombre": "treksafe_resultado_relevo",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "5d6121f0e0b0b435d92bc91c3d3487eb"
+    },
+    {
+      "nombre": "treksafe_sanear_cambios_evento_plan",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "e170e00fb2b9282ff539c43717a50139"
+    },
+    {
+      "nombre": "treksafe_transferencias_solo_anexado",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "575c54787829848d57b36619e911f192"
+    },
+    {
+      "nombre": "treksafe_validar_datos_lista_equipo",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": true,
+      "definicion_md5": "90a5ac0e07e411800b89dafe1dcd8bc4"
+    },
+    {
+      "nombre": "treksafe_validar_puntos_ruta",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "service_execute": false,
+      "definicion_md5": "8477653d22f0655b2d3be8669afb75ed"
+    }
+  ],
+  "alcance": "Solo lectura; no acredita ejecución funcional, aplicación de migraciones nuevas ni entorno publicado",
+  "advisory_seguridad": {
+    "lints": [
+      {
+        "name": "rls_enabled_no_policy",
+        "title": "RLS Enabled No Policy",
+        "level": "INFO",
+        "facing": "EXTERNAL",
+        "categories": [
+          "SECURITY"
+        ],
+        "description": "Detects cases where row level security (RLS) has been enabled on a table but no RLS policies have been created.",
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy",
+        "count": 3,
+        "findings": [
+          {
+            "detail": "Table \\`public.intentos_outbox\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "intentos_outbox",
+              "type": "table",
+              "schema": "public"
+            },
+            "observed_at": "2026-11-15T02:34:14.881Z"
+          },
+          {
+            "detail": "Table \\`public.retornos_confirmados\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "retornos_confirmados",
+              "type": "table",
+              "schema": "public"
+            },
+            "observed_at": "2026-11-15T02:34:14.881Z"
+          },
+          {
+            "detail": "Table \\`public.solicitudes_reintento_outbox\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "solicitudes_reintento_outbox",
+              "type": "table",
+              "schema": "public"
+            },
+            "observed_at": "2026-11-15T02:34:14.881Z"
+          }
+        ]
+      }
+    ]
+  }
+}

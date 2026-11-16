@@ -1,0 +1,15 @@
+{
+  "historia": "HU-48",
+  "fechaComprobacion": "2026-11-14",
+  "proyecto": "ibnwggvqgjpeqcretjak",
+  "operacion": "GET de solo lectura del registro de migraciones",
+  "http": 200,
+  "versionesConsultadas": ["029", "030", "031"],
+  "versionesRegistradas": [
+    { "version": "029", "nombre": "hu47_estadisticas_incidentes" },
+    { "version": "030", "nombre": "hu50_ficha_medica_responsable" }
+  ],
+  "versionesNoRegistradas": ["031"],
+  "supabaseDevModificado": false,
+  "validacionFuncionalDev": "pendiente de aplicación coordinada de 031 y prueba del reporte CSV"
+}

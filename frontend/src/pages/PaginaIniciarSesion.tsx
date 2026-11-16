@@ -1,16 +1,23 @@
 import { useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Mountain, Shield } from 'lucide-react';
 import { iniciarSesion } from '@/services/autenticacion';
 import { useAutenticacion } from '@/context/ContextoAutenticacion';
 import { FieldLabel, LogoHeader, MobileShell } from '@/components/Layout';
+import { AyudaInstalacionPwa } from '@/components/AyudaInstalacionPwa';
+import { destinoTrasLogin } from '@/lib/destinoTrasLogin';
 
 type TabLogin = 'senderista' | 'rescatista';
 
+// Las cuentas demo solo existen en DEV/local; en el entorno publicado se entregan por canal privado.
+const mostrarAccesoDemo = import.meta.env?.DEV === true || import.meta.env?.VITE_ACCESO_DEMO === 'true';
+
 export function PaginaIniciarSesion() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { loginSession, estaAutenticado, usuario } = useAutenticacion();
-  const [tab, setTab] = useState<TabLogin>('senderista');
+  const [tab, setTab] = useState<TabLogin>(() =>
+    destinoTrasLogin('rescatista', location.state).startsWith('/rescatista/') ? 'rescatista' : 'senderista');
   const [correo, setCorreo] = useState('');
   const [contrasena, setContrasena] = useState('');
   const [error, setError] = useState('');
@@ -18,7 +25,7 @@ export function PaginaIniciarSesion() {
 
   if (estaAutenticado && usuario) {
     return (
-      <Navigate to={usuario.rol === 'rescatista' ? '/rescatista' : '/senderista'} replace />
+      <Navigate to={destinoTrasLogin(usuario.rol, location.state)} replace />
     );
   }
 
@@ -36,8 +43,8 @@ export function PaginaIniciarSesion() {
         );
         return;
       }
-      loginSession(res.token, res.usuario);
-      navigate(res.usuario.rol === 'rescatista' ? '/rescatista' : '/senderista');
+      await loginSession(res.token, res.usuario);
+      navigate(destinoTrasLogin(res.usuario.rol, location.state), { replace: true });
     } catch (err) {
       const mensaje = err instanceof Error ? err.message : 'Error al iniciar sesión';
       setError(mensaje);
@@ -53,8 +60,8 @@ export function PaginaIniciarSesion() {
     setCargando(true);
     try {
       const res = await iniciarSesion({ correoElectronico: demoCorreo, contrasena: demoContrasena });
-      loginSession(res.token, res.usuario);
-      navigate(res.usuario.rol === 'rescatista' ? '/rescatista' : '/senderista');
+      await loginSession(res.token, res.usuario);
+      navigate(destinoTrasLogin(res.usuario.rol, location.state), { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error en acceso demo');
     } finally {
@@ -73,6 +80,8 @@ export function PaginaIniciarSesion() {
     <MobileShell>
       <div className="px-6 flex flex-col py-10">
         <LogoHeader variant={tab} />
+
+        <AyudaInstalacionPwa />
 
         <div className="flex bg-muted rounded-xl p-1 mb-5">
           {(['senderista', 'rescatista'] as const).map((t) => {
@@ -148,6 +157,7 @@ export function PaginaIniciarSesion() {
           </Link>
         </p>
 
+        {mostrarAccesoDemo && (
         <div>
           <div className="flex items-center gap-3 mb-4">
             <div className="flex-1 h-px bg-border" />
@@ -195,6 +205,7 @@ export function PaginaIniciarSesion() {
             </div>
           </div>
         </div>
+        )}
       </div>
     </MobileShell>
   );

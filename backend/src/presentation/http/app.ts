@@ -1,47 +1,44 @@
 import cors from 'cors';
-import express from 'express';
+import express, { type Router } from 'express';
 import helmet from 'helmet';
-import { loadEnv } from '../../infrastructure/config/env.js';
-import { cronHealth } from '../../infrastructure/jobs/cronState.js';
-import { ServicioCorreo } from '../../infrastructure/email/ServicioCorreo.js';
-import { errorHandler, notFoundHandler } from '../../shared/errors/errorHandler.js';
+import { ensamblarHttp } from '../../infrastructure/composicion/http.js';
+import {
+  errorHandler,
+  notFoundHandler,
+} from '../../shared/errors/errorHandler.js';
 import { createRateLimiter } from './middleware/rateLimitMiddleware.js';
-import { crearRutasAutenticacion } from './routes/rutasAutenticacion.js';
-import { crearRutasExpedicion } from './routes/rutasExpedicion.js';
-import { crearRutasRescate } from './routes/rutasRescate.js';
-import { crearRutasUsuario } from './routes/rutasUsuario.js';
 
-export function createApp() {
-  const env = loadEnv();
+export type DependenciasHttp = {
+  config: { apiPrefix: string; corsOrigin: string };
+  rutas: { prefijo: string; router: Router }[];
+  salud: () => unknown;
+  disponibilidad?: () => Promise<boolean>;
+};
 
+/** La composición inyectada evita inicializar entorno, Supabase o correo en pruebas. */
+export function createApp(dependencias?: DependenciasHttp) {
+  const { config, rutas, salud, disponibilidad } = dependencias ?? ensamblarHttp();
   const app = express();
-
   app.use(helmet());
-  app.use(cors({ origin: env.corsOrigin, credentials: true }));
-  app.use(express.json({ limit: '100kb' }));
-
-  app.get(`${env.apiPrefix}/salud`, (_req, res) => {
-    const correo = new ServicioCorreo();
-    res.json({
-      estado: 'ok',
-      servicio: 'treksafe-api',
-      correo: {
-        configurado: correo.estaConfigurado(),
-        modo: correo.getModoTransporte(),
-      },
-      cron: cronHealth,
-    });
+  app.use(cors({ origin: config.corsOrigin, credentials: true }));
+  app.use(config.apiPrefix, (_req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    next();
   });
-
+  app.use(express.json({ limit: '100kb' }));
+  app.get(`${config.apiPrefix}/salud`, (_req, res) => res.json(salud()));
+  app.get(`${config.apiPrefix}/disponibilidad`, async (_req, res) => {
+    let disponible = false;
+    try { disponible = await disponibilidad?.() ?? false; } catch { /* Respuesta mínima. */ }
+    res.status(disponible ? 200 : 503).json({ estado: disponible ? 'operativo' : 'degradado' });
+  });
   const limiteTasaAuth = createRateLimiter(20, 15 * 60_000);
-
-  app.use(`${env.apiPrefix}/auth`, limiteTasaAuth, crearRutasAutenticacion());
-  app.use(`${env.apiPrefix}/usuario`, crearRutasUsuario());
-  app.use(`${env.apiPrefix}/expediciones`, crearRutasExpedicion());
-  app.use(`${env.apiPrefix}/rescate`, crearRutasRescate());
-
+  for (const { prefijo, router } of rutas) {
+    if (prefijo === '/auth')
+      app.use(config.apiPrefix + prefijo, limiteTasaAuth, router);
+    else app.use(config.apiPrefix + prefijo, router);
+  }
   app.use(notFoundHandler);
   app.use(errorHandler);
-
   return app;
 }

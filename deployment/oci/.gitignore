@@ -1,0 +1,8 @@
+api.env
+worker.env
+duckdns.env
+deployment.env
+publicado.manifest.json
+registro-publicacion.json
+__pycache__/
+*.pyc

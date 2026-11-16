@@ -78,7 +78,7 @@ export function PaginaRevocacionDatos() {
             <h3 className="font-bold">Eliminar mis datos</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-            Elimina ficha médica, contactos de emergencia y expediciones finalizadas o programadas.
+            Elimina ficha médica, contactos de emergencia y expediciones finalizadas, programadas o canceladas.
           </p>
           <button
             type="button"
@@ -95,7 +95,7 @@ export function PaginaRevocacionDatos() {
             <h3 className="font-bold">Anonimizar historial</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-            Conserva el conteo de expediciones completadas sin ubicaciones ni cordada identificable.
+            Conserva el conteo de expediciones completadas sin ubicaciones ni cordada identificable. También anonimiza las canceladas.
           </p>
           <button
             type="button"
@@ -126,7 +126,7 @@ export function PaginaRevocacionDatos() {
             <p className="text-sm text-muted-foreground text-center mb-5 leading-relaxed">
               {modal === 'eliminar_personal'
                 ? 'Se eliminarán datos personales sensibles de forma irreversible.'
-                : 'Las rutas completadas quedarán anonimizadas en el sistema.'}
+                : 'Las rutas completadas y canceladas quedarán anonimizadas en el sistema.'}
             </p>
             <div className="flex gap-3">
               <button

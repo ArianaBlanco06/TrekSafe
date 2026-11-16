@@ -77,7 +77,7 @@ export function PaginaRegistroSenderista() {
         contrasena,
         consentimientoPrivacidad: true,
       });
-      loginSession(res.token, res.usuario);
+      await loginSession(res.token, res.usuario);
       setExito(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al registrar');

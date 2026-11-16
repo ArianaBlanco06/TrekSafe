@@ -189,3 +189,18 @@ button {
 .leaflet-container {
   font-family: inherit;
 }
+
+@keyframes entrada-ayuda-instalacion {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ayuda-instalacion[open] {
+    animation: entrada-ayuda-instalacion 220ms ease-out;
+  }
+}

@@ -11,17 +11,27 @@ import { PaginaInicioRescatista } from '@/pages/PaginaInicioRescatista';
 import { PaginaConsolaRescate } from '@/pages/PaginaConsolaRescate';
 import { PaginaDetalleAlertaRescate } from '@/pages/PaginaDetalleAlertaRescate';
 import { PaginaHistorialRescatista } from '@/pages/PaginaHistorialRescatista';
+import { PaginaEstadisticasRescate } from '@/pages/PaginaEstadisticasRescate';
 import { PaginaInicioSenderista } from '@/pages/PaginaInicioSenderista';
 import { PaginaPerfilSenderista } from '@/pages/PaginaPerfilSenderista';
 import { PaginaFichaMedica } from '@/pages/PaginaFichaMedica';
 import { PaginaContactos } from '@/pages/PaginaContactos';
+import { PaginaListasEquipo } from '@/pages/PaginaListasEquipo';
 import { PaginaHistorialExpediciones } from '@/pages/PaginaHistorialExpediciones';
+import { PaginaPlantillas } from '@/pages/PaginaPlantillas';
+import { PaginaAvisos } from '@/pages/PaginaAvisos';
 import { PaginaPrivacidad } from '@/pages/PaginaPrivacidad';
 import { PaginaRevocacionDatos } from '@/pages/PaginaRevocacionDatos';
 import { PaginaListaExpediciones } from '@/pages/PaginaListaExpediciones';
 import { PaginaCrearExpedicion } from '@/pages/PaginaCrearExpedicion';
+import { PaginaColaBorradores } from '@/pages/PaginaColaBorradores';
+import { PaginaEditarExpedicion } from '@/pages/PaginaEditarExpedicion';
 import { PaginaExpedicionActiva } from '@/pages/PaginaExpedicionActiva';
 import { PaginaRetornoConfirmado } from '@/pages/PaginaRetornoConfirmado';
+import { PaginaPuntosRuta } from '@/pages/PaginaPuntosRuta';
+import { PaginaEquipoExpedicion } from '@/pages/PaginaEquipoExpedicion';
+import { PaginaRecorrido } from '@/pages/PaginaRecorrido';
+import { PaginaHistorialCambiosPlan } from '@/pages/PaginaHistorialCambiosPlan';
 
 function RedireccionRaiz() {
   const { estaAutenticado, usuario } = useAutenticacion();
@@ -62,13 +72,32 @@ export function App() {
               <Route path="perfil" element={<PaginaPerfilSenderista />} />
               <Route path="perfil/medica" element={<PaginaFichaMedica />} />
               <Route path="perfil/contactos" element={<PaginaContactos />} />
+              <Route path="perfil/equipo" element={<PaginaListasEquipo />} />
               <Route path="perfil/historial" element={<PaginaHistorialExpediciones />} />
+              <Route path="perfil/plantillas" element={<PaginaPlantillas />} />
+              <Route path="avisos" element={<PaginaAvisos />} />
               <Route path="perfil/privacidad" element={<PaginaPrivacidad />} />
               <Route path="perfil/privacidad/solicitud" element={<PaginaRevocacionDatos />} />
               <Route path="expedicion" element={<PaginaListaExpediciones />} />
               <Route path="expedicion/activa" element={<PaginaExpedicionActiva />} />
               <Route path="expedicion/confirmada" element={<PaginaRetornoConfirmado />} />
               <Route path="expedicion/nueva" element={<PaginaCrearExpedicion />} />
+              <Route path="expedicion/borradores" element={<PaginaColaBorradores />} />
+              <Route path="expedicion/:id/puntos" element={<PaginaPuntosRuta />} />
+              <Route path="expedicion/:id/recorrido" element={<PaginaRecorrido />} />
+              <Route path="expedicion/:id/equipo" element={<PaginaEquipoExpedicion />} />
+              <Route path="expedicion/:id/cambios" element={<PaginaHistorialCambiosPlan />} />
+            </Route>
+
+            <Route
+              path="/expediciones/:id/editar"
+              element={
+                <RutaProtegida rol="senderista">
+                  <SenderistaLayout />
+                </RutaProtegida>
+              }
+            >
+              <Route index element={<PaginaEditarExpedicion />} />
             </Route>
 
             <Route
@@ -84,6 +113,7 @@ export function App() {
               <Route path="alertas" element={<PaginaInicioRescatista />} />
               <Route path="alertas/:expedicionId" element={<PaginaDetalleAlertaRescate />} />
               <Route path="historial" element={<PaginaHistorialRescatista />} />
+              <Route path="estadisticas" element={<PaginaEstadisticasRescate />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />

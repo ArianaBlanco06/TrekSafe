@@ -1,0 +1,19 @@
+{
+  email {$ACME_EMAIL}
+  admin off
+  servers {
+    protocols h1 h2
+  }
+}
+
+{$API_HOST} {
+  encode zstd gzip
+  header -Server
+  @api path /api /api/*
+  handle @api {
+    reverse_proxy api:3000
+  }
+  handle {
+    respond "Recurso no encontrado" 404
+  }
+}

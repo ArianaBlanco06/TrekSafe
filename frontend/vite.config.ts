@@ -26,7 +26,9 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'autoUpdate' recarga todas las ventanas abiertas al activarse un Service Worker nuevo, y eso
+      // descarta formularios a medio editar. Así, la versión nueva se activa al cerrar las pestañas.
+      registerType: 'prompt',
       includeAssets: ['favicon.svg'],
       manifest: {
         name: 'TrekSafe',
@@ -42,18 +44,48 @@ export default defineConfig({
         ],
       },
       workbox: {
+        importScripts: ['sw-privacy.js'],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api/],
+        navigateFallbackDenylist: [/^\/(?:api|rest\/v1)(?:\/|$)/],
+        clientsClaim: true,
         runtimeCaching: [
           {
-            urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'treksafe-api',
-              networkTimeoutSeconds: 8,
-              cacheableResponse: { statuses: [0, 200] },
-            },
+            // HU-34: los avances y sus notas nunca se almacenan como respuestas offline.
+            urlPattern: ({ url }) => /^\/api\/expediciones\/[^/]+\/avances(?:\/|$)/.test(url.pathname),
+            handler: 'NetworkOnly',
+          },
+          {
+            // HU-33: recorrido y preparación son privados, sin fallback API.
+            urlPattern: ({ url }) => /^\/api\/expediciones\/[^/]+\/recorrido\/?$/.test(url.pathname),
+            handler: 'NetworkOnly',
+          },
+          {
+            // El editor necesita una version vigente y aislada de la cache API.
+            urlPattern: ({ url }) => /\/expediciones\/[^/]+\/puntos\/?$/.test(url.pathname),
+            handler: 'NetworkOnly',
+          },
+          {
+            // HU-37: la bandeja de avisos es privada; nunca se guarda en caché.
+            urlPattern: ({ url }) => /^\/api\/avisos(?:\/|$)/.test(url.pathname),
+            handler: 'NetworkOnly',
+          },
+          {
+            urlPattern: ({ url }) => /^\/api\/usuario\/listas-equipo(?:\/|$)/.test(url.pathname),
+            handler: 'NetworkOnly',
+          },
+          {
+            // El plan fija la versionEsperada de la edición: nunca debe leerse de la caché.
+            urlPattern: ({ url }) =>
+              /^\/api\/expediciones\/[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(url.pathname),
+            handler: 'NetworkOnly',
+          },
+          {
+            // No hay respuestas API autorizadas para almacenamiento offline.
+            // Authorization cubre tambien APIs configuradas en otro origen.
+            urlPattern: ({ request, url }) => request.headers.has('authorization')
+              || /^\/(?:api|rest\/v1)(?:\/|$)/.test(url.pathname),
+            handler: 'NetworkOnly',
           },
         ],
       },

@@ -1,0 +1,1470 @@
+{
+  "version": 1,
+  "corte_fuentes_utc": "2026-11-15T02:33:36.3741490Z",
+  "base_fuentes": "8f9c4fed0b8a798e04f7e909f1c19d82e8222d92",
+  "alcance": "75 CA de HU26-HU50 y seis tareas PO. Closed en GitHub no acredita cada CA ni aceptación publicada. Ningún smoke equivale a cobertura integral.",
+  "evidencia_ejecucion": "Resultados de los agentes en dossiers; el informe del coordinador y CI deben identificar el SHA candidato final. No sumar suites solapadas como pruebas únicas.",
+  "historias": [
+    {
+      "id": "HU26-CA-01",
+      "hu": 26,
+      "issue": 26,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/26",
+      "criterio": "Permisos y estado: Solo el propietario puede editar una expedición programada con salida futura.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/application/use-cases/EditarPlan.test.ts",
+        "backend/src/application/services/FachadaPlanExpedicion.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Editar como propietario un plan futuro; probar otro usuario, fecha inválida y dos versiones concurrentes; comprobar persistencia y evento único."
+    },
+    {
+      "id": "HU26-CA-02",
+      "hu": 26,
+      "issue": 26,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/26",
+      "criterio": "Validaciones y control de versión: Valida fechas, coordenadas y contactos. Una versión desactualizada devuelve conflicto sin sobrescribir cambios.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/application/use-cases/EditarPlan.test.ts",
+        "backend/src/application/services/FachadaPlanExpedicion.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Editar como propietario un plan futuro; probar otro usuario, fecha inválida y dos versiones concurrentes; comprobar persistencia y evento único."
+    },
+    {
+      "id": "HU26-CA-03",
+      "hu": 26,
+      "issue": 26,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/26",
+      "criterio": "Persistencia atómica: Guarda los cambios y su evento en una operación atómica.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/application/use-cases/EditarPlan.test.ts",
+        "backend/src/application/services/FachadaPlanExpedicion.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Editar como propietario un plan futuro; probar otro usuario, fecha inválida y dos versiones concurrentes; comprobar persistencia y evento único."
+    },
+    {
+      "id": "HU27-CA-01",
+      "hu": 27,
+      "issue": 27,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/27",
+      "criterio": "Permisos y estado: Solo el propietario cancela un plan programado y futuro.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/application/use-cases/CancelarPlan.test.ts",
+        "backend/migrations/tests/hu27_cancelar_salida_futura.test.sql"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Cancelar un plan futuro, repetir la solicitud y dejar pasar su salida; comprobar que no se activa ni alerta; rechazar actor ajeno."
+    },
+    {
+      "id": "HU27-CA-02",
+      "hu": 27,
+      "issue": 27,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/27",
+      "criterio": "Cancelación y monitoreo: El plan queda cancelado y el cron no lo activa ni genera alertas por su vencimiento.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/application/use-cases/CancelarPlan.test.ts",
+        "backend/migrations/tests/hu27_cancelar_salida_futura.test.sql"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Cancelar un plan futuro, repetir la solicitud y dejar pasar su salida; comprobar que no se activa ni alerta; rechazar actor ajeno."
+    },
+    {
+      "id": "HU27-CA-03",
+      "hu": 27,
+      "issue": 27,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/27",
+      "criterio": "Cancelación idempotente: Una segunda cancelación devuelve el mismo resultado sin repetir efectos.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/application/use-cases/CancelarPlan.test.ts",
+        "backend/migrations/tests/hu27_cancelar_salida_futura.test.sql"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Cancelar un plan futuro, repetir la solicitud y dejar pasar su salida; comprobar que no se activa ni alerta; rechazar actor ajeno."
+    },
+    {
+      "id": "HU28-CA-01",
+      "hu": 28,
+      "issue": 28,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/28",
+      "criterio": "Propiedad de la expedición: Solo se reutiliza una expedición del propietario.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/application/creacion-plan/CreadorDesdeHistorial.test.ts",
+        "frontend/src/testing/hu28RepetirExpedicion.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Repetir un plan propio del historial; exigir fechas/contactos nuevos; comprobar nuevo id y ausencia de alertas, confirmaciones o ficha copiada."
+    },
+    {
+      "id": "HU28-CA-02",
+      "hu": 28,
+      "issue": 28,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/28",
+      "criterio": "Reutilización de datos: Copia ruta y puntos disponibles, pero pide nuevas fechas y revisión de los contactos.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/application/creacion-plan/CreadorDesdeHistorial.test.ts",
+        "frontend/src/testing/hu28RepetirExpedicion.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Repetir un plan propio del historial; exigir fechas/contactos nuevos; comprobar nuevo id y ausencia de alertas, confirmaciones o ficha copiada."
+    },
+    {
+      "id": "HU28-CA-03",
+      "hu": 28,
+      "issue": 28,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/28",
+      "criterio": "Independencia del nuevo plan: El nuevo plan tiene otro id. No copia alertas, confirmaciones ni datos médicos.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/application/creacion-plan/CreadorDesdeHistorial.test.ts",
+        "frontend/src/testing/hu28RepetirExpedicion.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Repetir un plan propio del historial; exigir fechas/contactos nuevos; comprobar nuevo id y ausencia de alertas, confirmaciones o ficha copiada."
+    },
+    {
+      "id": "HU29-CA-01",
+      "hu": 29,
+      "issue": 29,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/29",
+      "criterio": "Gestión de plantillas personales: El propietario guarda, renombra y elimina una plantilla en su cuenta.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/application/services/servicioPlantillas.test.ts",
+        "backend/src/presentation/http/routes/rutasPlantillas.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Guardar, renombrar y borrar plantilla; consultar con segunda sesión; crear con nuevas fechas y comprobar que borrar no elimina expediciones."
+    },
+    {
+      "id": "HU29-CA-02",
+      "hu": 29,
+      "issue": 29,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/29",
+      "criterio": "Disponibilidad entre dispositivos: Una segunda sesión del mismo usuario obtiene la plantilla guardada.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/application/services/servicioPlantillas.test.ts",
+        "backend/src/presentation/http/routes/rutasPlantillas.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Guardar, renombrar y borrar plantilla; consultar con segunda sesión; crear con nuevas fechas y comprobar que borrar no elimina expediciones."
+    },
+    {
+      "id": "HU29-CA-03",
+      "hu": 29,
+      "issue": 29,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/29",
+      "criterio": "Reutilización y conservación de expediciones: Crear desde plantilla pide fechas nuevas y valida contactos vigentes. Borrar la plantilla no borra expediciones.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/application/services/servicioPlantillas.test.ts",
+        "backend/src/presentation/http/routes/rutasPlantillas.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Guardar, renombrar y borrar plantilla; consultar con segunda sesión; crear con nuevas fechas y comprobar que borrar no elimina expediciones."
+    },
+    {
+      "id": "HU30-CA-01",
+      "hu": 30,
+      "issue": 30,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/30",
+      "criterio": "Gestión de listas: El propietario crea, edita y elimina listas con nombre e ítems.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu30_operaciones_equipo.test.sql",
+        "frontend/src/testing/hu30FlujoCompleto.integration.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Crear/editar/borrar lista; rechazar nombre vacío y actor ajeno; verificar marcas obligatorias y aislamiento entre dos cuentas."
+    },
+    {
+      "id": "HU30-CA-02",
+      "hu": 30,
+      "issue": 30,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/30",
+      "criterio": "Validación y clasificación: Rechaza nombres vacíos y guarda cuáles ítems son obligatorios.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu30_operaciones_equipo.test.sql",
+        "frontend/src/testing/hu30FlujoCompleto.integration.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Crear/editar/borrar lista; rechazar nombre vacío y actor ajeno; verificar marcas obligatorias y aislamiento entre dos cuentas."
+    },
+    {
+      "id": "HU30-CA-03",
+      "hu": 30,
+      "issue": 30,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/30",
+      "criterio": "Privacidad y autorización: Cada usuario solo consulta y modifica sus propias listas.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu30_operaciones_equipo.test.sql",
+        "frontend/src/testing/hu30FlujoCompleto.integration.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Crear/editar/borrar lista; rechazar nombre vacío y actor ajeno; verificar marcas obligatorias y aislamiento entre dos cuentas."
+    },
+    {
+      "id": "HU31-CA-01",
+      "hu": 31,
+      "issue": 31,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/31",
+      "criterio": "Asociación de listas: Al asociar una lista, crea una copia de sus ítems para esa expedición.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu31_preparacion.test.sql",
+        "frontend/src/testing/hu31FlujoCompleto.integration.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Asociar lista y marcar equipo; recargar y cambiar lista base; comprobar copia independiente, contador persistente y retorno permitido."
+    },
+    {
+      "id": "HU31-CA-02",
+      "hu": 31,
+      "issue": 31,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/31",
+      "criterio": "Seguimiento de preparación: Las marcas persisten y se muestra el número de ítems obligatorios pendientes.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu31_preparacion.test.sql",
+        "frontend/src/testing/hu31FlujoCompleto.integration.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Asociar lista y marcar equipo; recargar y cambiar lista base; comprobar copia independiente, contador persistente y retorno permitido."
+    },
+    {
+      "id": "HU31-CA-03",
+      "hu": 31,
+      "issue": 31,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/31",
+      "criterio": "Independencia y seguridad: Cambiar la lista base no cambia la copia ya asociada. El aviso no bloquea el retorno seguro.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu31_preparacion.test.sql",
+        "frontend/src/testing/hu31FlujoCompleto.integration.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Asociar lista y marcar equipo; recargar y cambiar lista base; comprobar copia independiente, contador persistente y retorno permitido."
+    },
+    {
+      "id": "HU32-CA-01",
+      "hu": 32,
+      "issue": 32,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/32",
+      "criterio": "Gestión de puntos intermedios: El propietario agrega, edita, elimina y reordena hasta 20 puntos en un plan programado.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/application/services/servicioPuntosRuta.test.ts",
+        "backend/src/presentation/http/routes/rutasPuntosRuta.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Guardar/reordenar 20 puntos; rechazar punto 21 y coordenadas inválidas sin cambios parciales; conservar extremos."
+    },
+    {
+      "id": "HU32-CA-02",
+      "hu": 32,
+      "issue": 32,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/32",
+      "criterio": "Validaciones y conservación de extremos: Valida nombre, latitud, longitud y orden único. Conserva los extremos de la ruta.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/application/services/servicioPuntosRuta.test.ts",
+        "backend/src/presentation/http/routes/rutasPuntosRuta.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Guardar/reordenar 20 puntos; rechazar punto 21 y coordenadas inválidas sin cambios parciales; conservar extremos."
+    },
+    {
+      "id": "HU32-CA-03",
+      "hu": 32,
+      "issue": 32,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/32",
+      "criterio": "Persistencia atómica: Guarda los puntos completos o rechaza la operación sin dejar una colección parcial.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/application/services/servicioPuntosRuta.test.ts",
+        "backend/src/presentation/http/routes/rutasPuntosRuta.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Guardar/reordenar 20 puntos; rechazar punto 21 y coordenadas inválidas sin cambios parciales; conservar extremos."
+    },
+    {
+      "id": "HU33-CA-01",
+      "hu": 33,
+      "issue": 33,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/33",
+      "criterio": "Visualización ordenada: Muestra inicio, puntos numerados y destino con el mismo orden del plan.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/presentation/http/routes/rutasRecorrido.test.ts",
+        "frontend/src/lib/copiarPuntosPlanNuevo.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Ver extremos, puntos y segmentos en su orden; bloquear proveedor de mapa y verificar alternativa de lista/coordenadas en dominio publicado."
+    },
+    {
+      "id": "HU33-CA-02",
+      "hu": 33,
+      "issue": 33,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/33",
+      "criterio": "Representación de segmentos: Identifica los segmentos como referencias entre puntos, sin calcular navegación real.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/presentation/http/routes/rutasRecorrido.test.ts",
+        "frontend/src/lib/copiarPuntosPlanNuevo.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Ver extremos, puntos y segmentos en su orden; bloquear proveedor de mapa y verificar alternativa de lista/coordenadas en dominio publicado."
+    },
+    {
+      "id": "HU33-CA-03",
+      "hu": 33,
+      "issue": 33,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/33",
+      "criterio": "Alternativa ante fallos del mapa: Si el mapa no carga, ofrece la lista y las coordenadas del recorrido.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/presentation/http/routes/rutasRecorrido.test.ts",
+        "frontend/src/lib/copiarPuntosPlanNuevo.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Ver extremos, puntos y segmentos en su orden; bloquear proveedor de mapa y verificar alternativa de lista/coordenadas en dominio publicado."
+    },
+    {
+      "id": "HU34-CA-01",
+      "hu": 34,
+      "issue": 35,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/35",
+      "criterio": "Autorización y estado: Solo el propietario registra avances online en una expedición en progreso.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/application/use-cases/RegistrarAvance.test.ts",
+        "backend/src/presentation/http/routes/rutasAvancesExpedicion.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Registrar avance online y repetir id; rechazar actor ajeno/estado inválido; comprobar hora servidor, un avance y plazo/alertas intactos."
+    },
+    {
+      "id": "HU34-CA-02",
+      "hu": 34,
+      "issue": 35,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/35",
+      "criterio": "Registro e idempotencia: Registra punto, hora del servidor y nota. Repetir el mismo id de solicitud no duplica el avance.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/application/use-cases/RegistrarAvance.test.ts",
+        "backend/src/presentation/http/routes/rutasAvancesExpedicion.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Registrar avance online y repetir id; rechazar actor ajeno/estado inválido; comprobar hora servidor, un avance y plazo/alertas intactos."
+    },
+    {
+      "id": "HU34-CA-03",
+      "hu": 34,
+      "issue": 35,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/35",
+      "criterio": "Independencia del monitoreo: Un avance no completa la expedición, no cambia el plazo y no evita una alerta por falta de retorno.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/application/use-cases/RegistrarAvance.test.ts",
+        "backend/src/presentation/http/routes/rutasAvancesExpedicion.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Registrar avance online y repetir id; rechazar actor ajeno/estado inválido; comprobar hora servidor, un avance y plazo/alertas intactos."
+    },
+    {
+      "id": "HU35-CA-01",
+      "hu": 35,
+      "issue": 36,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/36",
+      "criterio": "Límites y autorización: Permite una ampliación online de 1 a 120 minutos, antes del límite y solo al propietario.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/application/use-cases/AmpliarRetorno.test.ts",
+        "backend/src/infrastructure/jobs/cronFechaLimiteExpedicion.ampliacion.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Ampliar 1 y 120 minutos; rechazar 0/121 y límite vencido; enfrentar cron/ampliación concurrentes y comprobar conflicto sin sobrescritura."
+    },
+    {
+      "id": "HU35-CA-02",
+      "hu": 35,
+      "issue": 36,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/36",
+      "criterio": "Control de concurrencia: Una transacción verifica estado y versión. Si el cron ya declaró la alerta, rechaza la ampliación.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/application/use-cases/AmpliarRetorno.test.ts",
+        "backend/src/infrastructure/jobs/cronFechaLimiteExpedicion.ampliacion.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Ampliar 1 y 120 minutos; rechazar 0/121 y límite vencido; enfrentar cron/ampliación concurrentes y comprobar conflicto sin sobrescritura."
+    },
+    {
+      "id": "HU35-CA-03",
+      "hu": 35,
+      "issue": 36,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/36",
+      "criterio": "Registro y actualización del monitoreo: Registra hora anterior, nueva hora y motivo. Actualiza el contador y el próximo control del cron.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/application/use-cases/AmpliarRetorno.test.ts",
+        "backend/src/infrastructure/jobs/cronFechaLimiteExpedicion.ampliacion.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Ampliar 1 y 120 minutos; rechazar 0/121 y límite vencido; enfrentar cron/ampliación concurrentes y comprobar conflicto sin sobrescritura."
+    },
+    {
+      "id": "HU36-CA-01",
+      "hu": 36,
+      "issue": 37,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/37",
+      "criterio": "Acceso autorizado: Solo el propietario consulta los cambios de su plan.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu36_eventos_plan_solo_anexado.test.sql",
+        "frontend/src/pages/PaginaHistorialCambiosPlan.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Editar/cancelar/ampliar y consultar historial propio; rechazar actor ajeno; comprobar orden, antes/después y ausencia de secretos/salud."
+    },
+    {
+      "id": "HU36-CA-02",
+      "hu": 36,
+      "issue": 37,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/37",
+      "criterio": "Información del historial: Muestra edición, cancelación y ampliación con fecha, autor y valores relevantes antes y después.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu36_eventos_plan_solo_anexado.test.sql",
+        "frontend/src/pages/PaginaHistorialCambiosPlan.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Editar/cancelar/ampliar y consultar historial propio; rechazar actor ajeno; comprobar orden, antes/después y ausencia de secretos/salud."
+    },
+    {
+      "id": "HU36-CA-03",
+      "hu": 36,
+      "issue": 37,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/37",
+      "criterio": "Registro seguro y ordenado: Los eventos se registran con la operación y se ordenan de forma estable. Excluye contraseñas y datos médicos.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu36_eventos_plan_solo_anexado.test.sql",
+        "frontend/src/pages/PaginaHistorialCambiosPlan.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Editar/cancelar/ampliar y consultar historial propio; rechazar actor ajeno; comprobar orden, antes/después y ausencia de secretos/salud."
+    },
+    {
+      "id": "HU37-CA-01",
+      "hu": 37,
+      "issue": 38,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/38",
+      "criterio": "Consulta de avisos: Muestra avisos de edición, cancelación, ampliación y recordatorio al usuario correspondiente.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/application/services/servicioBandejaAvisos.test.ts",
+        "frontend/src/pages/PaginaAvisos.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Generar cada tipo de aviso; leer con dos sesiones; comprobar lectura persistida, evento único y enlace autorizado."
+    },
+    {
+      "id": "HU37-CA-02",
+      "hu": 37,
+      "issue": 38,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/38",
+      "criterio": "Persistencia de lectura: Marcar un aviso como leído persiste el estado entre sesiones.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/application/services/servicioBandejaAvisos.test.ts",
+        "frontend/src/pages/PaginaAvisos.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Generar cada tipo de aviso; leer con dos sesiones; comprobar lectura persistida, evento único y enlace autorizado."
+    },
+    {
+      "id": "HU37-CA-03",
+      "hu": 37,
+      "issue": 38,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/38",
+      "criterio": "Unicidad y autorización: El mismo evento genera un solo aviso por usuario. Cada aviso enlaza al plan autorizado.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/application/services/servicioBandejaAvisos.test.ts",
+        "frontend/src/pages/PaginaAvisos.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Generar cada tipo de aviso; leer con dos sesiones; comprobar lectura persistida, evento único y enlace autorizado."
+    },
+    {
+      "id": "HU38-CA-01",
+      "hu": 38,
+      "issue": 39,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/39",
+      "criterio": "Configuración del recordatorio: Permite elegir 15, 30 o 60 minutos y conserva 30 como valor inicial.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/application/services/servicioRecordatorioExpedicion.test.ts",
+        "backend/src/application/use-cases/ProcesarPlazosOperativos.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Elegir 15/30/60, comprobar inicial 30 y un aviso por umbral; modificarlo y comprobar que límite y alertas críticas permanecen activos."
+    },
+    {
+      "id": "HU38-CA-02",
+      "hu": 38,
+      "issue": 39,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/39",
+      "criterio": "Generación del aviso: Genera un aviso por expedición y umbral elegido mientras la expedición esté en progreso.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/application/services/servicioRecordatorioExpedicion.test.ts",
+        "backend/src/application/use-cases/ProcesarPlazosOperativos.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Elegir 15/30/60, comprobar inicial 30 y un aviso por umbral; modificarlo y comprobar que límite y alertas críticas permanecen activos."
+    },
+    {
+      "id": "HU38-CA-03",
+      "hu": 38,
+      "issue": 39,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/39",
+      "criterio": "Independencia de alertas críticas: Modificar el recordatorio no cambia el límite ni desactiva las alertas críticas a contactos o rescate.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": true,
+      "evidencia_disponible": [
+        "backend/src/application/services/servicioRecordatorioExpedicion.test.ts",
+        "backend/src/application/use-cases/ProcesarPlazosOperativos.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Elegir 15/30/60, comprobar inicial 30 y un aviso por umbral; modificarlo y comprobar que límite y alertas críticas permanecen activos."
+    },
+    {
+      "id": "HU39-CA-01",
+      "hu": 39,
+      "issue": 40,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/40",
+      "criterio": "Asunción de la alerta: Un rescatista validado asume una alerta abierta que no tenga responsable.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu39_asumir_coordinacion.test.sql",
+        "backend/src/application/use-cases/AsignarResponsable.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Dos rescatistas validados asumen a la vez; exigir un ganador, conflicto con responsable actual y consola sin datos médicos."
+    },
+    {
+      "id": "HU39-CA-02",
+      "hu": 39,
+      "issue": 40,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/40",
+      "criterio": "Un solo responsable: Dos solicitudes concurrentes dejan un solo responsable. La otra recibe un conflicto que indica el responsable vigente.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu39_asumir_coordinacion.test.sql",
+        "backend/src/application/use-cases/AsignarResponsable.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Dos rescatistas validados asumen a la vez; exigir un ganador, conflicto con responsable actual y consola sin datos médicos."
+    },
+    {
+      "id": "HU39-CA-03",
+      "hu": 39,
+      "issue": 40,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/40",
+      "criterio": "Visibilidad sin datos médicos: La consola muestra la asignación a todos los rescatistas autorizados sin exponer datos médicos.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu39_asumir_coordinacion.test.sql",
+        "backend/src/application/use-cases/AsignarResponsable.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Dos rescatistas validados asumen a la vez; exigir un ganador, conflicto con responsable actual y consola sin datos médicos."
+    },
+    {
+      "id": "HU40-CA-01",
+      "hu": 40,
+      "issue": 41,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/41",
+      "criterio": "Propuesta autorizada: Solo el responsable actual propone a un nuevo responsable validado.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu40_transferir_coordinacion.test.sql",
+        "frontend/src/components/rescate/BloqueRelevo.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Proponer relevo como responsable, rechazar otro actor; comprobar acceso anterior hasta aceptación y transferencia registrada; rechazar relevo paralelo/cerrado."
+    },
+    {
+      "id": "HU40-CA-02",
+      "hu": 40,
+      "issue": 41,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/41",
+      "criterio": "Aceptación explícita: El relevo se aplica cuando el destinatario lo acepta. Mientras esté pendiente, el responsable anterior conserva el caso.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu40_transferir_coordinacion.test.sql",
+        "frontend/src/components/rescate/BloqueRelevo.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Proponer relevo como responsable, rechazar otro actor; comprobar acceso anterior hasta aceptación y transferencia registrada; rechazar relevo paralelo/cerrado."
+    },
+    {
+      "id": "HU40-CA-03",
+      "hu": 40,
+      "issue": 41,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/41",
+      "criterio": "Registro y bloqueo: Guarda ambos responsables, el motivo y la hora. Impide relevos simultáneos y relevos en casos cerrados.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu40_transferir_coordinacion.test.sql",
+        "frontend/src/components/rescate/BloqueRelevo.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Proponer relevo como responsable, rechazar otro actor; comprobar acceso anterior hasta aceptación y transferencia registrada; rechazar relevo paralelo/cerrado."
+    },
+    {
+      "id": "HU41-CA-01",
+      "hu": 41,
+      "issue": 42,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/42",
+      "criterio": "Escritura autorizada: El responsable vigente agrega entradas a un incidente abierto.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu41_bitacora_incidente.test.sql",
+        "frontend/src/components/rescate/BitacoraIncidente.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Añadir entradas como responsable; rechazar otro actor y edición/borrado; corregir añadiendo entrada y consultar orden estable/hora servidor."
+    },
+    {
+      "id": "HU41-CA-02",
+      "hu": 41,
+      "issue": 42,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/42",
+      "criterio": "Bitácora de solo anexado: Las entradas se añaden sin sobrescribir las anteriores y guardan el autor y la hora del servidor.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu41_bitacora_incidente.test.sql",
+        "frontend/src/components/rescate/BitacoraIncidente.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Añadir entradas como responsable; rechazar otro actor y edición/borrado; corregir añadiendo entrada y consultar orden estable/hora servidor."
+    },
+    {
+      "id": "HU41-CA-03",
+      "hu": 41,
+      "issue": 42,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/42",
+      "criterio": "Consulta ordenada: Los rescatistas autorizados consultan la secuencia con orden estable. Una corrección se registra como otra entrada.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu41_bitacora_incidente.test.sql",
+        "frontend/src/components/rescate/BitacoraIncidente.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Añadir entradas como responsable; rechazar otro actor y edición/borrado; corregir añadiendo entrada y consultar orden estable/hora servidor."
+    },
+    {
+      "id": "HU42-CA-01",
+      "hu": 42,
+      "issue": 43,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/43",
+      "criterio": "Cierre autorizado: Solo el responsable cierra un incidente localizado y abierto, con resultado y resumen no vacíos.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu42_cerrar_incidente.test.sql",
+        "frontend/src/components/rescate/CierreIncidente.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Cerrar como responsable un incidente localizado con informe; rechazar vacío, ajeno y no localizado; conservar bitácora y no confirmar retorno."
+    },
+    {
+      "id": "HU42-CA-02",
+      "hu": 42,
+      "issue": 43,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/43",
+      "criterio": "Cierre completo: El cierre se aplica a todo el incidente y conserva su bitácora.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu42_cerrar_incidente.test.sql",
+        "frontend/src/components/rescate/CierreIncidente.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Cerrar como responsable un incidente localizado con informe; rechazar vacío, ajeno y no localizado; conservar bitácora y no confirmar retorno."
+    },
+    {
+      "id": "HU42-CA-03",
+      "hu": 42,
+      "issue": 43,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/43",
+      "criterio": "Estados separados: Distingue el cierre operativo del rescate del retorno confirmado por el senderista. No confirma su retorno automáticamente.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu42_cerrar_incidente.test.sql",
+        "frontend/src/components/rescate/CierreIncidente.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Cerrar como responsable un incidente localizado con informe; rechazar vacío, ajeno y no localizado; conservar bitácora y no confirmar retorno."
+    },
+    {
+      "id": "HU43-CA-01",
+      "hu": 43,
+      "issue": 44,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/44",
+      "criterio": "Criterios disponibles: Permite elegir entre tiempo excedido y número declarado de participantes.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/src/domain/services/OrdenadorAlertas.test.ts",
+        "frontend/src/pages/PaginaConsolaRescate.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Alternar ambos criterios con empates; comprobar orden fecha/id, explicación visible y ausencia de cambios de estado/plazo o inferencia médica."
+    },
+    {
+      "id": "HU43-CA-02",
+      "hu": 43,
+      "issue": 44,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/44",
+      "criterio": "Orden estable: Mantiene visibles las alertas abiertas y desempata por fecha e id de forma estable.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/src/domain/services/OrdenadorAlertas.test.ts",
+        "frontend/src/pages/PaginaConsolaRescate.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Alternar ambos criterios con empates; comprobar orden fecha/id, explicación visible y ausencia de cambios de estado/plazo o inferencia médica."
+    },
+    {
+      "id": "HU43-CA-03",
+      "hu": 43,
+      "issue": 44,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/44",
+      "criterio": "Criterio transparente: Explica el criterio activo. Cambiarlo no altera estados ni plazos, ni diagnostica riesgo médico.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/src/domain/services/OrdenadorAlertas.test.ts",
+        "frontend/src/pages/PaginaConsolaRescate.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Alternar ambos criterios con empates; comprobar orden fecha/id, explicación visible y ausencia de cambios de estado/plazo o inferencia médica."
+    },
+    {
+      "id": "HU44-CA-01",
+      "hu": 44,
+      "issue": 46,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/46",
+      "criterio": "Evento atómico: El retorno confirmado genera un evento de salida en la misma transacción que completa la expedición.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu44_retorno.test.sql",
+        "backend/src/infrastructure/repositories/RepositorioExpedicion.retorno.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Confirmar retorno y repetir; comprobar evento/outbox atómicos y destinatarios correspondientes; verificar recepción y contenido mínimo sin salud."
+    },
+    {
+      "id": "HU44-CA-02",
+      "hu": 44,
+      "issue": 46,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/46",
+      "criterio": "Destinatarios: Notifica a los contactos vinculados y, si hubo una alerta atendida, al responsable y a los rescatistas que la recibieron.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu44_retorno.test.sql",
+        "backend/src/infrastructure/repositories/RepositorioExpedicion.retorno.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Confirmar retorno y repetir; comprobar evento/outbox atómicos y destinatarios correspondientes; verificar recepción y contenido mínimo sin salud."
+    },
+    {
+      "id": "HU44-CA-03",
+      "hu": 44,
+      "issue": 46,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/46",
+      "criterio": "Contenido mínimo y sin duplicados: El mensaje incluye la ruta y la hora del retorno confirmado, sin datos médicos. Un evento repetido no crea otro despacho lógico.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu44_retorno.test.sql",
+        "backend/src/infrastructure/repositories/RepositorioExpedicion.retorno.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Confirmar retorno y repetir; comprobar evento/outbox atómicos y destinatarios correspondientes; verificar recepción y contenido mínimo sin salud."
+    },
+    {
+      "id": "HU45-CA-01",
+      "hu": 45,
+      "issue": 47,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/47",
+      "criterio": "Outbox persistente: Una outbox persistente guarda el evento junto con el cambio de estado y sobrevive a un reinicio del proceso.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu45_reservas.test.sql",
+        "backend/src/application/services/WorkerOutboxNotificaciones.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Crear pendiente, detener/reiniciar worker y usar fallo confirmado/ambiguo controlado; comprobar reservas, tres intentos máximos e incierto sin reenvío ciego."
+    },
+    {
+      "id": "HU45-CA-02",
+      "hu": 45,
+      "issue": 47,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/47",
+      "criterio": "Reintentos controlados: Si el proveedor confirma que no aceptó el envío, admite hasta tres intentos totales con espera creciente y un solo trabajador por registro.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu45_reservas.test.sql",
+        "backend/src/application/services/WorkerOutboxNotificaciones.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Crear pendiente, detener/reiniciar worker y usar fallo confirmado/ambiguo controlado; comprobar reservas, tres intentos máximos e incierto sin reenvío ciego."
+    },
+    {
+      "id": "HU45-CA-03",
+      "hu": 45,
+      "issue": 47,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/47",
+      "criterio": "Resultados diferenciados: Una respuesta ambigua queda como incierta para revisión. Registra pendiente, enviado, fallido o incierto y diferencia el dev-log del envío real.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu45_reservas.test.sql",
+        "backend/src/application/services/WorkerOutboxNotificaciones.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Crear pendiente, detener/reiniciar worker y usar fallo confirmado/ambiguo controlado; comprobar reservas, tres intentos máximos e incierto sin reenvío ciego."
+    },
+    {
+      "id": "HU46-CA-01",
+      "hu": 46,
+      "issue": 48,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/48",
+      "criterio": "Consulta de despachos: El responsable consulta fecha, canal, intento y estado de cada despacho de su incidente.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu46_reintentos.test.sql",
+        "backend/src/presentation/http/routes/rutasEntregaIncidente.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Consultar como responsable, rechazar ajeno; repetir comando manual sobre fallido; comprobar enviado protegido e incierto pendiente de revisión."
+    },
+    {
+      "id": "HU46-CA-02",
+      "hu": 46,
+      "issue": 48,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/48",
+      "criterio": "Reintento manual idempotente: Puede solicitar un intento manual solo para un fallo definitivo. Repetir la solicitud no crea dos comandos.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu46_reintentos.test.sql",
+        "backend/src/presentation/http/routes/rutasEntregaIncidente.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Consultar como responsable, rechazar ajeno; repetir comando manual sobre fallido; comprobar enviado protegido e incierto pendiente de revisión."
+    },
+    {
+      "id": "HU46-CA-03",
+      "hu": 46,
+      "issue": 48,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/48",
+      "criterio": "Protección de estados: Un aviso enviado no se reenvía. Un incierto exige revisión antes de habilitar otro intento y no se cuenta como entregado.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu46_reintentos.test.sql",
+        "backend/src/presentation/http/routes/rutasEntregaIncidente.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Consultar como responsable, rechazar ajeno; repetir comando manual sobre fallido; comprobar enviado protegido e incierto pendiente de revisión."
+    },
+    {
+      "id": "HU47-CA-01",
+      "hu": 47,
+      "issue": 49,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/49",
+      "criterio": "Filtros autorizados: Filtra por rango de fechas, zona y resultado de cierre dentro del alcance autorizado.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/src/application/use-cases/ConsultarEstadisticasRescate.test.ts",
+        "frontend/src/pages/PaginaEstadisticasRescate.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Filtrar fechas/zona/resultado y comparar datos conocidos con varios relevos/entradas; comprobar incidentes únicos y ausencia de salud."
+    },
+    {
+      "id": "HU47-CA-02",
+      "hu": 47,
+      "issue": 49,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/49",
+      "criterio": "Conteo de incidentes únicos: Cuenta cada incidente una sola vez, aunque tenga varias entradas o cambios de responsable.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/src/application/use-cases/ConsultarEstadisticasRescate.test.ts",
+        "frontend/src/pages/PaginaEstadisticasRescate.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Filtrar fechas/zona/resultado y comparar datos conocidos con varios relevos/entradas; comprobar incidentes únicos y ausencia de salud."
+    },
+    {
+      "id": "HU47-CA-03",
+      "hu": 47,
+      "issue": 49,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/49",
+      "criterio": "Resumen claro: Muestra incidentes atendidos, abiertos y cerrados, con el criterio de fechas visible y sin datos médicos.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/src/application/use-cases/ConsultarEstadisticasRescate.test.ts",
+        "frontend/src/pages/PaginaEstadisticasRescate.test.tsx"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Filtrar fechas/zona/resultado y comparar datos conocidos con varios relevos/entradas; comprobar incidentes únicos y ausencia de salud."
+    },
+    {
+      "id": "HU48-CA-01",
+      "hu": 48,
+      "issue": 50,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/50",
+      "criterio": "Mismo filtro, datos mínimos: Exporta el mismo filtro de HU-47 con id, zona, fechas, estado y resultado, sin ficha médica ni contactos.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/src/application/use-cases/ExportarReporteIncidentes.test.ts",
+        "frontend/src/services/descargaCsvEstadisticas.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Exportar el mismo filtro sobre 1000 incidentes ficticios; revisar paginación sin duplicados, UTF-8/comillas y neutralización de fórmulas."
+    },
+    {
+      "id": "HU48-CA-02",
+      "hu": 48,
+      "issue": 50,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/50",
+      "criterio": "Recorrido paginado: Recorre los resultados por páginas con orden e id estables, sin repetir incidentes.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/src/application/use-cases/ExportarReporteIncidentes.test.ts",
+        "frontend/src/services/descargaCsvEstadisticas.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Exportar el mismo filtro sobre 1000 incidentes ficticios; revisar paginación sin duplicados, UTF-8/comillas y neutralización de fórmulas."
+    },
+    {
+      "id": "HU48-CA-03",
+      "hu": 48,
+      "issue": 50,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/50",
+      "criterio": "Archivo seguro y fiel: Con 1000 incidentes conserva encabezados, comillas y acentos, y neutraliza valores que Excel pueda tratar como fórmulas.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/src/application/use-cases/ExportarReporteIncidentes.test.ts",
+        "frontend/src/services/descargaCsvEstadisticas.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Exportar el mismo filtro sobre 1000 incidentes ficticios; revisar paginación sin duplicados, UTF-8/comillas y neutralización de fórmulas."
+    },
+    {
+      "id": "HU49-CA-01",
+      "hu": 49,
+      "issue": 51,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/51",
+      "criterio": "Cola visible: Lista los borradores pendientes, con error y sincronizados, y permite editar o descartar un pendiente.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/src/presentation/http/routes/rutasBorradores.test.ts",
+        "frontend/src/application/commands/CrearPlan.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Crear borrador offline, reiniciar PWA y cambiar cuenta; reconectar, revisar fechas/contactos y repetir id; comprobar persistencia aislada y un solo plan."
+    },
+    {
+      "id": "HU49-CA-02",
+      "hu": 49,
+      "issue": 51,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/51",
+      "criterio": "Revisión al reconectar: Al reconectar, el usuario revisa fechas y contactos antes de enviar. Un borrador con fecha vencida requiere corrección.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/src/presentation/http/routes/rutasBorradores.test.ts",
+        "frontend/src/application/commands/CrearPlan.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Crear borrador offline, reiniciar PWA y cambiar cuenta; reconectar, revisar fechas/contactos y repetir id; comprobar persistencia aislada y un solo plan."
+    },
+    {
+      "id": "HU49-CA-03",
+      "hu": 49,
+      "issue": 51,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/51",
+      "criterio": "Sin duplicados y aislada: Reenviar el mismo id local retorna el plan ya creado. La cola se aísla por usuario y conserva los pendientes tras cerrar y abrir la PWA.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/src/presentation/http/routes/rutasBorradores.test.ts",
+        "frontend/src/application/commands/CrearPlan.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Crear borrador offline, reiniciar PWA y cambiar cuenta; reconectar, revisar fechas/contactos y repetir id; comprobar persistencia aislada y un solo plan."
+    },
+    {
+      "id": "HU50-CA-01",
+      "hu": 50,
+      "issue": 52,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/52",
+      "criterio": "Autorización antes de descifrar: El backend autoriza antes de descifrar, con consentimiento vigente, incidente abierto y responsable actual.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu50_ficha_medica_responsable.test.sql",
+        "backend/src/presentation/http/routes/rutasFichaMedicaIncidente.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Probar responsable con consentimiento, actor ajeno y consentimiento revocado; aceptar relevo y cerrar; comprobar autorización antes de descifrar, auditoría y correo sin salud."
+    },
+    {
+      "id": "HU50-CA-02",
+      "hu": 50,
+      "issue": 52,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/52",
+      "criterio": "Transferencia con el relevo: Un relevo aceptado transfiere el acceso. Los demás rescatistas reciben un rechazo, sin ficha médica.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu50_ficha_medica_responsable.test.sql",
+        "backend/src/presentation/http/routes/rutasFichaMedicaIncidente.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Probar responsable con consentimiento, actor ajeno y consentimiento revocado; aceptar relevo y cerrar; comprobar autorización antes de descifrar, auditoría y correo sin salud."
+    },
+    {
+      "id": "HU50-CA-03",
+      "hu": 50,
+      "issue": 52,
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/52",
+      "criterio": "Auditoría y correos sin salud: Audita los accesos permitidos y denegados con actor, incidente, hora y motivo. Los correos de alerta ya no incluyen datos médicos en texto.",
+      "issue_estado_capturado": "closed",
+      "casilla_criterio_capturada": false,
+      "evidencia_disponible": [
+        "backend/migrations/tests/hu50_ficha_medica_responsable.test.sql",
+        "backend/src/presentation/http/routes/rutasFichaMedicaIncidente.test.ts"
+      ],
+      "local": "Referencias identificadas; resultado de suites por ejecución y revisión específica del criterio pendiente de consolidar.",
+      "dev": "Inventario de solo lectura hasta 031; no se ejecutó esta CA funcionalmente en DEV durante este corte.",
+      "publicado": "BLOQUEADO: entorno académico y URLs todavía no disponibles.",
+      "resultado_aceptacion": "PENDIENTE",
+      "ejecucion_requerida": "Probar responsable con consentimiento, actor ajeno y consentimiento revocado; aceptar relevo y cerrar; comprobar autorización antes de descifrar, auditoría y correo sin salud."
+    }
+  ],
+  "tareas": [
+    {
+      "id": "TECH-107",
+      "issue": 107,
+      "titulo": "[TECH][DEP-03] Refactorizar los módulos del backend para API y tareas independientes",
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/107",
+      "criterios_originales": "- [ ] Los casos de uso refactorizados dependen de contratos y no importan adaptadores concretos de infraestructura.\n- [ ] API y tareas pueden construirse de forma independiente y reutilizan reglas de negocio sin duplicarlas.\n- [ ] Las pruebas pueden sustituir reloj, repositorios y correo sin usar Supabase compartido ni enviar correos reales.\n- [ ] Pasan las verificaciones existentes pertinentes y las regresiones de los contratos afectados, incluidos roles y propiedad de recursos.\n- [ ] Se documentan módulos cambiados, decisiones, deuda restante y comandos reproducibles.",
+      "estado_github_capturado": "open",
+      "evidencia_disponible": [
+        "docs/cierre-r2/acreditacion-107-108.md",
+        "backend/src/application/services/desacoplamiento.test.ts"
+      ],
+      "local": "Evidencia local integrada y revisada; consultar resumen por candidato y CI final. No acredita aceptación publicada.",
+      "dev": "032 pendiente de aplicación por Ariana; inventario hasta 031 disponible.",
+      "publicado": "PENDIENTE",
+      "resultado_aceptacion": "PENDIENTE",
+      "pendiente": "Regresión y CI del candidato integrado, revisión independiente y cierre técnico trazado."
+    },
+    {
+      "id": "TECH-108",
+      "issue": 108,
+      "titulo": "[TECH][DEP-04] Consolidar transacciones, concurrencia y migraciones por entorno",
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/108",
+      "criterios_originales": "- [ ] Una instalación desechable reproduce el esquema requerido aplicando las migraciones en orden, y la actualización se prueba sobre una base representativa con datos ficticios.\n- [ ] Un fallo intermedio no deja expediciones incompletas ni cambios de negocio sin su evento/notificación requerida.\n- [ ] Se verifican conflictos de versión, reintentos y concurrencia de las operaciones afectadas.\n- [ ] Los permisos impiden el acceso directo de clientes a objetos privados y las RPC verifican propiedad/actor según su contrato.\n- [ ] Cada entorno usado tiene evidencia de versión de esquema y aplicaciones reales; no se reejecuta init_schema.sql sobre bases compartidas ni DDL no reejecutable ya aplicado.\n- [ ] Se documenta el procedimiento de recuperación y cualquier limitación de reversión sin prometer rollback destructivo automático.",
+      "estado_github_capturado": "open",
+      "evidencia_disponible": [
+        "docs/cierre-r2/acreditacion-107-108.md",
+        "backend/scripts/test-dep108-postgres.mjs",
+        "docs/cierre-r2/paquete-032/manifest.json"
+      ],
+      "local": "Evidencia local integrada y revisada; consultar resumen por candidato y CI final. No acredita aceptación publicada.",
+      "dev": "032 pendiente de aplicación por Ariana; inventario hasta 031 disponible.",
+      "publicado": "PENDIENTE",
+      "resultado_aceptacion": "PENDIENTE",
+      "pendiente": "Ariana aplica y verifica solo 032 en DEV; registrar esquema real del nuevo proyecto académico y prueba de recuperación."
+    },
+    {
+      "id": "TECH-109",
+      "issue": 109,
+      "titulo": "[TECH][DEP-02] Integrar motor de tareas y outbox con recuperación ante fallos",
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/109",
+      "criterios_originales": "- [ ] Una interrupción después del cambio de estado conserva el pendiente y este puede procesarse al reiniciar.\n- [ ] La concurrencia de procesadores respeta las reservas y la clave única de notificación lógica, con pruebas de reserva vencida y reintento.\n- [ ] Se prueban fallo temporal, agotamiento de intentos, respuesta ambigua y caída entre aceptación del proveedor y registro local; se documentan límites sobre duplicados.\n- [ ] Los ciclos no se solapan sin control y el apagado deja las tareas en un estado recuperable.\n- [ ] La configuración identifica qué instancia ejecuta tareas, y una API de desarrollo no las activa por accidente contra la base compartida.\n- [ ] Existe evidencia del flujo completo con transporte de prueba y una prueba real controlada de correo en la validación final.",
+      "estado_github_capturado": "open",
+      "evidencia_disponible": [
+        "docs/cierre-r2/integracion-operativa.md",
+        "backend/src/infrastructure/jobs/tareasOperativas.test.ts"
+      ],
+      "local": "Evidencia local integrada y revisada; consultar resumen por candidato y CI final. No acredita aceptación publicada.",
+      "dev": "032 pendiente de aplicación por Ariana; inventario hasta 031 disponible.",
+      "publicado": "PENDIENTE",
+      "resultado_aceptacion": "PENDIENTE",
+      "pendiente": "Flujo completo publicado, corte/reinicio y correo controlado con recepción confirmada."
+    },
+    {
+      "id": "TECH-110",
+      "issue": 110,
+      "titulo": "[TECH][DEP-05] Preparar entornos, publicación y monitoreo del despliegue académico",
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/110",
+      "criterios_originales": "- [ ] La configuración de cada entorno es reproducible y se validan variables obligatorias sin revelar sus valores.\n- [ ] La publicación exige que pasen las verificaciones pertinentes y deja trazabilidad de código, esquema y servicios publicados.\n- [ ] Se puede reconocer si falla la API, la base, el procesador o el envío, y detectar pendientes que exceden el umbral documentado.\n- [ ] Se comprueba persistencia de pendientes y recuperación ante reinicio durante una publicación.\n- [ ] Existe un procedimiento de recuperación probado o ensayado en entorno controlado, con límites de compatibilidad explícitos.\n- [ ] Quedan documentados recursos, consumo observado, umbrales, URLs de cada entorno y guía de diagnóstico.",
+      "estado_github_capturado": "open",
+      "evidencia_disponible": [
+        "docs/cierre-r2/despliegue-academico.md",
+        "deployment/oci/README.md",
+        "deployment/oci/test_preflight.py",
+        "backend/migrations/032_dep110_estado_worker.sql"
+      ],
+      "local": "Paquete de preparación y protocolo revisados; ejecución cloud y aceptación publicadas pendientes.",
+      "dev": "032 pendiente de aplicación por Ariana; inventario hasta 031 disponible.",
+      "publicado": "PENDIENTE",
+      "resultado_aceptacion": "PENDIENTE",
+      "pendiente": "Crear cuenta/recursos gratuitos, publicar candidato, medir consumo y ensayar recuperación con URLs/digest/esquema reales."
+    },
+    {
+      "id": "TECH-111",
+      "issue": 111,
+      "titulo": "[TECH][DEP-06] Optimizar consultas y validar la PWA/offline contra la arquitectura R2",
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/111",
+      "criterios_originales": "- [ ] Se compara una medición antes/después de solicitudes periódicas y carga inicial, con escenarios y resultados registrados.\n- [ ] No se muestran respuestas tardías de otra sesión ni se duplican operaciones tras reconectar o reintentar.\n- [ ] La sincronización conserva identidad de operación y detecta versión obsoleta, mostrando un resultado comprensible al usuario.\n- [ ] Pasan regresiones PWA con Service Worker activo para logout, cambio de cuenta, datos privados, reconexión y actualización.\n- [ ] El mapa y las pantallas esenciales funcionan en el dominio publicado; las limitaciones offline quedan visibles y documentadas.\n- [ ] Se verifica rechazo del acceso médico no autorizado y ausencia de contenido médico en los correos generados por los flujos afectados.",
+      "estado_github_capturado": "open",
+      "evidencia_disponible": [
+        "docs/cierre-r2/pwa-validacion.md",
+        "frontend/src/lib/consultasPeriodicas.test.ts",
+        "frontend/tests/publicado/configuracion.test.ts",
+        "frontend/tests/publicado/privacidad.test.ts",
+        "frontend/src/services/clienteApi.test.ts",
+        "backend/src/presentation/http/cachePrivada.test.ts"
+      ],
+      "local": "Evidencia local integrada y revisada; consultar resumen por candidato y CI final. No acredita aceptación publicada.",
+      "dev": "032 pendiente de aplicación por Ariana; inventario hasta 031 disponible.",
+      "publicado": "PENDIENTE",
+      "resultado_aceptacion": "PENDIENTE",
+      "pendiente": "Completar medición de carga inicial, PWA/SW, mapa y privacidad contra el dominio publicado."
+    },
+    {
+      "id": "TECH-112",
+      "issue": 112,
+      "titulo": "[TECH][DEP-07] Desplegar y validar integralmente TrekSafe R2 para pruebas académicas",
+      "fuente": "https://github.com/ArianaBlanco06/TrekSafe/issues/112",
+      "criterios_originales": "- [ ] DEP-01 a DEP-06 están satisfechas con evidencia, y todas las HU requeridas para declarar la entrega R2 están integradas o identificadas como bloqueantes; ninguna omisión se presenta como validada.\n- [ ] Las URLs publicadas ejecutan el commit y esquema registrados, y las comprobaciones se realizan contra ese entorno, no solo contra mocks o DEV.\n- [ ] Los flujos principales por rol y los casos de autorización, concurrencia y privacidad pasan con evidencia reproducible.\n- [ ] Se confirma recepción de correos de prueba y se distingue de aceptación por proveedor o simulación.\n- [ ] Los fallos controlados muestran recuperación sin pérdida de pendientes; se documenta el tratamiento de posibles duplicados y resultados inciertos.\n- [ ] No quedan defectos bloqueantes abiertos para la demostración; los hallazgos restantes tienen issue, impacto y limitación comunicada.\n- [ ] El informe de cierre contiene fecha, commit, esquema, entorno, matriz de resultados, limitaciones y validación realizada por el PO, sin prometer ausencia total de errores.",
+      "estado_github_capturado": "open",
+      "evidencia_disponible": [
+        "docs/cierre-r2/protocolo-aceptacion.md",
+        "docs/cierre-r2/acta-aceptacion.md"
+      ],
+      "local": "Paquete de preparación y protocolo revisados; ejecución cloud y aceptación publicadas pendientes.",
+      "dev": "032 pendiente de aplicación por Ariana; inventario hasta 031 disponible.",
+      "publicado": "PENDIENTE",
+      "resultado_aceptacion": "PENDIENTE",
+      "pendiente": "Ejecutar las 75 CA y regresiones R1 pertinentes, prueba de carga/fallos, cerrar bloqueantes y firmar aceptación PO."
+    }
+  ]
+}

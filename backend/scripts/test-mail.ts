@@ -1,8 +1,9 @@
-import { loadEnv } from '../src/infrastructure/config/env.js';
+import { inicializarEntorno, loadEnv } from '../src/infrastructure/config/env.js';
 import { ServicioCorreo } from '../src/infrastructure/email/ServicioCorreo.js';
 import { brevoIpAuthHint, fetchOutboundIp } from '../src/infrastructure/email/mailUtils.js';
 
 async function main() {
+  inicializarEntorno();
   loadEnv();
   const to = process.argv[2] ?? 'anatestcontact@gmail.com';
   const correo = new ServicioCorreo();

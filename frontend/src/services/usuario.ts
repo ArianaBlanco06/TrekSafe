@@ -61,5 +61,7 @@ export function revocarDatosPersonales(accion: AccionRevocacion) {
     contactosEliminados?: number;
     expedicionesEliminadas?: number;
     expedicionesAnonimizadas?: number;
+    /** HU-50: notas libres de avance (HU-34) dejadas en blanco al anonimizar rutas. */
+    notasAvanceAnonimizadas?: number;
   }>('/usuario/privacidad/revocar', { accion, confirmar: true }, true);
 }

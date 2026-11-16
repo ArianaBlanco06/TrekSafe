@@ -1,9 +1,11 @@
-import { loadEnv } from '../src/infrastructure/config/env.js';
-import { ejecutarTickFechaLimite } from '../src/infrastructure/jobs/cronFechaLimiteExpedicion.js';
+import { inicializarEntorno, loadEnv } from '../src/infrastructure/config/env.js';
+import { procesarPlazosOperativos } from '../src/application/use-cases/ProcesarPlazosOperativos.js';
+import { crearDependenciasPlazosOperativos } from '../src/infrastructure/composicion/operacion.js';
 
-loadEnv();
+inicializarEntorno();
+if (!loadEnv().cronEnabled) throw new Error('Se requiere CRON_ENABLED=true explícito para este productor');
 
-ejecutarTickFechaLimite()
+procesarPlazosOperativos(crearDependenciasPlazosOperativos())
   .then((r) => {
     console.log('[cron-tick]', JSON.stringify(r));
   })

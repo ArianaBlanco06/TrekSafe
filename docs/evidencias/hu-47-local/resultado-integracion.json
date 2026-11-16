@@ -1,0 +1,54 @@
+{
+  "historia": "HU-47",
+  "ejecutadoEn": "2026-11-13T23:43:27.205Z",
+  "entorno": "PostgreSQL desechable local + PostgREST real + SDK Supabase + Express + build PWA + Edge",
+  "datos": "ficticios",
+  "supabaseDevModificado": false,
+  "reporteEsperado": {
+    "atendidos": 1212,
+    "abiertos": 3,
+    "cerrados": 1209
+  },
+  "casos": [
+    {
+      "nombre": "Express y SDK contra PostgREST real devuelven el agregado completo para dos rescatistas",
+      "resultado": "aprobado"
+    },
+    {
+      "nombre": "autenticación, rol, perfil y filtros se rechazan por HTTP real",
+      "resultado": "aprobado"
+    },
+    {
+      "nombre": "PWA móvil: reporte completo, UTC y acceso desde la navegación",
+      "resultado": "aprobado"
+    },
+    {
+      "nombre": "zona, cierre y resultado actualizan los conteos y filtros visibles",
+      "resultado": "aprobado"
+    },
+    {
+      "nombre": "conjunto vacío conserva filtros y tres ceros",
+      "resultado": "aprobado"
+    },
+    {
+      "nombre": "un rango invertido se rechaza sin sustituir el último reporte",
+      "resultado": "aprobado"
+    },
+    {
+      "nombre": "fallo real de persistencia y reintento conservan el resultado correcto",
+      "resultado": "aprobado"
+    },
+    {
+      "nombre": "320 px y escritorio no generan desbordamiento horizontal",
+      "resultado": "aprobado"
+    },
+    {
+      "nombre": "worker PWA activo, sin respuestas de estadísticas almacenadas ni fallback offline",
+      "resultado": "aprobado"
+    },
+    {
+      "nombre": "sin errores de JavaScript y sin modificaciones por consultas",
+      "resultado": "aprobado"
+    }
+  ]
+}

@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useConsultaPeriodica } from '@/hooks/useConsultaPeriodica';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { AlertTriangle, History, LogOut, Navigation, Shield } from 'lucide-react';
+import { AlertTriangle, BarChart3, History, LogOut, Navigation, Shield } from 'lucide-react';
 import { useAutenticacion } from '@/context/ContextoAutenticacion';
 import { MobileShell } from '@/components/Layout';
 import { BannerOffline } from '@/components/BannerOffline';
@@ -17,16 +18,9 @@ export function RescatistaLayout() {
   const navigate = useNavigate();
   const [pendientes, setPendientes] = useState(0);
 
-  useEffect(() => {
-    const cargar = () => {
-      obtenerAlertasRescate()
-        .then((r) => setPendientes(r.alertas.filter((a) => !a.confirmadoPorMi).length))
-        .catch(() => undefined);
-    };
-    cargar();
-    const poll = setInterval(cargar, 30_000);
-    return () => clearInterval(poll);
-  }, []);
+  useConsultaPeriodica('alertas-rescate', obtenerAlertasRescate, {
+    datos: (r) => setPendientes(r.alertas.filter((a) => !a.confirmadoPorMi).length),
+  });
 
   const handleLogout = () => {
     logout();
@@ -79,6 +73,10 @@ export function RescatistaLayout() {
           <NavLink to="/rescatista/historial" className={navClass}>
             <History size={22} />
             Historial
+          </NavLink>
+          <NavLink to="/rescatista/estadisticas" className={navClass}>
+            <BarChart3 size={22} />
+            Estadísticas
           </NavLink>
         </nav>
       </div>

@@ -1,0 +1,76 @@
+{
+  "historia": "HU-28",
+  "ejecucion": "4103b0f4-aa1a-4ee8-b326-3aa6bfa0bc6a",
+  "iniciadoEn": "2026-11-04T19:40:12.213Z",
+  "terminadoEn": "2026-11-04T19:40:50.868Z",
+  "entorno": "Supabase DEV con API Express y PWA locales reales",
+  "proyecto": "ibnwggvqgjpeqcretjak.supabase.co",
+  "node": "v22.23.4",
+  "resultado": "aprobado para el alcance sin puntos intermedios",
+  "pasos": [
+    {
+      "nombre": "Esquema DEV disponible y dos cuentas ficticias aisladas preparadas.",
+      "resultado": "aprobado"
+    },
+    {
+      "nombre": "Login real de TrekSafe con A y B; cron sin iniciar y correo simulado.",
+      "resultado": "aprobado"
+    },
+    {
+      "nombre": "PostgREST real devuelve el borrador propio con fechas vacías y sin campos privados del viaje anterior.",
+      "resultado": "aprobado"
+    },
+    {
+      "nombre": "Aislamiento real: B solo ve su historial; origen ajeno e inexistente devuelven el mismo 404.",
+      "resultado": "aprobado"
+    },
+    {
+      "nombre": "Guardar rechaza fechas antiguas, contactos borrados y contactos de B, sin crear expediciones parciales.",
+      "resultado": "aprobado"
+    },
+    {
+      "nombre": "PWA real crea otra expedición en DEV: id nuevo, fechas futuras, contactos vigentes y origen intacto.",
+      "resultado": "aprobado"
+    },
+    {
+      "nombre": "La nueva expedición permanece programada, no hereda bitácoras ni despachos y todavía no puede repetirse como completada.",
+      "resultado": "aprobado"
+    }
+  ],
+  "limpieza": "verificada: cuentas ficticias y sus expediciones eliminadas por id y propietario",
+  "datosFicticios": {
+    "usuarios": [
+      {
+        "id": "64e5096c-eac1-4e1c-95b2-e203d330abbc",
+        "correo": "hu28-4103b0f4-aa1a-4ee8-b326-3aa6bfa0bc6a-a@example.invalid"
+      },
+      {
+        "id": "3f4e3a02-c2ab-4692-9da1-9aa386d11720",
+        "correo": "hu28-4103b0f4-aa1a-4ee8-b326-3aa6bfa0bc6a-b@example.invalid"
+      }
+    ],
+    "origenId": "74cd41bd-d7e9-4bd4-addc-3c9e179899d3",
+    "origenB": "3969aa3e-fc73-42f1-a744-9c363a88aeaa",
+    "contactoA": "60c6c54f-a882-412b-98cc-4bfca80d3df1",
+    "contactoBorrado": "04c1c559-f450-4f99-917a-6745fbaca5a0",
+    "contactoB": "3e46a69e-a871-4fdd-b17e-b85fb1766ced"
+  },
+  "nuevaExpedicionId": "0f3c152b-6915-4138-a814-a143ce5dd0b9",
+  "capturas": [
+    "G:\\PW\\Soft2\\Proyecto\\TrekSafe\\frontend\\test-results\\hu28-dev\\hu28-dev-HU-28-PWA-login-A-40b00-ncia-reales-en-Supabase-DEV\\evidencia\\01-historial-dev.png",
+    "G:\\PW\\Soft2\\Proyecto\\TrekSafe\\frontend\\test-results\\hu28-dev\\hu28-dev-HU-28-PWA-login-A-40b00-ncia-reales-en-Supabase-DEV\\evidencia\\02-borrador-fechas-vacias-dev.png",
+    "G:\\PW\\Soft2\\Proyecto\\TrekSafe\\frontend\\test-results\\hu28-dev\\hu28-dev-HU-28-PWA-login-A-40b00-ncia-reales-en-Supabase-DEV\\evidencia\\03-nueva-expedicion-persistida-dev.png",
+    "G:\\PW\\Soft2\\Proyecto\\TrekSafe\\frontend\\test-results\\hu28-dev\\hu28-dev-HU-28-PWA-login-A-40b00-ncia-reales-en-Supabase-DEV\\evidencia\\04-usuario-B-origen-ajeno-404-dev.png"
+  ],
+  "error": "",
+  "pendientes": [
+    "Integración de puntos intermedios con HU-32 y contrato HU-29",
+    "Aceptación y revisión de evidencia por el equipo"
+  ],
+  "huellasArchivos": {
+    "backend/src/application/creacion-plan/CreadorDesdeHistorial.ts": "3a6841e46bd77f427d5ab67760607e1490d84a19118b8906c59728f57290c95b",
+    "backend/src/infrastructure/repositories/HistorialExpedicionesDAOSupabase.ts": "244cd61b99e8a7f66990f823ce788babe786d40a0dd4798aba4e8916e3958824",
+    "frontend/src/pages/PaginaCrearExpedicion.tsx": "fc8606c6aa14c44938292e5ca09b536c56fcab2544433487d850c99c7ff7e693",
+    "frontend/src/services/expedicion.ts": "84523dd76b814db87c7b4a72a81322fa41e5908210ae9c8ff2be1ead1c6f9a2e"
+  }
+}
